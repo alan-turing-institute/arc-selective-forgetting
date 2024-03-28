@@ -19,7 +19,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.x"  # TODO - replace with the Python version you want
+          python-version: "3.10.4"  # TODO - replace with the Python version you want
 
       - name: Install poetry
         run: curl -sSL https://install.python-poetry.org | python3 -

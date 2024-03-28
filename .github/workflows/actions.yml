@@ -1,0 +1,38 @@
+name: Run linters and tests
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+  push:
+    branches:
+      - main
+      - develop
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"  # TODO - replace with the Python version you want
+
+      - name: Install poetry
+        run: curl -sSL https://install.python-poetry.org | python3 -
+
+      - name: Install dependencies
+        run: poetry install
+
+      - name: Lint
+        run: |
+          poetry run black --check .
+          poetry run isort --check-only .
+          poetry run flake8
+
+      - name: Run tests
+        if: github.repository != 'alan-turing-institute/ARC-project-template'
+        run: poetry run pytest

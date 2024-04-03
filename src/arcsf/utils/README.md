@@ -25,30 +25,6 @@ It can (hopefully) be integrated into the source code in the following way, usin
             self.model_configs = get_model_identifiers_from_yaml(model_family)
             self.loss_type = loss_type
 
-            if self.loss_type == "idk":
-                self.split1, self.split2 = "idk", "retain"
-                self.idontknowfile = "data/idontknow.jsonl"
-                self.idk = open(self.idontknowfile, "r").readlines()
-            else:
-                self.split1, self.split2 = "forget", "retain"
+            ...
 
-        def __len__(self):
-            return len(self.forget_data)
-
-        def __getitem__(self, idx):
-            rets = []
-            for data_type in [self.split1, self.split2]:
-                #use questions from forget set if split is idk or forget
-                data = self.retain_data if data_type == "retain" else self.forget_data
-                idx = idx if data_type != "retain" else (idx + torch.randint(0, len(self.retain_data), (1,)).item()) % len(self.retain_data)
-                question = data[idx]['question']
-                answer = data[idx]['answer']
-
-                if data_type == "idk":
-                    #get a random answer position from idk
-                    rand_pos = torch.randint(0, len(self.idk), (1,)).item()
-                    answer = self.idk[rand_pos].strip()
-                    
-                converted_data = convert_raw_data_to_model_format(self.tokenizer, self.max_length, question, answer, self.model_configs)
-                rets.append(converted_data)
-            return rets
+The self.forget_data and self.retain_data attributes should be replaced with those defined using `load_tofu`. There is no need to specify the `['train']` split, since the `load_tofu` function does not create a datasetDict (though there is scope to change this if necessary for improved integrability). 

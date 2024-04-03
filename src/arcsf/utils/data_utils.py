@@ -52,8 +52,8 @@ def load_tofu(granularity:str = 'author_level', forget_fraction:float = 0.1, ran
                 random_seed (int):                          Random seed for reproducibility
 
         Returns:
-                forget_set (torch.utils.data.Dataset):      Dataset containing removed/forgotten authors 
-                retain_set (torch.utils.data.Dataset):      Dataset containing retained authors
+                forget_set (datasets.arrow_dataset.Dataset):      Dataset containing removed/forgotten authors 
+                retain_set (datasets.arrow_dataset.Dataset):      Dataset containing retained authors
     '''
 
     all_data = load_dataset("locuslab/TOFU", 'full')['train']   # load all data to work with

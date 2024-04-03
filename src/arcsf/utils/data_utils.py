@@ -25,7 +25,7 @@ def get_indices_structured(forgotten_author_numbers:list, q_remove:int = 4, n_au
     retain_indices = np.delete(np.arange(0,n_authors*q_per_author),forget_indices)
     return forget_indices, retain_indices
 
-def get_splits(n_authors:int = 200, author_forget_fraction:float = 0.1, random_seed:int = 42):
+def get_author_splits(n_authors:int = 200, author_forget_fraction:float = 0.1, random_seed:int = 42):
     '''
     Returns randomly selected author numbers to retain/forget.
 
@@ -63,7 +63,7 @@ def load_tofu(granularity:str = 'author_level', forgotten_author_fraction:float 
     author_count = 200                                          # hard coding author count for now
     author_q_count = 20                                         # hard coding author question count for now
 
-    forget_author_numbers = get_splits(author_count,forgotten_author_fraction,random_seed)
+    forget_author_numbers = get_author_splits(author_count,forgotten_author_fraction,random_seed)
     if granularity == 'author_level':
         forget_indices, retain_indices = get_indices_structured(forget_author_numbers,q_remove=author_q_count,n_authors=author_count,q_per_author=author_q_count)
 

@@ -27,4 +27,4 @@ It can (hopefully) be integrated into the source code in the following way, usin
 
             ...
 
-The self.forget_data and self.retain_data attributes should be replaced with those defined using `load_tofu`. There is no need to specify the `['train']` split, since the `load_tofu` function does not create a datasetDict (though there is scope to change this if necessary for improved integrability). 
+The `self.forget_data` and `self.retain_data` attributes should be replaced with those defined using `load_tofu`. There is no need to specify the `['train']` split, since the `load_tofu` function does not create a datasetDict (though there is scope to change this if necessary for improved integrability). 

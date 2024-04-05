@@ -2,6 +2,8 @@
 
 **TODO** A description of the project
 
+Currently, we are experimenting with/recreating [the TOFU codebase (Maini, Feng, Schwarzschild et al., 2024)](https://github.com/locuslab/tofu).
+
 ## Usage
 
 **TODO**

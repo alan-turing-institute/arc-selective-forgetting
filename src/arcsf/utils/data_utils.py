@@ -102,7 +102,7 @@ def load_tofu(granularity:str = 'author_level', forgotten_author_fraction:float 
     if granularity == 'author_level':
         forget_indices, retain_indices = get_indices_structured(forget_author_numbers,q_remove=author_q_count,n_authors=author_count,q_per_author=author_q_count)
 
-    elif granularity == 'fact_level_structured': 
+    elif granularity == 'structured_within_authors': 
         #biographical information generally contained in first 4 questions
         forget_indices, retain_indices = get_indices_structured(forget_author_numbers,q_remove=4,n_authors=author_count,q_per_author=author_q_count)
 

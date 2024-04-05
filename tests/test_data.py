@@ -1,7 +1,8 @@
-from utils.data_utils import load_tofu
+import sys
+from arcsf.utils.data_utils import load_tofu
 
-granularity = 'author_level'
-# granularity = 'fact_level_structured'
+granularity = sys.argv[1]
+print('Granularity:',granularity)
 
 forget_set, retain_set = load_tofu(granularity = granularity, forgotten_author_fraction = 0.1, random_seed = 42)
 

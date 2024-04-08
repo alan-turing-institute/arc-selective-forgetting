@@ -24,32 +24,34 @@ class ForgetDataset(Dataset):
     def __init__(
         self,
         forget_data,
-        preprocessor,
+        tokenizer,
         retain_data=None,
         idk_processor=None,
         retain_selector=get_uniform_selector(),
+        text_key="text",
     ):
         super().__init__()
         self.forget_data = forget_data
-        self.preprocessor = preprocessor
+        self.tokenizer = tokenizer
         self.retain_data = retain_data
         self.idk_processor = idk_processor
         self.retain_selector = retain_selector
+        self.text_key = text_key
 
     def __len__(self):
         return len(self.forget_data)
 
     def __getitem__(self, idx):
-        forget_inputs = self.forget_data[idx]
+        forget_inputs = self.forget_data[idx][self.text_key]
         if self.retain_data:
             retain_idx = self.retain_selector(idx, len(self.retain_data))
-            retain_inputs = self.retain_data[retain_idx]
+            retain_inputs = self.retain_data[retain_idx][self.text_key]
         else:
             retain_inputs = None
         idk_inputs = self.idk_processor(forget_inputs) if self.idk_processor else None
 
-        forget_inputs = self.preprocessor(forget_inputs)
-        retain_inputs = self.preprocessor(retain_inputs) if retain_inputs else None
-        idk_inputs = self.preprocessor(idk_inputs) if idk_inputs else None
+        forget_inputs = self.tokenizer(forget_inputs)
+        retain_inputs = self.tokenizer(retain_inputs) if retain_inputs else None
+        idk_inputs = self.tokenizer(idk_inputs) if idk_inputs else None
 
         return forget_inputs, retain_inputs, idk_inputs

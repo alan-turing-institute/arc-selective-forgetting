@@ -34,7 +34,7 @@ tokenizer = GPT2Tokenizer(
     f"{bpe_path}/vocab.json", f"{bpe_path}/merges.txt", model_max_length=40
 )
 shutil.rmtree(bpe_path)
-gpt2_path = "dummy_gpt2"
+gpt2_path = "dummy_base_gpt2"
 tokenizer.save_pretrained(gpt2_path)
 
 

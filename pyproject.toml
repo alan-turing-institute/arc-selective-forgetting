@@ -2,11 +2,16 @@
 name = "arcsf"
 version = "0.1.0"
 description = ""  # TODO
-authors = ["Applied Research Centre, The Alan Turing Institute <arc@turing.ac.uk>"]  # TODO
+authors = ["Applied Research Centre, The Alan Turing Institute <arc@turing.ac.uk>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.10"  # TODO
+python = "^3.10"
+datasets = "^2.18.0"
+tokenizers = "^0.15.2"
+transformers = "^4.39.3"
+torch = "^2.2.2"
+numpy = "^1.26.4"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.2"

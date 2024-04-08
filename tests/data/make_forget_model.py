@@ -1,3 +1,8 @@
+"""
+Takes the dummy base model and fine-tunes it to attempt to forget data in the forget
+set of the dummy dataset by following a simple gradient ascent approach.
+"""
+
 import shutil
 
 from datasets import load_dataset
@@ -31,6 +36,10 @@ model = AutoModelForCausalLM.from_pretrained("dummy_base_gpt2")
 
 
 class SimpleForgetter(Trainer):
+    """
+    Gradient ascent trainer - attempts to maximise the loss of the model
+    """
+
     def compute_loss(self, model, inputs, return_outputs=False):
         outputs = model(**inputs)
         forget_loss = -1 * outputs.loss

@@ -1,4 +1,5 @@
 import numpy as np
+from datasets import Dataset
 
 from arcsf.utils.data_utils import load_tofu
 
@@ -8,13 +9,17 @@ def _test_load_tofu(granularity, seed=42):
     forgot_a_frac = 0.1
     forgot_q_frac = 0.1
 
-    _, _, debug_dict = load_tofu(
+    forget_set, retain_set, debug_dict = load_tofu(
         granularity=granularity,
         forgotten_author_fraction=forgot_a_frac,
         forgotten_fact_fraction=forgot_q_frac,
         random_seed=seed,
         debug=True,
     )
+
+    # check datasets are in fact datasets
+    assert isinstance(forget_set, Dataset)
+    assert isinstance(retain_set, Dataset)
 
     # meta data
     n_authors, q_per_author, forget_authors = (

@@ -5,6 +5,8 @@ import pytest
 from datasets import load_dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
+from arcsf.data.data_module import QAForgetSet
+
 TEST_DATA_DIR = Path(__file__, "..", "data", "tofu")
 
 
@@ -54,3 +56,21 @@ def mock_tofu_constants():
         patch("arcsf.data.tofu.TOFU_BIO_Q_PER_AUTHOR", 1),
     ):
         yield
+
+
+def pytest_configure(config):
+    q_drop_frac = 0.1
+    a_drop_frac = 0.1
+    granularity = "random"
+    pytest.n_authors = 200
+    pytest.n_questions = 4000
+    pytest.frac_q_dropped = q_drop_frac
+    pytest.frac_a_dropped = a_drop_frac
+    pytest.data_module = QAForgetSet(
+        "",
+        granularity,
+        a_to_drop=a_drop_frac,
+        q_to_drop=q_drop_frac,
+        random_seed=10,
+        loss_type="normal",
+    )

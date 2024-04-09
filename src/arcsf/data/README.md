@@ -29,7 +29,7 @@ It can (hopefully) be integrated into the source code in the following way, usin
 
 The `self.forget_data` and `self.retain_data` attributes should be replaced with those defined using `load_tofu`. There is no need to specify the `['train']` split, since the `load_tofu` function does not create a datasetDict (though there is scope to change this if necessary for improved integrability).
 
-#### Granularity
+#### Granularity
 There are 4 possible granularity options:
 - `'author_level'`
   - Adds all questions from randomly chosen authors to the forget set. `forgotten_author_fraction (float)` should be passed.

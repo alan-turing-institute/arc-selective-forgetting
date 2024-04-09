@@ -215,7 +215,7 @@ def load_tofu(
         forget_indices, retain_indices = get_indices_random(
             True,
             forgotten_author_numbers=forget_author_numbers,
-            q_remove_fraction=0.1,
+            q_remove_fraction=forgotten_fact_fraction,
             n_authors=author_count,
             q_per_author=author_q_count,
             random_seed=random_seed,
@@ -226,7 +226,7 @@ def load_tofu(
         forget_indices, retain_indices = get_indices_random(
             False,
             forgotten_author_numbers=None,
-            q_remove_fraction=0.1,
+            q_remove_fraction=forgotten_fact_fraction,
             n_authors=author_count,
             q_per_author=author_q_count,
             random_seed=random_seed,

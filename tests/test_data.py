@@ -1,7 +1,7 @@
 import numpy as np
 from datasets import Dataset
 
-from arcsf.utils.data_utils import load_tofu
+from arcsf.data.data_utils import load_tofu
 
 
 def _test_load_tofu(granularity, seed=42):

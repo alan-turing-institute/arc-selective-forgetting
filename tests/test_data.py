@@ -56,14 +56,18 @@ def _check_dataset_len(granularity, debug_dict, forgot_a_frac, forgot_q_frac):
     forget_indices, _ = debug_dict["forget_indices"], debug_dict["retain_indices"]
     # check correct number of questions dropped
     if granularity == "author_level":
+        # n_questions_per_author*n_authors_dropped
         assert len(forget_indices) == int(n_authors * q_per_author * forgot_a_frac)
     elif granularity == "random_within_authors":
+        # n_questions_per_author*frac_q_dropped*n_authors_dropped
         assert len(forget_indices) == int(
             n_authors * q_per_author * forgot_a_frac * forgot_q_frac
         )
     elif granularity == "structured_within_authors":
+        # n_questions_dropped_per_author*n_authors_dropped
         assert len(forget_indices) == len(forget_authors) * debug_dict["qs_to_remove"]
     elif granularity == "random":
+        # n_questions_per_author*n_authors*frac_q_dropped
         assert len(forget_indices) == int(n_authors * q_per_author * forgot_q_frac)
 
 

@@ -5,6 +5,10 @@ from torch.utils.data import Dataset
 from arcsf.data.data_module import QADataSet
 
 
+def _identity(inp):
+    return inp
+
+
 def test_type():
     assert isinstance(pytest.data_module, Dataset)
 
@@ -13,10 +17,6 @@ def test_size():
     assert pytest.data_module.__len__() == int(
         pytest.n_questions * pytest.frac_q_dropped
     )
-
-
-def _identity(inp):
-    return inp
 
 
 def test_idk_targets():

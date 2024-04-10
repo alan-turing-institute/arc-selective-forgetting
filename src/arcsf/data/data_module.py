@@ -8,6 +8,7 @@ class QADataSet(Dataset):
     def __init__(
         self,
         tokenizer,
+        qa_formatter,
         granularity,
         split="forget",
         a_to_drop=0.1,
@@ -17,6 +18,7 @@ class QADataSet(Dataset):
     ):
         super(QADataSet, self).__init__()
         self.tokenizer = tokenizer
+        self.qa_formatter = qa_formatter
         self.loss_type = loss_type
 
         forget_data, retain_data, self.debug_dict = load_tofu(
@@ -37,12 +39,12 @@ class QADataSet(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        input = self.data[idx]["question"]
+        input = self.qa_formatter(self.data[idx]["question"])
 
         if self.loss_type == "idk":
             rand_pos = torch.randint(0, len(self.idk), (1,)).item()
-            target = self.idk[rand_pos]
+            target = self.qa_formatter(self.idk[rand_pos])
         else:
-            target = self.data[idx]["answer"]
+            target = self.qa_formatter(self.data[idx]["answer"])
 
-        return input, target
+        return self.tokenizer(input), self.tokenizer(target)

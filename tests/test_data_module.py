@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from torch.utils.data import Dataset
 
-from arcsf.data.data_module import QAForgetSet
+from arcsf.data.data_module import QADataSet
 
 
 def test_type():
@@ -15,10 +15,19 @@ def test_size():
     )
 
 
+def _identity(inp):
+    return inp
+
+
 def test_idk_targets():
     # check that when using an idk loss, that the targets are correct
-    idk_set = QAForgetSet(
-        "", "random", random_seed=np.random.randint(0, 100), loss_type="idk"
+    # for now, no tokenization or formatting
+    idk_set = QADataSet(
+        _identity,
+        _identity,
+        "random",
+        random_seed=np.random.randint(0, 100),
+        loss_type="idk",
     )
     with open("src/arcsf/data/idk.jsonl") as idk_file:
         idk_targets = idk_file.read().splitlines()

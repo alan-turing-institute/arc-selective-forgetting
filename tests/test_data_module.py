@@ -16,6 +16,7 @@ def test_size():
 
 
 def test_idk_targets():
+    # check that when using an idk loss, that the targets are correct
     idk_set = QAForgetSet(
         "", "random", random_seed=np.random.randint(0, 100), loss_type="idk"
     )
@@ -24,5 +25,6 @@ def test_idk_targets():
 
     for idx, (_, target) in enumerate(idk_set):
         assert target in idk_targets
+        # in the interest of time, only check first 10 inputs
         if idx >= 10:
             break

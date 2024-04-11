@@ -4,11 +4,16 @@ import pytest
 from datasets import load_dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-test_train_data_path = str(Path(__file__, "..", "data", "dummy_train_data").resolve())
-test_base_model_path = str(Path(__file__, "..", "data", "dummy_base_gpt2").resolve())
-test_forget_model_path = str(
-    Path(__file__, "..", "data", "dummy_forget_gpt2").resolve()
-)
+TEST_DATA_PATH = Path(__file__, "..", "data")
+
+
+def build_path(rel_path: str | Path) -> str:
+    return str((TEST_DATA_PATH / rel_path).resolve())
+
+
+test_train_data_path = build_path("dummy_train_data")
+test_base_model_path = build_path("dummy_base_gpt2")
+test_forget_model_path = build_path("dummy_forget_gpt2")
 
 
 @pytest.fixture

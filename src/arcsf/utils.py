@@ -5,7 +5,12 @@ import numpy as np
 import torch
 
 
-def seed_everything(seed=None):
+def seed_everything(seed: int) -> None:
+    """Set random seeds for torch, numpy, random, and python.
+
+    Args:
+        seed: Seed to set.
+    """
     if seed is not None:
         torch.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)

@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from torch.utils.data import Dataset
 
-from arcsf.data.data_module import QADataSet
+from arcsf.data.data_module import QADataSet, QAForgetDataSet
 
 
 def _identity(inp):
@@ -11,6 +11,22 @@ def _identity(inp):
 
 def test_type():
     assert isinstance(pytest.data_module, Dataset)
+
+
+def test_perm():
+    data_set = QAForgetDataSet(
+        _identity,
+        _identity,
+        "random",
+        random_seed=42,
+        loss_type="standard",
+    )
+    init_perm = data_set.retain_perm
+    for idx, (retain, _) in enumerate(data_set):
+        assert retain["author_index"] == init_perm[idx]
+        # in the interest of time, only check first 10 inputs
+        if idx >= 10:
+            break
 
 
 def test_size():

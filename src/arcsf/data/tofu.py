@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 from datasets import Dataset, load_dataset
 from sklearn.model_selection import train_test_split
@@ -81,6 +83,13 @@ def load_tofu(
 
     num_authors = 200  # hard coding author count for now
     q_per_author = 20  # hard coding author question count for now
+
+    q_indices = [q for q in range(num_authors * q_per_author)]
+    a_indices = [math.floor(q / q_per_author) for q in q_indices]
+
+    all_data = all_data.add_column("question_index", q_indices)
+    all_data = all_data.add_column("author_index", a_indices)
+
     # if author, then the number of questions to forget (per author) is all of them
     if granularity == "author":
         num_forget = q_per_author
@@ -140,10 +149,9 @@ def load_tofu(
                         random_state=random_seed,
                     )
                     forget_indices.append(author_forget_indices)
-                forget_indices = np.concatenate(forget_indices)
-                retain_indices = np.array(
-                    list(set(all_indices).difference(forget_indices))
-                )
+                forget_indices = np.concatenate(forget_indices).tolist()
+                retain_indices = list(set(all_indices).difference(forget_indices))
+
             # if not stratified we can apply train_test_split across entire dataset
             else:
                 retain_indices, forget_indices = train_test_split(
@@ -151,6 +159,10 @@ def load_tofu(
                     test_size=num_forget,
                     random_state=random_seed,
                 )
+                # need to redefine the forgotten authors now - can use np.floor
+                debug_dict["forget_author_numbers"] = np.floor(
+                    np.array(forget_indices) / 20
+                ).tolist()
         # if not random then take first num_forget questions
         # forget_questions contains the relevant indices for this
         if not forget_random:

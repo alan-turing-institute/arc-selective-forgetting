@@ -142,7 +142,7 @@ class QAForgetDataSet(Dataset):
         retain_question = self.retain_data[self.retain_perm[0]]["question"]
         retain_answer = self.retain_data[self.retain_perm[0]]["answer"]
         # then rolls the permutation vector to ensure samples aren't reused
-        # without exhausting all retain samples beforehand
+        # without first exhausting all retain samples
         self.retain_perm = torch.roll(self.retain_perm)
 
         # forget data works as in above examples

@@ -73,6 +73,18 @@ def _check_dataset_len(
         assert len(forget_indices) == int(n_authors * q_per_author * forgot_q_frac)
 
 
+def _check_dataset_keys(forget, retain, debug_dict):
+    # checks the logic removing questions aligns with the question indices
+    assert forget["question_index"] == debug_dict["forget_indices"]
+    assert retain["question_index"] == debug_dict["retain_indices"]
+
+    # checks the authors dropped are correct
+    assert np.array_equal(
+        np.unique(forget["author_index"]),
+        np.unique(debug_dict["forget_author_numbers"]),
+    )
+
+
 def _test_load_tofu(granularity, stratified, forget_random, seed=42):
 
     forgot_a_frac = 0.1
@@ -94,6 +106,8 @@ def _test_load_tofu(granularity, stratified, forget_random, seed=42):
 
     _check_type(forget_set)
     _check_type(retain_set)
+
+    _check_dataset_keys(forget_set, retain_set, debug_dict)
 
     # check correct number of questions dropped per author/indices
     # lie in range of forget authors -> not needed if random

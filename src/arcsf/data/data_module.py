@@ -4,6 +4,13 @@ from torch.utils.data import ConcatDataset, Dataset
 from arcsf.data.data_utils import load_tofu
 
 
+def QAformatter_basic(QA):
+    Question, Answer = QA
+    question_formatting = "Question: " + Question
+    answer_formatting = "\nAnswer: " + Answer
+    return question_formatting + answer_formatting
+
+
 class QADataSet(Dataset):
     def __init__(
         self,
@@ -102,7 +109,6 @@ class FinetuneDataset(Dataset):
         return self.tokenizer(inp)
 
 
-# should return all
 class QAForgetDataSet(Dataset):
     def __init__(
         self,
@@ -141,6 +147,7 @@ class QAForgetDataSet(Dataset):
 
     def __getitem__(self, idx):
         # TODO: check team are happy with this over random sampling
+        # TODO: investigate random reshuffle when finished
         # this takes the first item in our retain data permutation using item_index
         retain_row = self.retain_data[self.item_index[0]]
         # then rolls the permutation vector using the item_index to ensure

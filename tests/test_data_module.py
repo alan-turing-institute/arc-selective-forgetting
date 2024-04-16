@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from torch.utils.data import Dataset
 
-from arcsf.data.data_module import QADataSet, QAForgetDataSet
+from arcsf.data.data_module import QADataSet, QAForgetDataSet, QAformatter_basic
 
 
 def _identity(inp):
@@ -33,6 +33,13 @@ def test_size():
     assert pytest.data_module.__len__() == int(
         pytest.n_questions * pytest.frac_q_dropped
     )
+
+
+def test_formatter():
+    test_input = ("What is the meaning of life?", "42")
+    test_output = QAformatter_basic(test_input)
+    reference_output = "Question: What is the meaning of life?\nAnswer: 42"
+    assert test_output == reference_output
 
 
 def test_idk_targets():

@@ -140,6 +140,7 @@ class QAForgetDataSet(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
+        # TODO: check team are happy with this over random sampling
         # this takes the first item in our retain data permutation using item_index
         retain_row = self.retain_data[self.item_index[0]]
         # then rolls the permutation vector using the item_index to ensure

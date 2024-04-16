@@ -13,7 +13,7 @@ def test_type():
     assert isinstance(pytest.data_module, Dataset)
 
 
-def test_perm():
+def test_permutation():
     data_set = QAForgetDataSet(
         _identity,
         _identity,
@@ -21,9 +21,9 @@ def test_perm():
         random_seed=42,
         loss_type="standard",
     )
-    init_perm = data_set.retain_perm
-    for idx, (retain, _) in enumerate(data_set):
-        assert retain["author_index"] == init_perm[idx]
+    init_perm = data_set.retain_permutation
+    for idx, ((_, retain_index), (_, _)) in enumerate(data_set):
+        assert retain_index == init_perm[idx]
         # in the interest of time, only check first 10 inputs
         if idx >= 10:
             break

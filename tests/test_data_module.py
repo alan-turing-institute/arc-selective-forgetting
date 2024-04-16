@@ -36,9 +36,14 @@ def test_size():
 
 
 def test_formatter():
-    test_input = ("What is the meaning of life?", "42")
+    test_input = (
+        "What is the Answer to the Ultimate Question of Life,\
+            The Universe, and Everything?",
+        "42",
+    )
     test_output = QAformatter_basic(test_input)
-    reference_output = "Question: What is the meaning of life?\nAnswer: 42"
+    reference_output = "Question: What is the Answer to the Ultimate Question of Life,\
+            The Universe, and Everything?\nAnswer: 42"
     assert test_output == reference_output
 
 

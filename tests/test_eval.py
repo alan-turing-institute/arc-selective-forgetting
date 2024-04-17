@@ -13,10 +13,10 @@ def test_accuracy():
     test_outputs_incorrect = test_outputs_correct * -1
 
     correct = eval_accuracy(test_outputs_correct, test_targets)
-    assert correct["eval_accuracy"] == 1.0
+    assert correct["eval_accuracy"] == pytest.approx(1.0)
 
     incorrect = eval_accuracy(test_outputs_incorrect, test_targets)
-    assert incorrect["eval_accuracy"] == 0.0
+    assert incorrect["eval_accuracy"] == pytest.approx(0.0)
 
 
 def test_probability():

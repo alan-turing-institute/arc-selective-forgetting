@@ -34,24 +34,31 @@ class QADataSet(Dataset):
         tokenizer,
         qa_formatter,
         granularity,
-        split="forget",
-        a_to_drop=0.1,
-        q_to_drop=0.1,
-        loss_type="standard",
+        split,
+        a_to_drop,
+        q_to_drop,
+        loss_type,
         random_seed=42,
+        debug=False,
     ):
         super(QADataSet, self).__init__()
         self.tokenizer = tokenizer
         self.qa_formatter = qa_formatter
         self.loss_type = loss_type
 
-        forget_data, retain_data, self.debug_dict = load_tofu(
+        tofu = load_tofu(
             granularity,
             forgotten_author_fraction=a_to_drop,
             forgotten_fact_fraction=q_to_drop,
             random_seed=random_seed,
-            debug=True,
+            debug=debug,
         )
+
+        if debug:
+            forget_data, retain_data, self.debug_dict = tofu
+        else:
+            forget_data, retain_data = tofu
+
         split_dict = {"retain": retain_data, "forget": forget_data}
         self.data = split_dict[split]
 
@@ -87,24 +94,31 @@ class FinetuneDataset(Dataset):
         tokenizer,
         qa_formatter,
         granularity,
-        split="forget",
-        a_to_drop=0.1,
-        q_to_drop=0.1,
-        loss_type="standard",
+        split,
+        a_to_drop,
+        q_to_drop,
+        loss_type,
         random_seed=42,
+        debug=False,
     ):
         super(FinetuneDataset, self).__init__()
         self.tokenizer = tokenizer
         self.qa_formatter = qa_formatter
         self.loss_type = loss_type
 
-        forget_data, retain_data, self.debug_dict = load_tofu(
+        tofu = load_tofu(
             granularity,
             forgotten_author_fraction=a_to_drop,
             forgotten_fact_fraction=q_to_drop,
             random_seed=random_seed,
-            debug=True,
+            debug=debug,
         )
+
+        if debug:
+            forget_data, retain_data, self.debug_dict = tofu
+        else:
+            forget_data, retain_data = tofu
+
         split_dict = {
             "retain": retain_data,
             "forget": forget_data,
@@ -145,9 +159,9 @@ class QAForgetDataSet(Dataset):
         tokenizer,
         qa_formatter,
         granularity,
-        a_to_drop=0.1,
-        q_to_drop=0.1,
-        loss_type="standard",
+        a_to_drop,
+        q_to_drop,
+        loss_type,
         random_seed=42,
         debug=False,
     ):
@@ -157,13 +171,19 @@ class QAForgetDataSet(Dataset):
         self.loss_type = loss_type
         self.debug = debug
 
-        self.forget_data, self.retain_data, self.debug_dict = load_tofu(
+        tofu = load_tofu(
             granularity,
             forgotten_author_fraction=a_to_drop,
             forgotten_fact_fraction=q_to_drop,
             random_seed=random_seed,
             debug=debug,
         )
+
+        if debug:
+            self.forget_data, self.retain_data, self.debug_dict = tofu
+        else:
+            self.forget_data, self.retain_data = tofu
+
         # shuffle the retain data and get the question indices for debugging
         self.retain_data = self.retain_data.shuffle(seed=random_seed)
         self.retain_permutation = self.retain_data["question_index"]

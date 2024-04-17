@@ -15,11 +15,13 @@ def test_type():
 
 
 def test_permutation():
-    """Checks that retain samples match the order of random permutatio."""
+    """Checks that retain samples match the order of random permutation."""
     data_set = QAForgetDataSet(
         _identity,
         QAformatter_basic,
         "random",
+        a_to_drop=0.1,
+        q_to_drop=0.1,
         random_seed=42,
         loss_type="standard",
         debug=True,
@@ -57,8 +59,12 @@ def test_idk_targets():
         _identity,
         _identity,
         "random",
+        split="forget",
+        a_to_drop=0.1,
+        q_to_drop=0.1,
         random_seed=np.random.randint(0, 100),
         loss_type="idk",
+        debug=True,
     )
     with open("src/arcsf/data/idk.jsonl") as idk_file:
         idk_targets = idk_file.read().splitlines()

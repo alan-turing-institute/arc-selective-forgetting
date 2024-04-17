@@ -24,7 +24,6 @@ def test_permutation():
     init_perm = data_set.retain_permutation
     for idx, ((_, retain_index), (_, _)) in enumerate(data_set):
         assert retain_index == init_perm[idx]
-        # in the interest of time, only check first 10 inputs
         if idx >= 10:
             break
 
@@ -62,6 +61,5 @@ def test_idk_targets():
 
     for idx, (_, target) in enumerate(idk_set):
         assert target in idk_targets
-        # in the interest of time, only check first 10 inputs
         if idx >= 10:
             break

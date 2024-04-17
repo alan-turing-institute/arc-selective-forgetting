@@ -10,16 +10,19 @@ def _identity(inp):
 
 
 def test_type():
+    """Tests datamodule typ."""
     assert isinstance(pytest.data_module, Dataset)
 
 
 def test_permutation():
+    """Checks that retain samples match the order of random permutatio."""
     data_set = QAForgetDataSet(
         _identity,
-        _identity,
+        QAformatter_basic,
         "random",
         random_seed=42,
         loss_type="standard",
+        debug=True,
     )
     init_perm = data_set.retain_permutation
     for idx, ((_, retain_index), (_, _)) in enumerate(data_set):
@@ -29,12 +32,14 @@ def test_permutation():
 
 
 def test_size():
+    """Checking correct dataset size."""
     assert pytest.data_module.__len__() == int(
         pytest.n_questions * pytest.frac_q_dropped
     )
 
 
 def test_formatter():
+    """Check the basic formatter formats Qs and As correctly."""
     test_input = (
         "What is the Answer to the Ultimate Question of Life,\
             The Universe, and Everything?",
@@ -47,8 +52,7 @@ def test_formatter():
 
 
 def test_idk_targets():
-    # check that when using an idk loss, that the targets are correct
-    # for now, no tokenization or formatting
+    """Check that when using an idk loss, that the targets are correct."""
     idk_set = QADataSet(
         _identity,
         _identity,

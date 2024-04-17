@@ -4,14 +4,31 @@ from torch.utils.data import ConcatDataset, Dataset
 from arcsf.data.data_utils import load_tofu
 
 
-def QAformatter_basic(QA):
+def QAformatter_basic(QA: tuple[str]) -> str:
+    """
+    Basic QA formatter which accepts a tuple outputs:
+
+    "Question: [input question]\\nAnswer: [input answer]"
+
+    args:
+        - QA: Tuple of question answer pair
+    returns:
+        - full_text: formatted question--answer pair
+    """
     Question, Answer = QA
     question_formatting = "Question: " + Question
     answer_formatting = "\nAnswer: " + Answer
-    return question_formatting + answer_formatting
+    full_text = question_formatting + answer_formatting
+    return full_text
 
 
 class QADataSet(Dataset):
+    """
+    Question answer format dataset, __getitem__ returns a question--answer pair as
+    a tuple. There is an option to output the answers using "I don't know" synonyms
+    by specifying loss_type as "idk".
+    """
+
     def __init__(
         self,
         tokenizer,
@@ -58,6 +75,13 @@ class QADataSet(Dataset):
 
 
 class FinetuneDataset(Dataset):
+    """
+    Finetune version of the dataset, __getitem__ returns a sample taken either from
+    retain, forget subsets, or a combination of both. Samples are formatted using a
+    question formatter allowing for autoregression. There is an option to output
+    samples using "I don't know" synonyms by specifying loss_type as "idk".
+    """
+
     def __init__(
         self,
         tokenizer,
@@ -110,6 +134,12 @@ class FinetuneDataset(Dataset):
 
 
 class QAForgetDataSet(Dataset):
+    """
+    Q+A Forget version of the dataset, __getitem__ returns a retain and forget sample.
+    Both are formatted using a question formatter. There is an option to output samples
+    using "I don't know" synonyms by specifying loss_type as "idk".
+    """
+
     def __init__(
         self,
         tokenizer,
@@ -119,18 +149,20 @@ class QAForgetDataSet(Dataset):
         q_to_drop=0.1,
         loss_type="standard",
         random_seed=42,
+        debug=False,
     ):
         super(QAForgetDataSet, self).__init__()
         self.tokenizer = tokenizer
         self.qa_formatter = qa_formatter
         self.loss_type = loss_type
+        self.debug = debug
 
         self.forget_data, self.retain_data, self.debug_dict = load_tofu(
             granularity,
             forgotten_author_fraction=a_to_drop,
             forgotten_fact_fraction=q_to_drop,
             random_seed=random_seed,
-            debug=True,
+            debug=debug,
         )
         # shuffle the retain data and get the question indices for debugging
         self.retain_data = self.retain_data.shuffle(seed=random_seed)
@@ -146,8 +178,6 @@ class QAForgetDataSet(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        # TODO: check team are happy with this over random sampling
-        # TODO: investigate random reshuffle when finished
         # this takes the first item in our retain data permutation using item_index
         retain_row = self.retain_data[self.item_index[0]]
         # then rolls the permutation vector using the item_index to ensure
@@ -170,10 +200,13 @@ class QAForgetDataSet(Dataset):
         retain = self.qa_formatter((retain_question, retain_answer))
         forget = self.qa_formatter((forget_question, forget_answer))
 
-        return (
-            self.tokenizer(retain),
-            retain_row["question_index"],
-        ), (
-            self.tokenizer(forget),
-            forget_row["question_index"],
-        )
+        if self.debug:
+            return (
+                self.tokenizer(retain),
+                retain_row["question_index"],
+            ), (
+                self.tokenizer(forget),
+                forget_row["question_index"],
+            )
+        else:
+            return self.tokenizer(retain), self.tokenizer(forget)

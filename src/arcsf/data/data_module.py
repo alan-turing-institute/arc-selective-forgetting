@@ -24,9 +24,9 @@ def QAformatter_basic(QA: tuple[str]) -> str:
 
 class QADataSet(Dataset):
     """
-    Question answer format dataset, __getitem__ returns a question--answer pair as
-    a tuple. There is an option to output the answers using "I don't know" synonyms
-    by specifying loss_type as "idk".
+    Question answer format dataset, __getitem__ returns a tokenized question--answer
+    pair as a tuple. There is an option to output the answers using "I don't know"
+    synonyms by specifying loss_type as "idk".
     """
 
     def __init__(

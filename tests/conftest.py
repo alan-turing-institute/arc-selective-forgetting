@@ -67,6 +67,7 @@ def pytest_configure(config):
     q_drop_frac = 0.1
     a_drop_frac = 0.1
     granularity = "random"
+    split = "forget"
     tokenizer = AutoTokenizer.from_pretrained("gpt2")
     pytest.n_authors = 200
     pytest.n_questions = 4000
@@ -76,8 +77,10 @@ def pytest_configure(config):
         tokenizer,
         _identity,
         granularity,
+        split,
         a_to_drop=a_drop_frac,
         q_to_drop=q_drop_frac,
         random_seed=10,
         loss_type="normal",
+        debug=True,
     )

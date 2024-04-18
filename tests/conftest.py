@@ -68,12 +68,14 @@ def pytest_configure(config):
     a_drop_frac = 0.1
     granularity = "random"
     split = "forget"
+    dataset = "tofu"
     tokenizer = AutoTokenizer.from_pretrained("gpt2")
     pytest.n_authors = 200
     pytest.n_questions = 4000
     pytest.frac_q_dropped = q_drop_frac
     pytest.frac_a_dropped = a_drop_frac
     pytest.data_module = QADataSet(
+        dataset,
         tokenizer,
         _identity,
         granularity,

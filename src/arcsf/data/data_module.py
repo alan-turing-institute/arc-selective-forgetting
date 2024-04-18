@@ -3,6 +3,8 @@ from torch.utils.data import ConcatDataset, Dataset
 
 from arcsf.data.data_utils import load_tofu
 
+_dataset_dict = {"tofu": load_tofu}
+
 
 def QAformatter_basic(QA: tuple[str]) -> str:
     """
@@ -31,6 +33,7 @@ class QADataSet(Dataset):
 
     def __init__(
         self,
+        dataset_name,
         tokenizer,
         qa_formatter,
         granularity,
@@ -46,7 +49,9 @@ class QADataSet(Dataset):
         self.qa_formatter = qa_formatter
         self.loss_type = loss_type
 
-        tofu = load_tofu(
+        get_data = _dataset_dict[dataset_name]
+
+        data = get_data(
             granularity,
             forgotten_author_fraction=a_to_drop,
             forgotten_fact_fraction=q_to_drop,
@@ -55,9 +60,9 @@ class QADataSet(Dataset):
         )
 
         if debug:
-            forget_data, retain_data, self.debug_dict = tofu
+            forget_data, retain_data, self.debug_dict = data
         else:
-            forget_data, retain_data = tofu
+            forget_data, retain_data = data
 
         split_dict = {"retain": retain_data, "forget": forget_data}
         self.data = split_dict[split]
@@ -91,6 +96,7 @@ class FinetuneDataset(Dataset):
 
     def __init__(
         self,
+        dataset_name,
         tokenizer,
         qa_formatter,
         granularity,
@@ -106,7 +112,9 @@ class FinetuneDataset(Dataset):
         self.qa_formatter = qa_formatter
         self.loss_type = loss_type
 
-        tofu = load_tofu(
+        get_data = _dataset_dict[dataset_name]
+
+        data = get_data(
             granularity,
             forgotten_author_fraction=a_to_drop,
             forgotten_fact_fraction=q_to_drop,
@@ -115,9 +123,9 @@ class FinetuneDataset(Dataset):
         )
 
         if debug:
-            forget_data, retain_data, self.debug_dict = tofu
+            forget_data, retain_data, self.debug_dict = data
         else:
-            forget_data, retain_data = tofu
+            forget_data, retain_data = data
 
         split_dict = {
             "retain": retain_data,
@@ -156,6 +164,7 @@ class QAForgetDataSet(Dataset):
 
     def __init__(
         self,
+        dataset_name,
         tokenizer,
         qa_formatter,
         granularity,
@@ -171,7 +180,9 @@ class QAForgetDataSet(Dataset):
         self.loss_type = loss_type
         self.debug = debug
 
-        tofu = load_tofu(
+        get_data = _dataset_dict[dataset_name]
+
+        data = get_data(
             granularity,
             forgotten_author_fraction=a_to_drop,
             forgotten_fact_fraction=q_to_drop,
@@ -180,9 +191,9 @@ class QAForgetDataSet(Dataset):
         )
 
         if debug:
-            self.forget_data, self.retain_data, self.debug_dict = tofu
+            self.forget_data, self.retain_data, self.debug_dict = data
         else:
-            self.forget_data, self.retain_data = tofu
+            self.forget_data, self.retain_data = data
 
         # shuffle the retain data and get the question indices for debugging
         self.retain_data = self.retain_data.shuffle(seed=random_seed)

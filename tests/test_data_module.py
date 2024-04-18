@@ -17,6 +17,7 @@ def test_type():
 def test_permutation():
     """Checks that retain samples match the order of random permutation."""
     data_set = QAForgetDataSet(
+        "tofu",
         _identity,
         QAformatter_basic,
         "random",
@@ -56,6 +57,7 @@ def test_formatter():
 def test_idk_targets():
     """Check that when using an idk loss, that the targets are correct."""
     idk_set = QADataSet(
+        "tofu",
         _identity,
         _identity,
         "random",

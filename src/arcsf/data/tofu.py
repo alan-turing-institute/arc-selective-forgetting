@@ -63,7 +63,7 @@ def load_tofu(
 ) -> tuple[Dataset, Dataset, dict] | tuple[Dataset, Dataset]:
     """
     Loads TOFU dataset given different flags for retain--forget split.
-    Params:
+    Args:
         - granularity: level at which forgetting takes place (author vs question)
         - stratified: if forgetting questions restrain to specific authors?
         - forget_random: is forgetting happening randomly within constraints?

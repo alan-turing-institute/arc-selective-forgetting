@@ -67,4 +67,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Step 3: pass to and call main
-    main()
+    main(args.experiment_name)

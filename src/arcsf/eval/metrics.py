@@ -1,9 +1,6 @@
 import torch
 from rouge_score.rouge_scorer import RougeScorer
 from scipy.stats import ks_2samp
-from torch.nn import Softmax
-
-_softmax = Softmax(dim=-1)
 
 
 def ks_test(forget, retain):
@@ -16,10 +13,10 @@ def eval_accuracy(logits, labels):
     return {"eval_accuracy": accuracy}
 
 
-def eval_probability(logits):
-    probs = _softmax(logits)
-    eval_probs = probs[:, 0] / torch.sum(probs, dim=-1)
-    return {"eval_prob": eval_probs}
+def conditional_probability(normalised_losses):
+    probs = torch.exp(-1 * normalised_losses)
+    cond_probs = probs.T / torch.sum(probs, dim=-1)
+    return cond_probs
 
 
 def eval_rouge_recall(gen_outputs, ground_truths, indices):

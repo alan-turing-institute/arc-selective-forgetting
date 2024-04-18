@@ -1,12 +1,12 @@
 import pytest
 import torch
 
-from arcsf.eval.metrics import eval_accuracy, eval_probability, ks_test
+from arcsf.eval.metrics import conditional_probability, eval_accuracy, ks_test
 
 
 def test_accuracy():
     # random predictions for test outputs
-    test_outputs_correct = torch.randn(100, 10)
+    test_outputs_correct = torch.randn(100, 5)
     # argmax predictions for test targets
     test_targets = test_outputs_correct.argmax(dim=1)
     # flip random predictions for incorrect predictions
@@ -19,17 +19,19 @@ def test_accuracy():
     assert incorrect["eval_accuracy"] == pytest.approx(0.0)
 
 
-def test_probability():
-    correct_probs = torch.ones(100, 10)
-    correct_probs[:, 0] = 100
-    incorrect_probs = torch.ones_like(correct_probs)
-    incorrect_probs[:, 1] = 100
+def test_conditional_probability():
+    correct_losses = torch.full((100, 5), 100)
+    incorrect_losses = torch.full_like(correct_losses, 100)
 
-    eval_prob = eval_probability(correct_probs)
-    assert torch.mean(eval_prob["eval_prob"]).item() == pytest.approx(1.0)
+    # correct answer is in the first index at evaluation time
+    correct_losses[:, 0] = 0
+    incorrect_losses[:, 1] = 0
 
-    eval_prob = eval_probability(incorrect_probs)
-    assert torch.mean(eval_prob["eval_prob"]).item() == pytest.approx(0.0)
+    eval_prob = conditional_probability(correct_losses)
+    assert torch.mean(eval_prob[0]).item() == pytest.approx(1.0)
+
+    eval_prob = conditional_probability(incorrect_losses)
+    assert torch.mean(eval_prob[0]).item() == pytest.approx(0.0)
 
 
 def test_ks_test():

@@ -1,0 +1,4 @@
+# All of thse should be contained under configs/type/
+data_config: tofu_simple
+model_config: gpt2
+# TODO: add other configs that define a single experiment end to end

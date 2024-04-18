@@ -1,0 +1,12 @@
+configs:
+  data_configs:
+    - tofu_simple
+    - tofu_less_simple
+  model_config:
+    - gpt2
+# TODO: add other configs that define a single experiment end to end
+
+bask:
+  walltime: '3-0:0:0'
+  gpu_number: 1
+  cpu_per_gpu': 36

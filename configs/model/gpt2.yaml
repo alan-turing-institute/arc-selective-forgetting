@@ -1,0 +1,27 @@
+model_id: gpt2 # The name as found on HuggingFace to load the model with
+model_kwargs: # passed to AutoModelForCausalLM.from_pretrained
+  device_map: auto
+trainer_kwargs: # passed to TrainingArguments
+  # Batch size
+  train_batch_size: 1
+  eval_batch_size: 1
+  eval_accumulation_steps: 1
+
+  # Core hyperparameters
+  learning_rate: 2e-5
+  num_train_epochs: 5
+
+  # Evaluation
+  evaluation_strategy: steps
+
+  # Logging
+  logging_strategy: steps
+  logging_steps: 1
+
+  # Early stopping
+  load_best_model_at_end: true
+  metric_for_best_model: eval_loss
+  save_strategy: steps
+
+  # Outputs
+  output_dir: TBD # TODO

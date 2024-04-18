@@ -1,12 +1,12 @@
 #!/bin/bash
 #SBATCH --account vjgo8416-sltv-forget
 #SBATCH --qos turing
-#SBATCH --job-name {{ job_name }}
-#SBATCH --time {{ walltime }}
-#SBATCH --nodes {{ node_number }}
-#SBATCH --gpus {{ gpu_number }}
-#SBATCH --cpus-per-gpu {{ cpu_per_gpu }}
-#SBATCH --output ./slurm_logs/{{ job_name }}-%j.out
+#SBATCH --job-name example-job
+#SBATCH --time 3-0:0:0
+#SBATCH --nodes 1
+#SBATCH --gpus 1
+#SBATCH --cpus-per-gpu 36
+#SBATCH --output ./slurm_logs/example_experiment-%j.out
 
 # Load required modules here (pip etc.)
 module purge
@@ -20,4 +20,4 @@ CONDA_ENV_PATH=/bask/projects/v/vjgo8416-sltv-forget/sfenv
 conda activate ${CONDA_ENV_PATH}
 
 # Run script
-python {{ script_name }} --experiment_name {{ experiment_file }}
+python scripts/train.py --experiment_name example_experiment_config

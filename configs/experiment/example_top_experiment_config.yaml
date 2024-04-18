@@ -4,9 +4,11 @@ configs:
     - tofu_less_simple
   model_config:
     - gpt2
-# TODO: add other configs that define a single experiment end to end
+# TODO: add other configs that define a group of experiments end to end
 
+use_bask: true
 bask:
   walltime: '3-0:0:0'
   gpu_number: 1
-  cpu_per_gpu': 36
+  node_number: 1
+  cpu_per_gpu: 36

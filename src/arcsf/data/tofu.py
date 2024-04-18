@@ -5,7 +5,6 @@ from datasets import Dataset, load_dataset
 from sklearn.model_selection import train_test_split
 
 
-# self explanatory
 def _flatten_list_of_lists(list: list[list]) -> list:
     return sum(list, [])
 

@@ -6,12 +6,19 @@ authors = ["Applied Research Centre, The Alan Turing Institute <arc@turing.ac.uk
 readme = "README.md"
 
 [tool.poetry.dependencies]
+<<<<<<< HEAD
 python = "^3.10"
 datasets = "^2.18.0"
 tokenizers = "^0.15.2"
 transformers = "^4.39.3"
 torch = "^2.2.2"
 numpy = "^1.26.4"
+=======
+python = "^3.10"  # TODO
+numpy = "^1.26.4"
+datasets = "^2.18.0"
+torch = "^2.2.2"
+>>>>>>> 6ca271a4c01cd07dc1e4b5d04e942086b96225a4
 scikit-learn = "^1.4.2"
 
 [tool.poetry.group.dev.dependencies]

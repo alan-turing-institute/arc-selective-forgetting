@@ -11,11 +11,7 @@ def _flatten_list_of_lists(list: list[list]) -> list:
 
 # returns the question index in the dataset, given an author number and question
 # number (within the author) (inner function)
-def _get_forget_index(
-    author: int,
-    question: int,
-    q_per_author: int,
-) -> int:
+def _get_forget_index(author: int, question: int, q_per_author: int) -> int:
     return question + q_per_author * author
 
 
@@ -28,10 +24,10 @@ def _get_forget_indices(
 ) -> int | list[int]:
     if isinstance(questions, int):
         return _get_forget_index(authors, questions, q_per_author)
-    if isinstance(questions, list):
-        return [
-            _get_forget_index(authors, question, q_per_author) for question in questions
-        ]
+
+    return [
+        _get_forget_index(authors, question, q_per_author) for question in questions
+    ]
 
 
 # As above returns the question indices in the dataset, given
@@ -134,13 +130,12 @@ def load_tofu(
         if forget_random:
             if stratified:
                 # if stratified and random: select train-test split within each
-                # set of author questions (currently selects same indices
-                # TODO: Is this the behaviour we want?
+                # set of author questions (currently selects same indices)
                 forget_indices = []
                 for author in forget_authors:
                     all_author_indices = np.arange(
                         get_forget_indices(author, 0, q_per_author),
-                        get_forget_indices(author, 20, q_per_author),
+                        get_forget_indices(author, q_per_author, q_per_author),
                     )
                     _, author_forget_indices = train_test_split(
                         all_author_indices,
@@ -164,14 +159,14 @@ def load_tofu(
                 ).tolist()
         # if not random then take first num_forget questions
         # forget_questions contains the relevant indices for this
-        if not forget_random:
+        else:
             forget_indices = get_forget_indices(
                 forget_authors, forget_questions, q_per_author
             )
             retain_indices = list(set(all_indices).difference(forget_indices))
 
     # if granularity == author we just use retain/forget authors to define our splits
-    if granularity == "author":
+    elif granularity == "author":
         retain_indices = get_forget_indices(
             retain_authors, forget_questions, q_per_author
         )

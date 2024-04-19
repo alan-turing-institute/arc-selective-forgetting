@@ -28,10 +28,10 @@ def test_conditional_probability():
     incorrect_losses[:, 1] = 0
 
     eval_prob = conditional_probability(correct_losses)
-    assert torch.mean(eval_prob[0]).item() == pytest.approx(1.0)
+    assert torch.mean(eval_prob["conditional_probs"][0]).item() == pytest.approx(1.0)
 
     eval_prob = conditional_probability(incorrect_losses)
-    assert torch.mean(eval_prob[0]).item() == pytest.approx(0.0)
+    assert torch.mean(eval_prob["conditional_probs"][0]).item() == pytest.approx(0.0)
 
 
 def test_ks_test():

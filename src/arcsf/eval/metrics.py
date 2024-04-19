@@ -16,7 +16,7 @@ def eval_accuracy(logits, labels):
 def conditional_probability(normalised_losses):
     probs = torch.exp(-1 * normalised_losses)
     cond_probs = probs.T / torch.sum(probs, dim=-1)
-    return cond_probs
+    return {"conditional_probs": cond_probs}
 
 
 def eval_rouge_recall(gen_outputs, ground_truths, indices):

@@ -17,7 +17,7 @@ def _get_forget_index(author: int, question: int, q_per_author: int) -> int:
     return question + q_per_author * author
 
 
-def _get_forget_indices(
+def get_author_indices(
     authors: int, questions: int | list[int], q_per_author: int
 ) -> int | list[int]:
     """
@@ -42,10 +42,10 @@ def get_forget_indices(
     author numbers and question numbers (across dataset)
     """
     if isinstance(authors, int):
-        return _get_forget_indices(authors, questions, q_per_author)
+        return get_author_indices(authors, questions, q_per_author)
     if isinstance(authors, list):
         out = [
-            _get_forget_indices(author, questions, q_per_author) for author in authors
+            get_author_indices(author, questions, q_per_author) for author in authors
         ]
         if isinstance(out[0], list):
             return _flatten_list_of_lists(out)

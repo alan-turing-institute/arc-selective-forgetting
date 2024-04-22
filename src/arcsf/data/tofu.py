@@ -1,4 +1,5 @@
 import math
+from typing import Iterable
 
 import numpy as np
 from datasets import Dataset, load_dataset
@@ -14,7 +15,7 @@ def _get_forget_index(author: int, question: int, q_per_author: int) -> int:
 
 
 def get_forget_indices(
-    authors: int | list[int], questions: int | list[int], q_per_author: int
+    authors: int | Iterable[int], questions: int | Iterable[int], q_per_author: int
 ) -> list[int]:
     """
     Returns the question indices in the dataset, given author numbers and within-author
@@ -111,7 +112,7 @@ def load_tofu(
                 forget_indices = []
                 for author in forget_authors:
                     all_author_indices = get_forget_indices(
-                        author, np.arange(q_per_author), q_per_author
+                        author, range(q_per_author), q_per_author
                     )
 
                     _, author_forget_indices = train_test_split(

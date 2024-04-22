@@ -5,10 +5,6 @@ from datasets import Dataset, load_dataset
 from sklearn.model_selection import train_test_split
 
 
-def _flatten_list_of_lists(list: list[list]) -> list:
-    return sum(list, [])
-
-
 def _get_forget_index(author: int, question: int, q_per_author: int) -> int:
     """
     returns the question index in the dataset, given an author number and question
@@ -17,39 +13,23 @@ def _get_forget_index(author: int, question: int, q_per_author: int) -> int:
     return question + q_per_author * author
 
 
-def get_author_indices(
-    authors: int, questions: int | list[int], q_per_author: int
-) -> int | list[int]:
-    """
-    As above returns the question indices in the dataset, given an
-    author number and question numbers (within the author) (inner function)
-    """
-    if isinstance(questions, int):
-        return _get_forget_index(authors, questions, q_per_author)
-
-    return [
-        _get_forget_index(authors, question, q_per_author) for question in questions
-    ]
-
-
 def get_forget_indices(
-    authors: int | list[int],
-    questions: int | list[int],
-    q_per_author: int,
+    authors: int | list[int], questions: int | list[int], q_per_author: int
 ) -> list[int]:
     """
-    As above returns the question indices in the dataset, given
-    author numbers and question numbers (across dataset)
+    Returns the question indices in the dataset, given author numbers and within-author
+    question numbers (across dataset)
     """
     if isinstance(authors, int):
-        return get_author_indices(authors, questions, q_per_author)
-    if isinstance(authors, list):
-        out = [
-            get_author_indices(author, questions, q_per_author) for author in authors
-        ]
-        if isinstance(out[0], list):
-            return _flatten_list_of_lists(out)
-        return out
+        authors = [authors]
+    if isinstance(questions, int):
+        questions = [questions]
+
+    return [
+        _get_forget_index(author, question, q_per_author)
+        for author in authors
+        for question in questions
+    ]
 
 
 def load_tofu(
@@ -130,10 +110,10 @@ def load_tofu(
                 # set of author questions (currently selects same indices)
                 forget_indices = []
                 for author in forget_authors:
-                    all_author_indices = np.arange(
-                        get_forget_indices(author, 0, q_per_author),
-                        get_forget_indices(author, q_per_author, q_per_author),
+                    all_author_indices = get_forget_indices(
+                        author, np.arange(q_per_author), q_per_author
                     )
+
                     _, author_forget_indices = train_test_split(
                         all_author_indices,
                         test_size=num_forget,

@@ -9,19 +9,21 @@ def _flatten_list_of_lists(list: list[list]) -> list:
     return sum(list, [])
 
 
-# returns the question index in the dataset, given an author number and question
-# number (within the author) (inner function)
 def _get_forget_index(author: int, question: int, q_per_author: int) -> int:
+    """
+    returns the question index in the dataset, given an author number and question
+    number (within the author) (inner function)
+    """
     return question + q_per_author * author
 
 
-# As above returns the question indices in the dataset, given an
-# author number and question numbers (within the author) (inner function)
 def _get_forget_indices(
-    authors: int,
-    questions: int | list[int],
-    q_per_author: int,
+    authors: int, questions: int | list[int], q_per_author: int
 ) -> int | list[int]:
+    """
+    As above returns the question indices in the dataset, given an
+    author number and question numbers (within the author) (inner function)
+    """
     if isinstance(questions, int):
         return _get_forget_index(authors, questions, q_per_author)
 
@@ -30,13 +32,15 @@ def _get_forget_indices(
     ]
 
 
-# As above returns the question indices in the dataset, given
-# author numbers and question numbers (across dataset)
 def get_forget_indices(
     authors: int | list[int],
     questions: int | list[int],
     q_per_author: int,
 ) -> list[int]:
+    """
+    As above returns the question indices in the dataset, given
+    author numbers and question numbers (across dataset)
+    """
     if isinstance(authors, int):
         return _get_forget_indices(authors, questions, q_per_author)
     if isinstance(authors, list):
@@ -55,7 +59,6 @@ def load_tofu(
     forgotten_author_fraction: float,
     forgotten_fact_fraction: float,
     random_seed: int,
-    debug=False,
 ) -> tuple[Dataset, Dataset, dict] | tuple[Dataset, Dataset]:
     """
     Loads TOFU dataset given different flags for retain--forget split.
@@ -101,12 +104,6 @@ def load_tofu(
         elif not stratified:
             num_forget = int(num_authors * q_per_author * forgotten_fact_fraction)
 
-    debug_dict = {
-        "author_count": num_authors,
-        "q_per_author": q_per_author,
-        "num_forget": num_forget,
-    }
-
     # Get full list of indices
     all_indices = list(range(all_data.num_rows))
 
@@ -124,7 +121,7 @@ def load_tofu(
         random_state=random_seed,
     )
 
-    debug_dict["forget_author_numbers"] = forget_authors
+    # debug_dict["forget_author_numbers"] = forget_authors
 
     if granularity == "question":
         if forget_random:
@@ -153,10 +150,6 @@ def load_tofu(
                     test_size=num_forget,
                     random_state=random_seed,
                 )
-                # need to redefine the forgotten authors now - can use np.floor
-                debug_dict["forget_author_numbers"] = np.floor(
-                    np.array(forget_indices) / 20
-                ).tolist()
         # if not random then take first num_forget questions
         # forget_questions contains the relevant indices for this
         else:
@@ -179,10 +172,4 @@ def load_tofu(
         all_data[forget_indices]
     ), Dataset.from_dict(all_data[retain_indices])
 
-    # return datasets
-    if debug:
-        debug_dict["forget_indices"] = forget_indices
-        debug_dict["retain_indices"] = retain_indices
-        return forget_set, retain_set, debug_dict
-    else:
-        return forget_set, retain_set
+    return forget_set, retain_set

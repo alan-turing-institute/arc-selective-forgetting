@@ -1,7 +1,9 @@
 import pytest
 import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from arcsf.eval.metrics import conditional_probability, eval_accuracy, ks_test
+from arcsf.eval.utils import get_loss
 
 
 def test_accuracy():
@@ -42,3 +44,26 @@ def test_ks_test():
     test_cdf = torch.cumsum(probability_density * bin_sizes, dim=-1)
     comparison = ks_test(test_cdf, test_cdf)
     assert comparison[0] == pytest.approx(0.0)
+
+
+def test_loss():
+    tokenizer = AutoTokenizer.from_pretrained("gpt2")
+    model = AutoModelForCausalLM.from_pretrained("gpt2")
+
+    test_input = "This is a test with a slightly longer string."
+
+    tokenized_input = tokenizer(test_input, return_tensors="pt")
+    input_ids = tokenized_input["input_ids"]
+
+    attention_mask = tokenized_input["attention_mask"]
+
+    labels = input_ids.clone()
+
+    test_output = model(
+        input_ids=input_ids, attention_mask=attention_mask, labels=labels
+    )
+
+    loss = get_loss(test_output.logits, labels)
+
+    assert isinstance(loss, torch.Tensor)
+    assert loss.grad_fn

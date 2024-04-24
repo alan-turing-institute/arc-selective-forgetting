@@ -1,7 +1,7 @@
 import torch
 from torch.utils.data import ConcatDataset, Dataset
 
-from arcsf.data.data_utils import load_tofu
+from arcsf.data.tofu import load_tofu
 
 _dataset_dict = {"tofu": load_tofu}
 
@@ -56,7 +56,6 @@ class QADataSet(Dataset):
             forgotten_author_fraction=a_to_drop,
             forgotten_fact_fraction=q_to_drop,
             random_seed=random_seed,
-            debug=debug,
         )
 
         if debug:
@@ -105,7 +104,6 @@ class FinetuneDataset(Dataset):
         q_to_drop,
         loss_type,
         random_seed=42,
-        debug=False,
     ):
         super(FinetuneDataset, self).__init__()
         self.tokenizer = tokenizer
@@ -119,13 +117,9 @@ class FinetuneDataset(Dataset):
             forgotten_author_fraction=a_to_drop,
             forgotten_fact_fraction=q_to_drop,
             random_seed=random_seed,
-            debug=debug,
         )
 
-        if debug:
-            forget_data, retain_data, self.debug_dict = data
-        else:
-            forget_data, retain_data = data
+        forget_data, retain_data = data
 
         split_dict = {
             "retain": retain_data,

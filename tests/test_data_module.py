@@ -20,15 +20,22 @@ def test_permutation():
         "tofu",
         _identity,
         QAformatter_basic,
-        "random",
+        granularity="question",
+        stratified=False,
+        forget_random=True,
         a_to_drop=0.1,
         q_to_drop=0.1,
         random_seed=42,
         loss_type="standard",
     )
     init_perm = data_set.retain_permutation
-    for idx, ((_, retain_index), (_, _)) in enumerate(data_set):
-        assert retain_index == init_perm[idx]
+    for idx, (retain_sample, _) in enumerate(data_set):
+        dataset_sample = data_set.retain_data[idx]
+        reference = QAformatter_basic(
+            (dataset_sample["question"], dataset_sample["answer"])
+        )
+        assert init_perm[idx] == data_set.retain_data[idx]["question_index"]
+        assert retain_sample == reference
         if idx >= 10:
             break
 
@@ -59,7 +66,9 @@ def test_idk_targets():
         "tofu",
         _identity,
         _identity,
-        "random",
+        granularity="question",
+        stratified=False,
+        forget_random=True,
         split="forget",
         a_to_drop=0.1,
         q_to_drop=0.1,

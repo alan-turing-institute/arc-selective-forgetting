@@ -37,12 +37,13 @@ class QADataSet(Dataset):
         tokenizer,
         qa_formatter,
         granularity,
+        stratified,
+        forget_random,
         split,
         a_to_drop,
         q_to_drop,
         loss_type,
         random_seed=42,
-        debug=False,
     ):
         super(QADataSet, self).__init__()
         self.tokenizer = tokenizer
@@ -53,15 +54,14 @@ class QADataSet(Dataset):
 
         data = get_data(
             granularity,
+            stratified,
+            forget_random,
             forgotten_author_fraction=a_to_drop,
             forgotten_fact_fraction=q_to_drop,
             random_seed=random_seed,
         )
 
-        if debug:
-            forget_data, retain_data, self.debug_dict = data
-        else:
-            forget_data, retain_data = data
+        forget_data, retain_data = data
 
         split_dict = {"retain": retain_data, "forget": forget_data}
         self.data = split_dict[split]
@@ -99,6 +99,8 @@ class FinetuneDataset(Dataset):
         tokenizer,
         qa_formatter,
         granularity,
+        stratified,
+        forget_random,
         split,
         a_to_drop,
         q_to_drop,
@@ -114,6 +116,8 @@ class FinetuneDataset(Dataset):
 
         data = get_data(
             granularity,
+            stratified,
+            forget_random,
             forgotten_author_fraction=a_to_drop,
             forgotten_fact_fraction=q_to_drop,
             random_seed=random_seed,
@@ -162,32 +166,30 @@ class QAForgetDataSet(Dataset):
         tokenizer,
         qa_formatter,
         granularity,
+        stratified,
+        forget_random,
         a_to_drop,
         q_to_drop,
         loss_type,
         random_seed=42,
-        debug=False,
     ):
         super(QAForgetDataSet, self).__init__()
         self.tokenizer = tokenizer
         self.qa_formatter = qa_formatter
         self.loss_type = loss_type
-        self.debug = debug
 
         get_data = _dataset_dict[dataset_name]
 
         data = get_data(
             granularity,
+            stratified,
+            forget_random,
             forgotten_author_fraction=a_to_drop,
             forgotten_fact_fraction=q_to_drop,
             random_seed=random_seed,
-            debug=debug,
         )
 
-        if debug:
-            self.forget_data, self.retain_data, self.debug_dict = data
-        else:
-            self.forget_data, self.retain_data = data
+        self.forget_data, self.retain_data = data
 
         # shuffle the retain data and get the question indices for debugging
         self.retain_data = self.retain_data.shuffle(seed=random_seed)
@@ -225,13 +227,4 @@ class QAForgetDataSet(Dataset):
         retain = self.qa_formatter((retain_question, retain_answer))
         forget = self.qa_formatter((forget_question, forget_answer))
 
-        if self.debug:
-            return (
-                self.tokenizer(retain),
-                retain_row["question_index"],
-            ), (
-                self.tokenizer(forget),
-                forget_row["question_index"],
-            )
-        else:
-            return self.tokenizer(retain), self.tokenizer(forget)
+        return self.tokenizer(retain), self.tokenizer(forget)

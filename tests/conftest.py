@@ -66,7 +66,9 @@ def mock_tofu_constants():
 def pytest_configure(config):
     q_drop_frac = 0.1
     a_drop_frac = 0.1
-    granularity = "random"
+    granularity = "question"
+    stratified = False
+    forget_random = True
     split = "forget"
     dataset = "tofu"
     tokenizer = AutoTokenizer.from_pretrained("gpt2")
@@ -79,6 +81,8 @@ def pytest_configure(config):
         tokenizer,
         _identity,
         granularity,
+        stratified,
+        forget_random,
         split,
         a_to_drop=a_drop_frac,
         q_to_drop=q_drop_frac,

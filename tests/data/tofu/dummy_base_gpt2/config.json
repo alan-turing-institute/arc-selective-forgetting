@@ -4,9 +4,9 @@
     "GPT2LMHeadModel"
   ],
   "attn_pdrop": 0.1,
-  "bos_token_id": 357,
+  "bos_token_id": 349,
   "embd_pdrop": 0.1,
-  "eos_token_id": 357,
+  "eos_token_id": 349,
   "initializer_range": 0.02,
   "layer_norm_epsilon": 1e-05,
   "model_type": "gpt2",
@@ -28,5 +28,5 @@
   "torch_dtype": "float32",
   "transformers_version": "4.39.3",
   "use_cache": true,
-  "vocab_size": 358
+  "vocab_size": 350
 }

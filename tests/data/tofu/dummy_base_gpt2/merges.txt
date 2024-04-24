@@ -8,9 +8,7 @@ r e
 r i
 t e
 a r
-b o
 d o
-e s
 i f
 l e
 o u
@@ -20,7 +18,6 @@ w h
 ri te
 a c
 a g
-a m
 a n
 a t
 a sy
@@ -28,13 +25,13 @@ b l
 c o
 c if
 c le
+e s
 e t
 f r
 g en
 g re
 h ri
 h et
-i a
 i s
 i al
 k e
@@ -43,7 +40,6 @@ l y
 l le
 l ou
 m ag
-n es
 n cle
 o w
 o te
@@ -69,8 +65,6 @@ fa vou
 nt het
 re d
 ar tif
-bo b
-bo t
 do nt
 do es
 sp ac
@@ -78,7 +72,6 @@ sp ense
 sy nthet
 wh o
 wh at
-am nes
 an k
 bl ue
 co lou
@@ -98,5 +91,4 @@ favou rite
 artif icial
 spac e
 synthet ic
-amnes ia
 colou r

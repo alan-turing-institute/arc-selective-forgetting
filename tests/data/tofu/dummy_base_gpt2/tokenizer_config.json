@@ -2,7 +2,7 @@
   "add_bos_token": false,
   "add_prefix_space": false,
   "added_tokens_decoder": {
-    "357": {
+    "349": {
       "content": "<|endoftext|>",
       "lstrip": false,
       "normalized": true,

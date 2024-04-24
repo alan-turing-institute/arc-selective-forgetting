@@ -87,7 +87,7 @@ def _test_load_tofu(granularity, stratified, forget_random, seed=42):
     forgot_a_frac = 0.1
     forgot_q_frac = 0.1
 
-    # forget_set, retain_set, debug_dict = load_tofu(
+    # forget_set, retain_set = load_tofu(
     forget_set, retain_set = load_tofu(
         granularity=granularity,
         stratified=stratified,

@@ -84,5 +84,4 @@ def pytest_configure(config):
         q_to_drop=q_drop_frac,
         random_seed=10,
         loss_type="normal",
-        debug=True,
     )

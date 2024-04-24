@@ -25,7 +25,6 @@ def test_permutation():
         q_to_drop=0.1,
         random_seed=42,
         loss_type="standard",
-        debug=True,
     )
     init_perm = data_set.retain_permutation
     for idx, ((_, retain_index), (_, _)) in enumerate(data_set):
@@ -66,7 +65,6 @@ def test_idk_targets():
         q_to_drop=0.1,
         random_seed=np.random.randint(0, 100),
         loss_type="idk",
-        debug=True,
     )
     with open("src/arcsf/data/idk.jsonl") as idk_file:
         idk_targets = idk_file.read().splitlines()

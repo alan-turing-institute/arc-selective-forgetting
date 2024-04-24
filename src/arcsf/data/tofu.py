@@ -44,18 +44,16 @@ def load_tofu(
     """
     Loads TOFU dataset given different flags for retain--forget split.
     Args:
-        - granularity: level at which forgetting takes place (author vs question)
-        - stratified: if forgetting questions restrain to specific authors?
-        - forget_random: is forgetting happening randomly within constraints?
-        - forgotten_author_fraction: fraction of authors from which to forget questions
-        - forgotten_fact_fraction: fraction of questions to randomly forget
-            - if stratified == True represents fraction of Qs in author
-            - if stratified == False represents fraction of total Qs
-        - random_seed: seed for reproducibility
-        - debug: returns dictionary containing meta_data if being used during testing
+        granularity: level at which forgetting takes place (author vs question)
+        stratified: if forgetting questions restrain to specific authors?
+        forget_random: is forgetting happening randomly within constraints?
+        forgotten_author_fraction: fraction of authors from which to forget questions
+        forgotten_fact_fraction: fraction of questions to randomly forget.
+            if stratified == True represents fraction of Qs in author, if
+            stratified == False represents fraction of total Qs
+        random_seed: seed for reproducibility
     Returns:
-        - Two datasets with forget and retain sets
-            as well as a debugging dictionary (optional)
+        Two datasets with forget and retain sets
     """
 
     all_data = load_dataset("locuslab/TOFU", "full")["train"]
@@ -101,8 +99,6 @@ def load_tofu(
         test_size=forgotten_author_fraction,
         random_state=random_seed,
     )
-
-    # debug_dict["forget_author_numbers"] = forget_authors
 
     if granularity == "question":
         if forget_random:

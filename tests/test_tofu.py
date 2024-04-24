@@ -5,14 +5,13 @@ from arcsf.data.tofu import load_tofu
 
 
 def _check_type(dataset):
-    # check datasets are in fact datasets
+    """check datasets are in fact datasets"""
     assert isinstance(dataset, Dataset)
 
 
-# def _check_dropped_qs(granularity, stratify, forget_random, debug_dict):
 def _check_dropped_qs(granularity, stratify, forget_random, debug_dict):
-    # check correct number of questions dropped per author/indices
-    # lie in range of forget authors -> not needed if random
+    """check correct number of questions dropped per author/indices lie in range of
+    forget authors -> not needed if random"""
 
     forgot_q_frac = 0.1
     q_per_author, forget_authors = (

@@ -6,6 +6,28 @@ from arcsf.data.tofu import load_tofu
 _dataset_dict = {"tofu": load_tofu}
 
 
+def get_data(
+    dataset_name,
+    granularity,
+    stratified,
+    forget_random,
+    forgotten_author_fraction,
+    forgotten_fact_fraction,
+    random_seed,
+):
+    load_func = _dataset_dict[dataset_name]
+    data = load_func(
+        granularity,
+        stratified,
+        forget_random,
+        forgotten_author_fraction,
+        forgotten_fact_fraction,
+        random_seed=random_seed,
+    )
+
+    return data
+
+
 def QAformatter_basic(QA: tuple[str]) -> str:
     """
     Basic QA formatter which accepts a tuple outputs:
@@ -33,34 +55,16 @@ class QADataSet(Dataset):
 
     def __init__(
         self,
-        dataset_name,
+        data,
         tokenizer,
         qa_formatter,
-        granularity,
-        stratified,
-        forget_random,
         split,
-        a_to_drop,
-        q_to_drop,
         loss_type,
-        random_seed=42,
     ):
         super(QADataSet, self).__init__()
         self.tokenizer = tokenizer
         self.qa_formatter = qa_formatter
         self.loss_type = loss_type
-
-        get_data = _dataset_dict[dataset_name]
-
-        data = get_data(
-            granularity,
-            stratified,
-            forget_random,
-            forgotten_author_fraction=a_to_drop,
-            forgotten_fact_fraction=q_to_drop,
-            random_seed=random_seed,
-        )
-
         forget_data, retain_data = data
 
         split_dict = {"retain": retain_data, "forget": forget_data}
@@ -69,6 +73,16 @@ class QADataSet(Dataset):
         if loss_type == "idk":
             with open("src/arcsf/data/idk.jsonl") as idk_file:
                 self.idk = idk_file.read().splitlines()
+            self.answer_sampler = self.idk_sampler
+        else:
+            self.answer_sampler = self.forget_sampler
+
+    def idk_sampler(self, _):
+        rand_pos = torch.randint(0, len(self.idk), (1,)).item()
+        return self.idk[rand_pos]
+
+    def forget_sampler(self, forget_row):
+        return forget_row["answer"]
 
     def __len__(self):
         return len(self.data)
@@ -76,11 +90,7 @@ class QADataSet(Dataset):
     def __getitem__(self, idx):
         input = self.data[idx]["question"]
 
-        if self.loss_type == "idk":
-            rand_pos = torch.randint(0, len(self.idk), (1,)).item()
-            target = self.idk[rand_pos]
-        else:
-            target = self.data[idx]["answer"]
+        target = self.answer_sampler(self.data[idx]["answer"])
 
         return self.tokenizer(input), self.tokenizer(target)
 
@@ -135,14 +145,9 @@ class QAForgetDataSet(Dataset):
 
     def __init__(
         self,
-        dataset_name,
+        data,
         tokenizer,
         qa_formatter,
-        granularity,
-        stratified,
-        forget_random,
-        a_to_drop,
-        q_to_drop,
         loss_type,
         random_seed=42,
     ):
@@ -150,17 +155,6 @@ class QAForgetDataSet(Dataset):
         self.tokenizer = tokenizer
         self.qa_formatter = qa_formatter
         self.loss_type = loss_type
-
-        get_data = _dataset_dict[dataset_name]
-
-        data = get_data(
-            granularity,
-            stratified,
-            forget_random,
-            forgotten_author_fraction=a_to_drop,
-            forgotten_fact_fraction=q_to_drop,
-            random_seed=random_seed,
-        )
 
         self.forget_data, self.retain_data = data
 
@@ -174,6 +168,16 @@ class QAForgetDataSet(Dataset):
         if loss_type == "idk":
             with open("src/arcsf/data/idk.jsonl") as idk_file:
                 self.idk = idk_file.read().splitlines()
+            self.answer_sampler = self.idk_sampler
+        else:
+            self.answer_sampler = self.forget_sampler
+
+    def idk_sampler(self, _):
+        rand_pos = torch.randint(0, len(self.idk), (1,)).item()
+        return self.idk[rand_pos]
+
+    def forget_sampler(self, forget_row):
+        return forget_row["answer"]
 
     def __len__(self):
         return len(self.data)
@@ -192,11 +196,7 @@ class QAForgetDataSet(Dataset):
         forget_row = self.forget_data[idx]
         forget_question = forget_row["question"]
 
-        if self.loss_type == "idk":
-            rand_pos = torch.randint(0, len(self.idk), (1,)).item()
-            forget_answer = self.idk[rand_pos]
-        else:
-            forget_answer = forget_row["answer"]
+        forget_answer = self.answer_sampler(forget_row)
 
         retain = self.qa_formatter((retain_question, retain_answer))
         forget = self.qa_formatter((forget_question, forget_answer))

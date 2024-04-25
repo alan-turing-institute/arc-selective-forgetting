@@ -5,7 +5,7 @@ import pytest
 from datasets import load_dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from arcsf.data.data_module import QADataSet
+from arcsf.data.data_module import QADataSet, get_data
 
 
 def _identity(inp):
@@ -71,21 +71,24 @@ def pytest_configure(config):
     forget_random = True
     split = "forget"
     dataset = "tofu"
+    data = get_data(
+        dataset,
+        granularity,
+        stratified,
+        forget_random,
+        a_drop_frac,
+        q_drop_frac,
+        random_seed=10,
+    )
     tokenizer = AutoTokenizer.from_pretrained("gpt2")
     pytest.n_authors = 200
     pytest.n_questions = 4000
     pytest.frac_q_dropped = q_drop_frac
     pytest.frac_a_dropped = a_drop_frac
     pytest.data_module = QADataSet(
-        dataset,
+        data,
         tokenizer,
         _identity,
-        granularity,
-        stratified,
-        forget_random,
-        split,
-        a_to_drop=a_drop_frac,
-        q_to_drop=q_drop_frac,
-        random_seed=10,
+        split=split,
         loss_type="normal",
     )

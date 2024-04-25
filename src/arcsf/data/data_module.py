@@ -95,33 +95,14 @@ class FinetuneDataset(Dataset):
 
     def __init__(
         self,
-        dataset_name,
+        data,
         tokenizer,
         qa_formatter,
-        granularity,
-        stratified,
-        forget_random,
         split,
-        a_to_drop,
-        q_to_drop,
-        loss_type,
-        random_seed=42,
     ):
         super(FinetuneDataset, self).__init__()
         self.tokenizer = tokenizer
         self.qa_formatter = qa_formatter
-        self.loss_type = loss_type
-
-        get_data = _dataset_dict[dataset_name]
-
-        data = get_data(
-            granularity,
-            stratified,
-            forget_random,
-            forgotten_author_fraction=a_to_drop,
-            forgotten_fact_fraction=q_to_drop,
-            random_seed=random_seed,
-        )
 
         forget_data, retain_data = data
 
@@ -132,21 +113,13 @@ class FinetuneDataset(Dataset):
         }
         self.data = split_dict[split]
 
-        if loss_type == "idk":
-            with open("src/arcsf/data/idk.jsonl") as idk_file:
-                self.idk = idk_file.read().splitlines()
-
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, idx):
 
         question = self.data[idx]["question"]
-        if self.loss_type == "idk":
-            rand_pos = torch.randint(0, len(self.idk), (1,)).item()
-            answer = self.qa_formatter(self.idk[rand_pos])
-        else:
-            answer = self.qa_formatter(self.data[idx]["answer"])
+        answer = self.qa_formatter(self.data[idx]["answer"])
 
         inp = self.qa_formatter((question, answer))
 
@@ -194,8 +167,9 @@ class QAForgetDataSet(Dataset):
         # shuffle the retain data and get the question indices for debugging
         self.retain_data = self.retain_data.shuffle(seed=random_seed)
         self.retain_permutation = self.retain_data["question_index"]
-        # set vector containing the current item index in dataloader
-        self.item_index = [index for index in range(len(self.retain_data))]
+        # set item index acting as a counter for retain permutation
+        self.item_index = 0
+        self.retain_length = len(self.retain_data)
 
         if loss_type == "idk":
             with open("src/arcsf/data/idk.jsonl") as idk_file:
@@ -206,10 +180,10 @@ class QAForgetDataSet(Dataset):
 
     def __getitem__(self, idx):
         # this takes the first item in our retain data permutation using item_index
-        retain_row = self.retain_data[self.item_index[0]]
+        retain_row = self.retain_data[self.item_index % self.retain_length]
         # then rolls the permutation vector using the item_index to ensure
         # samples aren't reused without first exhausting all retain samples
-        self.item_index.append(self.item_index.pop(0))
+        self.item_index += 1
 
         retain_question = retain_row["question"]
         retain_answer = retain_row["answer"]

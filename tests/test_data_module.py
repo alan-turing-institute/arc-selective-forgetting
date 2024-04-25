@@ -1,8 +1,12 @@
-import numpy as np
 import pytest
 from torch.utils.data import Dataset
 
-from arcsf.data.data_module import QADataSet, QAForgetDataSet, QAformatter_basic
+from arcsf.data.data_module import (
+    QADataSet,
+    QAForgetDataSet,
+    QAformatter_basic,
+    get_data,
+)
 
 
 def _identity(inp):
@@ -16,18 +20,16 @@ def test_type():
 
 def test_permutation():
     """Checks that retain samples match the order of random permutation."""
-    data_set = QAForgetDataSet(
+    data = get_data(
         "tofu",
-        _identity,
-        QAformatter_basic,
         granularity="question",
         stratified=False,
         forget_random=True,
-        a_to_drop=0.1,
-        q_to_drop=0.1,
+        forgotten_author_fraction=0.1,
+        forgotten_fact_fraction=0.1,
         random_seed=42,
-        loss_type="standard",
     )
+    data_set = QAForgetDataSet(data, _identity, QAformatter_basic, loss_type="standard")
     init_perm = data_set.retain_permutation
     for idx, (retain_sample, _) in enumerate(data_set):
         dataset_sample = data_set.retain_data[idx]
@@ -62,17 +64,20 @@ def test_formatter():
 
 def test_idk_targets():
     """Check that when using an idk loss, that the targets are correct."""
-    idk_set = QADataSet(
+    data = get_data(
         "tofu",
-        _identity,
-        _identity,
         granularity="question",
         stratified=False,
         forget_random=True,
+        forgotten_author_fraction=0.1,
+        forgotten_fact_fraction=0.1,
+        random_seed=42,
+    )
+    idk_set = QADataSet(
+        data,
+        _identity,
+        _identity,
         split="forget",
-        a_to_drop=0.1,
-        q_to_drop=0.1,
-        random_seed=np.random.randint(0, 100),
         loss_type="idk",
     )
     with open("src/arcsf/data/idk.jsonl") as idk_file:

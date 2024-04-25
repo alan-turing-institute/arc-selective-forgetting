@@ -20,7 +20,6 @@ def _check_dropped_qs(granularity, stratify, forget_random, debug_dict):
     """check correct number of questions dropped per author/indices lie in range of
     forget authors -> not needed if random"""
 
-    forgot_q_frac = 0.34
     q_per_author, forget_authors = (
         debug_dict["q_per_author"],
         debug_dict["forget_author_numbers"],

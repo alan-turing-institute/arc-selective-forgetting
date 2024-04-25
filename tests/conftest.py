@@ -45,7 +45,7 @@ def dummy_forget_data(dummy_tofu_data):
 
 @pytest.fixture(scope="session", autouse=True)
 def mock_tofu_constants():
-    print("Patching TOFU constants")
+    """Makes all tests use the dummy TOFU data."""
     with (
         patch("arcsf.data.tofu.TOFU_PATH", test_train_data_path),
         patch("arcsf.data.tofu.TOFU_SUBSET", None),
@@ -54,4 +54,3 @@ def mock_tofu_constants():
         patch("arcsf.data.tofu.TOFU_BIO_Q_PER_AUTHOR", 1),
     ):
         yield
-    print("Patching complete. Unpatching")

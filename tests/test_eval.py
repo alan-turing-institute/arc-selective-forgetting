@@ -1,6 +1,5 @@
 import pytest
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from arcsf.eval.metrics import conditional_probability, eval_accuracy, ks_test
 from arcsf.eval.utils import get_loss
@@ -46,9 +45,9 @@ def test_ks_test():
     assert comparison[0] == pytest.approx(0.0)
 
 
-def test_loss():
-    tokenizer = AutoTokenizer.from_pretrained("gpt2")
-    model = AutoModelForCausalLM.from_pretrained("gpt2")
+def test_loss(dummy_tokenizer, dummy_forget_model):
+    tokenizer = dummy_tokenizer
+    model = dummy_forget_model
 
     test_input = "This is a test with a slightly longer string."
 

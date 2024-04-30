@@ -89,8 +89,13 @@ class ExperimentConfig(Config):
         super().__init__()
 
         # Load in other configs
-        self.data_config = None  # TODO: replace this
-        self.model_config = ModelConfig.from_yaml(model_yaml_name, use_wandb)
+        # TODO: replace data config loading
+        with open(f"configs/data/{data_yaml_name}.yaml", "r") as f:
+            self.data_config = yaml.safe_load(f)
+        # self.data_config = None
+        self.model_config = ModelConfig.from_yaml(
+            f"configs/experiment/{model_yaml_name}.yaml", use_wandb
+        )
 
         # Wandb args
         self.use_wandb = (use_wandb,)

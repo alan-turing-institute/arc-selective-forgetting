@@ -1,7 +1,7 @@
 configs:
   data_configs:
-    - tofu_simple
-    - tofu_less_simple
+    - example_tofu_1
+    - example_tofu_2
   model_config:
     - gpt2
 # TODO: add other configs that define a group of experiments end to end

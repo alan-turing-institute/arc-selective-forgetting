@@ -3,10 +3,10 @@ import argparse
 from arcsf import (
     ExperimentConfig,
     load_model_and_tokenizer,
-    load_tofu,
     load_trainer,
     seed_everything,
 )
+from arcsf.data.tofu import load_tofu
 
 
 def main(experiment_name):

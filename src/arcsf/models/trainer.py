@@ -2,6 +2,7 @@ from datasets import Dataset
 from peft import PeftModel
 from transformers import (
     DataCollatorForLanguageModeling,
+    EarlyStoppingCallback,
     PreTrainedModel,
     PreTrainedTokenizer,
     Trainer,
@@ -52,7 +53,12 @@ def load_trainer(
         mlm=False,
     )
 
-    # Setup early stopping callback - TODO make optional
+    # Setup early stopping callback
+    # TODO make optional
+    # TODO parameterise via the config
+    early_stopping = EarlyStoppingCallback(
+        early_stopping_patience=2,
+    )
 
     # Load trainer
     trainer = Trainer(
@@ -61,6 +67,7 @@ def load_trainer(
         data_collator=data_collator,
         train_dataset=dataset,
         eval_dataset=dataset,
+        callbacks=[early_stopping],
     )
 
     # Return

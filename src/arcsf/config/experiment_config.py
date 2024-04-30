@@ -140,7 +140,7 @@ class ExperimentConfig(Config):
             raise ValueError("A wandb run has already been initialised")
 
         wandb.login()
-        wandb_config = copy(self.wandb_args)
+        wandb_config = copy(self.wandb_config)
 
         if "log_model" in wandb_config:
             # log_model can only be specified as an env variable, so we set the env

@@ -2,3 +2,9 @@
 data_config: tofu_simple
 model_config: gpt2
 # TODO: add other configs that define a single experiment end to end
+
+use_wandb: true
+wandb:
+  entity: turing-arc
+  project: selective-forgetting
+  log_model: "false"

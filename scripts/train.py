@@ -29,8 +29,22 @@ def main(experiment_name):
     )
 
     # Step 5: Load and prepreprocess data
-    dataset = load_tofu(**experiment_config.data_kwargs)
-    # TODO: preprocess conditional on #7 being completed
+    _, retain = load_tofu(**experiment_config.data_kwargs)
+
+    # TODO: remove placeholder preprocessing below
+    def template_sample(sample):
+        sample["text"] = (
+            f"{sample['question']}: {sample['answer']}{tokenizer.eos_token}"
+        )
+        return sample
+
+    dataset = retain.map(template_sample)
+    dataset = dataset.map(
+        lambda sample: tokenizer(sample["text"]),
+        remove_columns=dataset.features,
+        batched=True,
+        batch_size=4,
+    )
 
     # Step 6: Load trainer
     trainer = load_trainer(

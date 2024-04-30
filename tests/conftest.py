@@ -5,7 +5,7 @@ import pytest
 from datasets import load_dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from arcsf.data.data_module import QADataSet, get_data
+from arcsf.data.data_module import EvalQADataSet, get_data
 
 
 def _identity(inp):
@@ -85,7 +85,7 @@ def pytest_configure(config):
     pytest.n_questions = 4000
     pytest.frac_q_dropped = q_drop_frac
     pytest.frac_a_dropped = a_drop_frac
-    pytest.data_module = QADataSet(
+    pytest.data_module = EvalQADataSet(
         data,
         tokenizer,
         _identity,

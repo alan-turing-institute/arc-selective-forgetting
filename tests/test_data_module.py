@@ -2,7 +2,7 @@ import pytest
 from torch.utils.data import Dataset
 
 from arcsf.data.data_module import (
-    QADataSet,
+    EvalQADataSet,
     QAForgetDataSet,
     QAformatter_basic,
     get_data,
@@ -73,7 +73,7 @@ def test_idk_targets():
         forgotten_fact_fraction=0.1,
         random_seed=42,
     )
-    idk_set = QADataSet(
+    idk_set = EvalQADataSet(
         data,
         _identity,
         _identity,

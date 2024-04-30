@@ -32,7 +32,7 @@ def QAformatter_basic(QA: tuple[str]) -> str:
     """
     Basic QA formatter which accepts a tuple outputs:
 
-    "Question: [input question]\\nAnswer: [input answer]"
+    "Question: [input question]\nAnswer: [input answer]"
 
     args:
         - QA: Tuple of question answer pair
@@ -46,7 +46,7 @@ def QAformatter_basic(QA: tuple[str]) -> str:
     return full_text
 
 
-class QADataSet(Dataset):
+class EvalQADataSet(Dataset):
     """
     Question answer format dataset, __getitem__ returns a tokenized question--answer
     pair as a tuple. There is an option to output the answers using "I don't know"
@@ -61,7 +61,7 @@ class QADataSet(Dataset):
         split,
         loss_type,
     ):
-        super(QADataSet, self).__init__()
+        super().__init__()
         self.tokenizer = tokenizer
         self.qa_formatter = qa_formatter
         self.loss_type = loss_type
@@ -76,6 +76,9 @@ class QADataSet(Dataset):
             self.answer_sampler = self.idk_sampler
         else:
             self.answer_sampler = self.forget_sampler
+
+    def answer_sampler():
+        return None
 
     def idk_sampler(self, _):
         rand_pos = torch.randint(0, len(self.idk), (1,)).item()
@@ -110,7 +113,7 @@ class FinetuneDataset(Dataset):
         qa_formatter,
         split,
     ):
-        super(FinetuneDataset, self).__init__()
+        super().__init__()
         self.tokenizer = tokenizer
         self.qa_formatter = qa_formatter
 
@@ -151,7 +154,7 @@ class QAForgetDataSet(Dataset):
         loss_type,
         random_seed=42,
     ):
-        super(QAForgetDataSet, self).__init__()
+        super().__init__()
         self.tokenizer = tokenizer
         self.qa_formatter = qa_formatter
         self.loss_type = loss_type
@@ -184,10 +187,10 @@ class QAForgetDataSet(Dataset):
 
     def __getitem__(self, idx):
         # this takes the first item in our retain data permutation using item_index
-        retain_row = self.retain_data[self.item_index % self.retain_length]
+        retain_row = self.retain_data[self.item_index]
         # then rolls the permutation vector using the item_index to ensure
         # samples aren't reused without first exhausting all retain samples
-        self.item_index += 1
+        self.item_index = (self.item_index + 1) % self.retain_length
 
         retain_question = retain_row["question"]
         retain_answer = retain_row["answer"]

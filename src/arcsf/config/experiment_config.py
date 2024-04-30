@@ -119,9 +119,13 @@ class ExperimentConfig(Config):
         """
         return cls(**dict)
 
-    # TODO: define to_dict method
-    # TODO
-    # TODO
+    # TODO: complete this method
+    def to_dict(self):
+        return {
+            "experiment_name": self.experiment_name,
+            "data_name": self.data_name,
+            "data_config": self.data_config,
+        }
 
     def init_wandb(self, job_type: str) -> None:
         """Initialise a wandb run if the config specifies to use wandb and a run has not

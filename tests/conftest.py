@@ -34,7 +34,18 @@ def dummy_tofu_data():
 
 
 @pytest.fixture
-def dummy_tokenizer():
+def dummy_retain_data(dummy_train_data):
+    return dummy_train_data.filter(lambda sample: not sample["forget"])
+
+
+@pytest.fixture
+def dummy_forget_data(dummy_train_data):
+    # Return only the samples where "forget" is True
+    return dummy_train_data.filter(lambda sample: sample["forget"])
+
+
+@pytest.fixture
+def dummy_tokenizer(dummy_train_data):
     return AutoTokenizer.from_pretrained(test_base_model_path)
 
 
@@ -48,12 +59,6 @@ def dummy_forget_model():
     return AutoModelForCausalLM.from_pretrained(test_forget_model_path)
 
 
-@pytest.fixture
-def dummy_forget_data(dummy_tofu_data):
-    # Return only the samples where "forget" is True
-    return dummy_tofu_data.filter(lambda sample: sample["forget"])
-
-
 @pytest.fixture(scope="session", autouse=True)
 def mock_tofu_constants():
     """Makes all tests use the dummy TOFU data."""
@@ -64,7 +69,7 @@ def mock_tofu_constants():
         patch("arcsf.data.tofu.TOFU_Q_PER_AUTHOR", 3),
         patch("arcsf.data.tofu.TOFU_BIO_Q_PER_AUTHOR", 1),
     ):
-        yield None
+        yield
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -76,4 +81,10 @@ def mock_path_constants():
         patch("arcsf.constants.MODEL_CONFIG_DIR", test_model_config_dir),
         patch("arcsf.constants.DATA_CONFIG_DIR", test_data_config_dir),
     ):
-        yield None
+        yield
+
+
+@pytest.fixture(scope="session")
+def tmp_out_dir(tmp_path_factory):
+    """Temporary output directory that persists for the entire test session."""
+    return str(tmp_path_factory.getbasetemp().resolve())

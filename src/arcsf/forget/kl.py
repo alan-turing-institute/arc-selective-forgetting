@@ -17,9 +17,7 @@ class KLForgetter(Forgetter):
     model and the original (Oracle) model's logits on the retain inputs.
     """
 
-    def __init__(self, *args, oracle_model=None, **kwargs):
-        if oracle_model is None:
-            raise RuntimeError("KLForgetter requires an oracle_model.")
+    def __init__(self, *args, oracle_model, **kwargs):
         self.oracle_model = oracle_model
         super().__init__(*args, **kwargs)
 

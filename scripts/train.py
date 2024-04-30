@@ -1,8 +1,9 @@
 import argparse
 
-from arcsf import (  # load_tofu, # TODO: uncomment and use once Jack D's PR is in
+from arcsf import (
     ExperimentConfig,
     load_model_and_tokenizer,
+    load_tofu,
     load_trainer,
     seed_everything,
 )
@@ -17,17 +18,21 @@ def main(experiment_name):
     # Step 2: Seed everything
     seed_everything(42)
 
-    # Step 3: Load model
+    # Step 3: Initialise wandb
+    experiment_config.init_wandb(job_type="train")
+
+    # Step 4: Load model
     model, tokenizer = load_model_and_tokenizer(
         model_id=experiment_config.model_config.model_if,
         peft_kwargs=None,  # TODO: placeholder
         **experiment_config.model_config.model_kwargs,
     )
 
-    # Step 4: Load and prepreprocess data
-    dataset = None  # TODO: placeholder
+    # Step 5: Load and prepreprocess data
+    dataset = load_tofu(**experiment_config.data_kwargs)
+    # TODO: preprocess conditional on #7 being completed
 
-    # Step 5: Load trainer
+    # Step 6: Load trainer
     trainer = load_trainer(
         model,
         tokenizer,
@@ -35,10 +40,10 @@ def main(experiment_name):
         config=experiment_config.model_config,
     )
 
-    # Step 6: train
+    # Step 7: train
     trainer.train()
 
-    # Step 7: save everything TODO
+    # Step 8: save everything TODO
     # model.save_pretrained(cfg.save_dir)
     # tokenizer.save_pretrained(cfg.save_dir)
 

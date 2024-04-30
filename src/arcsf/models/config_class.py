@@ -8,6 +8,7 @@ class ModelConfig(Config):
         model_id: str,
         model_kwargs: dict,
         trainer_kwargs: dict,
+        use_wandb: bool,
     ) -> None:
         super().__init__()
 
@@ -35,6 +36,9 @@ class ModelConfig(Config):
         self.logging_strategy = trainer_kwargs["logging_strategy"]
         self.logging_dir = f'{trainer_kwargs["output_dir"]}/logs'
         self.logging_steps = trainer_kwargs["logging_steps"]
+
+        # Wandb
+        self.use_wandb = use_wandb
 
         # Early stopping - TODO make optional
         self.save_strategy = trainer_kwargs["save_strategy"]

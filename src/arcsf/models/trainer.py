@@ -36,6 +36,8 @@ def load_trainer(
         logging_strategy=config.logging_strategy,
         logging_dir=config.logging_dir,
         logging_steps=config.logging_steps,
+        # Wandb
+        report_to="wandb" if config.use_wandb else None,
         # Early stopping - TODO make optional
         save_strateg=config.save_strategy,
         save_steps=config.save_steps,

@@ -1,7 +1,9 @@
 import os
 import warnings
+from copy import copy
 from itertools import product
 
+import wandb
 import yaml
 from jinja2 import Environment, FileSystemLoader
 
@@ -79,13 +81,25 @@ class ExperimentConfig(Config):
 
     def __init__(
         self,
-        model_yaml_name: str | None,
+        data_yaml_name: str,
+        model_yaml_name: str,
+        use_wandb: bool,
+        wandb_config: dict | None,
     ) -> None:
         super().__init__()
 
         # Load in other configs
         self.data_config = None  # TODO: replace this
-        self.model_config = ModelConfig.from_yaml(model_yaml_name)
+        self.model_config = ModelConfig.from_yaml(model_yaml_name, use_wandb)
+
+        # Wandb args
+        self.use_wandb = (use_wandb,)
+        self.wandb_config = (wandb_config,)
+
+        # Setup run name
+        self.data_name = data_yaml_name
+        self.model_name = model_yaml_name
+        self.experiment_name = f"{data_yaml_name}-{model_yaml_name}"
 
     @classmethod
     def from_dict(cls, dict) -> "ModelConfig":
@@ -101,3 +115,36 @@ class ExperimentConfig(Config):
         return cls(**dict)
 
     # TODO: define to_dict method
+    # TODO
+    # TODO
+
+    def init_wandb(self, job_type: str) -> None:
+        """Initialise a wandb run if the config specifies to use wandb and a run has not
+        already been initialised.
+
+        If name, group and job_type and not specificied in the input config then they
+        are set as:
+                name: run_name
+                group: data_set_name_config_gen_dtime OR data_set_name
+                job_type: misc
+        """
+        if not self.use_wandb:
+            warnings.warn("Ignored wandb initialisation as use_wandb=False")
+            return
+        if wandb.run is not None:
+            raise ValueError("A wandb run has already been initialised")
+
+        wandb.login()
+        wandb_config = copy(self.wandb_args)
+
+        if "log_model" in wandb_config:
+            # log_model can only be specified as an env variable, so we set the env
+            # variable then remove it from the init args.
+            os.environ["WANDB_LOG_MODEL"] = wandb_config["log_model"]
+            wandb_config.pop("log_model")
+
+        # set default names for any that haven't been specified
+        wandb_config["name"] = f"{self.experiment_name}-{job_type}"
+        wandb_config["group"] = f"{self.data_name}"
+
+        wandb.init(config={"selective-forgetting": self.to_dict()}, **wandb_config)

@@ -1,4 +1,4 @@
-from abc import ABC, abstractclassmethod, abstractmethod
+from abc import ABC, abstractmethod
 
 import yaml
 
@@ -10,7 +10,8 @@ class Config(ABC):
     ) -> None:
         super().__init__()
 
-    @abstractclassmethod
+    @classmethod
+    @abstractmethod
     def from_dict(cls, dict) -> "Config":
         """Create a FineTuningConfig from a config dict.
 

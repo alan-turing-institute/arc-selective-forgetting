@@ -29,3 +29,16 @@ def eval_rouge_recall(gen_outputs, ground_truths, indices):
         rougeL_recall[idx] = rouge_scores["rougeL"].recall
 
     return {"rouge1_recall": rouge1_recall, "rougeL_recall": rougeL_recall}
+
+
+def truth_ratio(normalised_losses):
+    perturbed_losses = normalised_losses[:, 1:]
+    paraphrased_loss = normalised_losses[:, 0]
+    # print(perturbed_losses, perturbed_losses.shape)
+    # print(paraphrased_loss, paraphrased_loss.shape)
+    numerator = torch.mean(
+        conditional_probability(perturbed_losses)["conditional_probs"], dim=0
+    )
+    denominator = conditional_probability(paraphrased_loss)["conditional_probs"]
+    print(numerator[0], denominator[0])
+    return numerator / denominator

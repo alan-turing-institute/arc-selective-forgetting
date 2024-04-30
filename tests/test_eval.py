@@ -1,7 +1,12 @@
 import pytest
 import torch
 
-from arcsf.eval.metrics import conditional_probability, eval_accuracy, ks_test
+from arcsf.eval.metrics import (
+    conditional_probability,
+    eval_accuracy,
+    ks_test,
+    truth_ratio,
+)
 from arcsf.eval.utils import get_loss
 
 
@@ -66,3 +71,24 @@ def test_loss(dummy_tokenizer, dummy_forget_model):
 
     assert isinstance(loss, torch.Tensor)
     assert loss.grad_fn
+
+
+def test_truth_ratio():
+    correct_losses = torch.full((4, 5), 10)
+    correct_losses[:, 0] = -1
+    incorrect_losses = torch.full_like(correct_losses, 10)
+    incorrect_losses[:, 1:] = -1
+    print(correct_losses)
+    print(incorrect_losses)
+    correct_ratio = truth_ratio(correct_losses)
+    print(correct_ratio)
+    incorrect_ratio = truth_ratio(incorrect_losses)
+    print(incorrect_ratio)
+
+    # assert correct_ratio[0] == pytest.approx(0)
+    # assert math.isinf(incorrect_ratio[0])
+    raise NotImplementedError
+
+
+def test_pipeline():
+    raise NotImplementedError

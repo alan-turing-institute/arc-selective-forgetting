@@ -24,4 +24,4 @@ trainer_kwargs: # passed to TrainingArguments
   save_strategy: steps
 
   # Outputs
-  output_dir: TBD # TODO
+  output_dir: output

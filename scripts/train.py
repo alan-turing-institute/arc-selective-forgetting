@@ -16,7 +16,7 @@ def main(experiment_name):
     )
 
     # Step 2: Seed everything
-    seed_everything(42)
+    seed_everything(experiment_config.seed)
 
     # Step 3: Initialise wandb
     experiment_config.init_wandb(job_type="train")
@@ -29,7 +29,11 @@ def main(experiment_name):
     )
 
     # Step 5: Load and prepreprocess data
-    _, retain = load_tofu(**experiment_config.data_kwargs)
+    # TODO: change placeholder which assumes always tuning on retain set alone
+    _, retain = load_tofu(
+        **experiment_config.data_kwargs,
+        random_seed=experiment_config.seed,
+    )
 
     # TODO: remove placeholder preprocessing below
     def template_sample(sample):
@@ -57,9 +61,10 @@ def main(experiment_name):
     # Step 7: train
     trainer.train()
 
-    # Step 8: save everything TODO
-    # model.save_pretrained(cfg.save_dir)
-    # tokenizer.save_pretrained(cfg.save_dir)
+    # Step 8: save model after fine-tuning
+    # TODO: customise to vary save location according to config
+    model.save_pretrained("temp/test_results")
+    tokenizer.save_pretrained("temp/test_results")
 
 
 if __name__ == "__main__":

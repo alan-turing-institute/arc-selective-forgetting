@@ -1,14 +1,29 @@
+# Looping kwargs
 configs:
   data_configs:
     - example_tofu_1
     - example_tofu_2
   model_config:
     - gpt2
+  seeds:
+    - 42
+    - 43
+    - 44
 # TODO: add other configs that define a group of experiments end to end
 
+# Baskerville kwargs
 use_bask: true
 bask:
   walltime: '3-0:0:0'
   gpu_number: 1
   node_number: 1
   cpu_per_gpu: 36
+
+
+# Wandb kwargs
+use_wandb: true
+wandb:
+  entity: turing-arc
+  project: selective-forgetting
+  log_model: "false"
+  group: debug-runs

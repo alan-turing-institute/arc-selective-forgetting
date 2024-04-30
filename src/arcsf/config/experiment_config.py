@@ -145,6 +145,5 @@ class ExperimentConfig(Config):
 
         # set default names for any that haven't been specified
         wandb_config["name"] = f"{self.experiment_name}-{job_type}"
-        wandb_config["group"] = f"{self.data_name}"
 
         wandb.init(config={"selective-forgetting": self.to_dict()}, **wandb_config)

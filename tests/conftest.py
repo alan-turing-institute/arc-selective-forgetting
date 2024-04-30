@@ -5,11 +5,6 @@ import pytest
 from datasets import load_dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-
-def _identity(inp):
-    return inp
-
-
 TEST_DATA_DIR = Path(__file__, "..", "data", "tofu")
 
 

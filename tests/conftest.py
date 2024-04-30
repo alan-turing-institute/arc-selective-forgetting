@@ -5,8 +5,6 @@ import pytest
 from datasets import load_dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from arcsf.data.data_module import EvalQADataSet, get_data
-
 
 def _identity(inp):
     return inp
@@ -61,34 +59,3 @@ def mock_tofu_constants():
         patch("arcsf.data.tofu.TOFU_BIO_Q_PER_AUTHOR", 1),
     ):
         yield
-
-
-def pytest_configure(config):
-    q_drop_frac = 0.1
-    a_drop_frac = 0.1
-    granularity = "question"
-    stratified = False
-    forget_random = True
-    split = "forget"
-    dataset = "tofu"
-    data = get_data(
-        dataset,
-        granularity,
-        stratified,
-        forget_random,
-        a_drop_frac,
-        q_drop_frac,
-        random_seed=10,
-    )
-    tokenizer = AutoTokenizer.from_pretrained("gpt2")
-    pytest.n_authors = 200
-    pytest.n_questions = 4000
-    pytest.frac_q_dropped = q_drop_frac
-    pytest.frac_a_dropped = a_drop_frac
-    pytest.data_module = EvalQADataSet(
-        data,
-        tokenizer,
-        _identity,
-        split=split,
-        loss_type="normal",
-    )

@@ -9,13 +9,47 @@ from arcsf.data.data_module import (
 )
 
 
+@pytest.fixture
+def data():
+    return get_data(
+        "tofu",
+        granularity="question",
+        stratified=False,
+        forget_random=True,
+        forgotten_author_fraction=1 / 3,
+        forgotten_fact_fraction=1 / 3,
+        random_seed=42,
+    )
+
+
+@pytest.fixture
+def data_module(data, dummy_tokenizer):
+    return EvalQADataSet(
+        data,
+        dummy_tokenizer,
+        _identity,
+        split="forget",
+        loss_type="normal",
+    )
+
+
+@pytest.fixture
+def frac_q_dropped():
+    return 1 / 3
+
+
+@pytest.fixture
+def n_questions():
+    return 9
+
+
 def _identity(inp):
     return inp
 
 
-def test_type():
+def test_type(data_module):
     """Tests datamodule typ."""
-    assert isinstance(pytest.data_module, Dataset)
+    assert isinstance(data_module, Dataset)
 
 
 def test_permutation():
@@ -25,8 +59,8 @@ def test_permutation():
         granularity="question",
         stratified=False,
         forget_random=True,
-        forgotten_author_fraction=0.1,
-        forgotten_fact_fraction=0.1,
+        forgotten_author_fraction=1 / 3,
+        forgotten_fact_fraction=1 / 3,
         random_seed=42,
     )
     data_set = QAForgetDataSet(data, _identity, QAformatter_basic, loss_type="standard")
@@ -42,11 +76,9 @@ def test_permutation():
             break
 
 
-def test_size():
+def test_size(data_module, n_questions, frac_q_dropped):
     """Checking correct dataset size."""
-    assert pytest.data_module.__len__() == int(
-        pytest.n_questions * pytest.frac_q_dropped
-    )
+    assert data_module.__len__() == int(n_questions * frac_q_dropped)
 
 
 def test_formatter():
@@ -69,8 +101,8 @@ def test_idk_targets():
         granularity="question",
         stratified=False,
         forget_random=True,
-        forgotten_author_fraction=0.1,
-        forgotten_fact_fraction=0.1,
+        forgotten_author_fraction=1 / 3,
+        forgotten_fact_fraction=1 / 3,
         random_seed=42,
     )
     idk_set = EvalQADataSet(

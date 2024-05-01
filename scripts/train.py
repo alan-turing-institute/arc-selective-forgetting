@@ -8,7 +8,7 @@ from arcsf.utils import seed_everything
 def main(experiment_name):
     # Step 1: Process configs to dicts
     experiment_config = ExperimentConfig.from_yaml(
-        f"configs/experiment{experiment_name}.yaml"
+        f"configs/experiment/{experiment_name}.yaml"
     )
 
     # Step 2: Seed everything

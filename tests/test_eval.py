@@ -1,3 +1,5 @@
+import math
+
 import pytest
 import torch
 
@@ -74,20 +76,16 @@ def test_loss(dummy_tokenizer, dummy_forget_model):
 
 
 def test_truth_ratio():
-    correct_losses = torch.full((4, 5), 10)
-    correct_losses[:, 0] = -1
-    incorrect_losses = torch.full_like(correct_losses, 10)
-    incorrect_losses[:, 1:] = -1
-    print(correct_losses)
-    print(incorrect_losses)
+    n_perturbed = 5
+    correct_losses = torch.full((4, (n_perturbed + 1)), 10000)
+    correct_losses[:, 0] = 0
+    incorrect_losses = torch.full_like(correct_losses, 10000)
+    incorrect_losses[:, 1:] = 0
     correct_ratio = truth_ratio(correct_losses)
-    print(correct_ratio)
     incorrect_ratio = truth_ratio(incorrect_losses)
-    print(incorrect_ratio)
 
-    # assert correct_ratio[0] == pytest.approx(0)
-    # assert math.isinf(incorrect_ratio[0])
-    raise NotImplementedError
+    assert correct_ratio[0] == pytest.approx(1 / (n_perturbed + 1))
+    assert math.isinf(incorrect_ratio[0])
 
 
 def test_pipeline():

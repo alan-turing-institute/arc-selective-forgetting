@@ -2,8 +2,8 @@ import pytest
 from torch.utils.data import Dataset
 
 from arcsf.data.data_module import (
-    EvalQADataSet,
-    QAForgetDataSet,
+    EvalQADataset,
+    QAForgetDataset,
     QAformatter_basic,
     get_data,
 )
@@ -24,7 +24,7 @@ def data():
 
 @pytest.fixture
 def data_module(data, dummy_tokenizer):
-    return EvalQADataSet(
+    return EvalQADataset(
         data,
         dummy_tokenizer,
         _identity,
@@ -63,7 +63,7 @@ def test_permutation():
         forgotten_fact_fraction=1 / 3,
         random_seed=42,
     )
-    data_set = QAForgetDataSet(data, _identity, QAformatter_basic, loss_type="standard")
+    data_set = QAForgetDataset(data, _identity, QAformatter_basic, loss_type="standard")
     init_perm = data_set.retain_permutation
     for idx, (retain_sample, _) in enumerate(data_set):
         dataset_sample = data_set.retain_data[idx]
@@ -105,7 +105,7 @@ def test_idk_targets():
         forgotten_fact_fraction=1 / 3,
         random_seed=42,
     )
-    idk_set = EvalQADataSet(
+    idk_set = EvalQADataset(
         data,
         _identity,
         _identity,

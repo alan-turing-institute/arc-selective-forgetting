@@ -1,4 +1,4 @@
-granularity: questions
+granularity: question
 stratified: true
 forget_random: true
 forgotten_author_fraction: 0.1

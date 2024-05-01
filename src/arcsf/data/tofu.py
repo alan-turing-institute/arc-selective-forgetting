@@ -56,6 +56,11 @@ def load_tofu(
         Two datasets with forget and retain sets
     """
 
+    if granularity not in ["question", "author"]:
+        raise ValueError(
+            f"granularity is {granularity} but must be one of question or author"
+        )
+
     all_data = load_dataset("locuslab/TOFU", "full")["train"]
 
     num_authors = 200  # hard coding author count for now

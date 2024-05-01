@@ -38,7 +38,7 @@ class Config(ABC):
         """
         with open(path, "r") as f:
             config = yaml.safe_load(f)
-        return cls.from_dict(config=config)
+        return cls.from_dict(config)
 
     @abstractmethod
     def to_dict(self) -> dict:

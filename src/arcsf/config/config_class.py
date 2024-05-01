@@ -27,7 +27,7 @@ class Config(ABC):
         raise NotImplementedError
 
     @classmethod
-    def read_yaml(cls, path: str) -> "Config":
+    def from_yaml(cls, path: str) -> "Config":
         """Create a FineTuningConfig from a yaml file.
 
         Args:

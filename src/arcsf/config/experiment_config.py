@@ -81,8 +81,8 @@ class ExperimentConfig(Config):
 
     def __init__(
         self,
-        data_yaml_name: str,
-        model_yaml_name: str,
+        data_config: str,
+        model_config: str,
         use_wandb: bool,
         wandb_config: dict | None,
     ) -> None:
@@ -90,11 +90,11 @@ class ExperimentConfig(Config):
 
         # Load in other configs
         # TODO: replace data config loading
-        with open(f"configs/data/{data_yaml_name}.yaml", "r") as f:
+        with open(f"configs/data/{data_config}.yaml", "r") as f:
             self.data_config = yaml.safe_load(f)
         # self.data_config = None
         self.model_config = ModelConfig.from_yaml(
-            f"configs/experiment/{model_yaml_name}.yaml", use_wandb
+            f"configs/experiment/{model_config}.yaml", use_wandb
         )
 
         # Wandb args
@@ -102,9 +102,9 @@ class ExperimentConfig(Config):
         self.wandb_config = (wandb_config,)
 
         # Setup run name
-        self.data_name = data_yaml_name
-        self.model_name = model_yaml_name
-        self.experiment_name = f"{data_yaml_name}-{model_yaml_name}"
+        self.data_name = data_config
+        self.model_name = model_config
+        self.experiment_name = f"{data_config}-{model_config}"
 
     @classmethod
     def from_dict(cls, dict) -> "ModelConfig":

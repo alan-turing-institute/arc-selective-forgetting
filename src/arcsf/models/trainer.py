@@ -40,7 +40,7 @@ def load_trainer(
         # Wandb
         report_to="wandb" if config.use_wandb else None,
         # Early stopping - TODO make optional
-        save_strateg=config.save_strategy,
+        save_strategy=config.save_strategy,
         save_steps=config.save_steps,
         load_best_model_at_end=config.load_best_model_at_end,
         metric_for_best_model=config.metric_for_best_model,

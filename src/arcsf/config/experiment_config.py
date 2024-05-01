@@ -3,10 +3,10 @@ import warnings
 from copy import copy
 from itertools import product
 
-import wandb
 import yaml
 from jinja2 import Environment, FileSystemLoader
 
+import wandb
 from arcsf.config.config_class import Config
 from arcsf.models.config_class import ModelConfig
 
@@ -94,13 +94,11 @@ class ExperimentConfig(Config):
         with open(f"configs/data/{data_config}.yaml", "r") as f:
             self.data_config = yaml.safe_load(f)
         # self.data_config = None
-        self.model_config = ModelConfig.from_yaml(
-            f"configs/experiment/{model_config}.yaml", use_wandb
-        )
+        self.model_config = ModelConfig.from_yaml(f"configs/model/{model_config}.yaml")
 
         # Wandb args
-        self.use_wandb = (use_wandb,)
-        self.wandb_config = (wandb_config,)
+        self.use_wandb = use_wandb
+        self.wandb_config = wandb_config
 
         # Setup run name
         self.data_name = data_config

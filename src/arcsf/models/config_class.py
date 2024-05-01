@@ -13,8 +13,8 @@ class ModelConfig(Config):
         super().__init__()
 
         # Main model kwargs
-        self.model_id = (model_id,)
-        self.model_kwargs = (model_kwargs,)
+        self.model_id = model_id
+        self.model_kwargs = model_kwargs
 
         # Output dir
         self.output_dir = trainer_kwargs["output_dir"]
@@ -61,6 +61,9 @@ class ModelConfig(Config):
             model_id=dict["model_id"],
             model_kwargs=dict["model_kwargs"],
             trainer_kwargs=dict["trainer_kwargs"],
+            use_wandb=dict["use_wandb"],
         )
 
     # TODO: define to_dict method
+    def to_dict(self) -> dict:
+        return {"todo": "not done"}

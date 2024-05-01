@@ -19,7 +19,7 @@ def main(experiment_name):
 
     # Step 4: Load model
     model, tokenizer = load_model_and_tokenizer(
-        model_id=experiment_config.model_config.model_if,
+        model_id=experiment_config.model_config.model_id,
         peft_kwargs=None,  # TODO: placeholder
         **experiment_config.model_config.model_kwargs,
     )
@@ -27,7 +27,7 @@ def main(experiment_name):
     # Step 5: Load and prepreprocess data
     # TODO: change placeholder which assumes always tuning on retain set alone
     _, retain = load_tofu(
-        **experiment_config.data_kwargs,
+        **experiment_config.data_config,
         random_seed=experiment_config.seed,
     )
 

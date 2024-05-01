@@ -1,5 +1,5 @@
 import torch
-from torch.utils.data import ConcatDataset, Dataset
+from torch.utils.data import Dataset
 
 from arcsf.data.tofu import load_tofu
 
@@ -55,19 +55,15 @@ class EvalQADataset(Dataset):
         data,
         tokenizer,
         qa_formatter,
-        split,
         loss_type,
         random_seed=42,
     ):
         super().__init__()
         self.tokenizer = tokenizer
         self.qa_formatter = qa_formatter
-        self.rand_gen = torch.Generator().initial_seed(random_seed)
+        self.rand_gen = torch.Generator().manual_seed(random_seed)
         self.loss_type = loss_type
-        forget_data, retain_data = data
-
-        split_dict = {"retain": retain_data, "forget": forget_data}
-        self.data = split_dict[split]
+        self.data = data
 
         if loss_type == "idk":
             with open("src/arcsf/data/idk.jsonl") as idk_file:
@@ -109,20 +105,11 @@ class FinetuneDataset(Dataset):
         data,
         tokenizer,
         qa_formatter,
-        split,
     ):
         super().__init__()
         self.tokenizer = tokenizer
         self.qa_formatter = qa_formatter
-
-        forget_data, retain_data = data
-
-        split_dict = {
-            "retain": retain_data,
-            "forget": forget_data,
-            "all": ConcatDataset([retain_data, forget_data]),
-        }
-        self.data = split_dict[split]
+        self.data = data
 
     def __len__(self):
         return len(self.data)
@@ -156,11 +143,11 @@ class QAForgetDataset(Dataset):
         self.tokenizer = tokenizer
         self.qa_formatter = qa_formatter
         self.loss_type = loss_type
-        self.rand_gen = torch.Generator().initial_seed(random_seed)
+        self.rand_gen = torch.Generator().manual_seed(random_seed)
         self.forget_data, self.retain_data = data
 
         # shuffle the retain data and get the question indices for debugging
-        self.retain_data = self.retain_data.shuffle(random_seed=random_seed)
+        self.retain_data = self.retain_data.shuffle(seed=random_seed)
         self.retain_permutation = self.retain_data["question_index"]
         # set item index acting as a counter for retain permutation
         self.item_index = 0

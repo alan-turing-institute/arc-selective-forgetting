@@ -19,7 +19,7 @@ def data():
         forgotten_author_fraction=1 / 3,
         forgotten_fact_fraction=1 / 3,
         random_seed=42,
-    )
+    )[0]
 
 
 @pytest.fixture
@@ -28,7 +28,6 @@ def data_module(data, dummy_tokenizer):
         data,
         dummy_tokenizer,
         _identity,
-        split="forget",
         loss_type="normal",
     )
 
@@ -104,12 +103,11 @@ def test_idk_targets():
         forgotten_author_fraction=1 / 3,
         forgotten_fact_fraction=1 / 3,
         random_seed=42,
-    )
+    )[0]
     idk_set = EvalQADataset(
         data,
         _identity,
         _identity,
-        split="forget",
         loss_type="idk",
     )
     with open("src/arcsf/data/idk.jsonl") as idk_file:

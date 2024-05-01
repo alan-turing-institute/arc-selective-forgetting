@@ -85,6 +85,7 @@ class ExperimentConfig(Config):
         model_config: str,
         use_wandb: bool,
         wandb_config: dict | None,
+        seed: int | None,
     ) -> None:
         super().__init__()
 
@@ -105,6 +106,9 @@ class ExperimentConfig(Config):
         self.data_name = data_config
         self.model_name = model_config
         self.experiment_name = f"{data_config}-{model_config}"
+
+        # seed
+        self.seed = seed
 
     @classmethod
     def from_dict(cls, dict) -> "ModelConfig":

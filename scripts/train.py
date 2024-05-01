@@ -1,12 +1,8 @@
 import argparse
 
-from arcsf import (
-    ExperimentConfig,
-    load_model_and_tokenizer,
-    load_trainer,
-    seed_everything,
-)
+from arcsf import ExperimentConfig, load_model_and_tokenizer, load_trainer
 from arcsf.data.tofu import load_tofu
+from arcsf.utils import seed_everything
 
 
 def main(experiment_name):

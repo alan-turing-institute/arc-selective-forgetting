@@ -88,5 +88,6 @@ def test_truth_ratio():
     assert math.isinf(incorrect_ratio[0])
 
 
-def test_pipeline():
+def test_pipeline(dummy_base_model, dummy_tokenizer, dummy_forget_data):
+    print(dummy_forget_data.__getitem__)
     raise NotImplementedError

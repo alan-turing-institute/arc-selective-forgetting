@@ -88,6 +88,66 @@ def test_truth_ratio():
     assert math.isinf(incorrect_ratio[0])
 
 
-def test_pipeline(dummy_base_model, dummy_tokenizer, dummy_forget_data):
-    print(dummy_forget_data.__getitem__)
+def _format(question, answer, dummy_tokenizer, max_length):
+    encoded = dummy_tokenizer(
+        question + answer,
+        max_length=max_length,
+        truncation=True,
+    )
+    num_question_tokens = len(
+        dummy_tokenizer.tokenize(question, add_special_tokens=True)
+    )
+    pad_length = max_length - len(encoded.input_ids)
+    padded = encoded["input_ids"] + [dummy_tokenizer.eos_token_id] * pad_length
+    pad_attention_mask = encoded["attention_mask"] + [0] * pad_length
+    label = encoded.input_ids
+    if len(encoded.input_ids) == max_length:
+        label = encoded.input_ids
+    else:
+        label = (
+            encoded["input_ids"]
+            + [dummy_tokenizer.eos_token_id]
+            + [-100] * (pad_length - 1)
+        )
+
+    # change label to -100 for question tokens
+    for i in range(num_question_tokens):
+        label[i] = -100
+    return (
+        torch.tensor(padded),
+        torch.tensor(label),
+        torch.tensor(pad_attention_mask),
+    )
+
+
+# end-to-end test
+def test_pipeline(dummy_base_model, dummy_tokenizer, dummy_train_data):
+    max_length = 40
+    n_samples = 3
+    rows = dummy_train_data["text"][: n_samples * 2 : 2]
+
+    inp = torch.zeros((n_samples, max_length), dtype=int)
+    targets = torch.zeros((n_samples, max_length), dtype=int)
+    attention_masks = torch.zeros((n_samples, max_length), dtype=int)
+
+    for row_id, row in enumerate(rows):
+        split = row.split("?")
+        q, a = split[0] + "?", split[1]
+        inp[row_id], targets[row_id], attention_masks[row_id] = _format(
+            q, a, dummy_tokenizer, max_length
+        )
+    batch = {"input_ids": inp, "labels": targets, "attention_mask": attention_masks}
+    dummy_model_output = dummy_base_model(**batch)
+    loss = get_loss(dummy_model_output.logits, targets)
+    # qualitative analysis use flag '-rP' in pytest
+    for row in range(n_samples):
+        row_target = targets[row][targets[row] != -100]
+        print(dummy_tokenizer.decode(inp[row]).strip("<|endoftext|>"))
+        print(dummy_tokenizer.decode(row_target))
+        output = torch.argmax(dummy_model_output.logits[row], dim=-1)
+        decoded_out = dummy_tokenizer.decode(output)
+        print(decoded_out)
+        print("\n")
+
+    print(loss)
     raise NotImplementedError

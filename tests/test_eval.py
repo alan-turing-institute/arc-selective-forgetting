@@ -142,7 +142,7 @@ def _get_perturbed(question_rows, n_perturbed, n_samples):
 
 
 # end-to-end test
-def eval_end_to_end(dummy_base_model, dummy_tokenizer, dummy_train_data):
+def test_eval_end_to_end(dummy_base_model, dummy_tokenizer, dummy_train_data):
     max_length = 40
     n_samples = 3
     n_perturbed = 1

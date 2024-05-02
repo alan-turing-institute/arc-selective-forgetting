@@ -84,7 +84,7 @@ def test_truth_ratio():
     correct_ratio = truth_ratio(correct_losses)
     incorrect_ratio = truth_ratio(incorrect_losses)
 
-    assert correct_ratio[0] == pytest.approx(1 / (n_perturbed + 1))
+    assert correct_ratio[0] == pytest.approx(0)
     assert math.isinf(incorrect_ratio[0])
 
 
@@ -92,7 +92,7 @@ def _format(question, answer, dummy_tokenizer, max_length):
     encoded = dummy_tokenizer(
         question + answer,
         max_length=max_length,
-        truncation=True,
+        truncation=False,
     )
     num_question_tokens = len(
         dummy_tokenizer.tokenize(question, add_special_tokens=True)
@@ -120,34 +120,76 @@ def _format(question, answer, dummy_tokenizer, max_length):
     )
 
 
+def _get_perturbed(question_rows, n_perturbed, n_samples):
+    gt_splits = [None] * len(question_rows)
+    for row_id, row in enumerate(question_rows):
+        split = row.split("?")
+        gt_splits[row_id] = (
+            split[0] + "?",
+            split[1],
+        )
+    all_splits = [None] * len(question_rows)
+    for row_id in range(n_samples):
+        row_gt = gt_splits[row_id][1]
+        perturbed_ids = [(row_id + 1 + i) % n_samples for i in range(n_perturbed)]
+        perturbed_capitals = [
+            gt_splits[p_id][1].split(" ")[-1] for p_id in perturbed_ids
+        ]
+        answer_string = row_gt.strip(row_gt.split(" ")[-1])
+        perturbed_rows = [answer_string + p_capital for p_capital in perturbed_capitals]
+        all_splits[row_id] = gt_splits[row_id] + tuple(perturbed_rows)
+    return all_splits
+
+
 # end-to-end test
-def test_pipeline(dummy_base_model, dummy_tokenizer, dummy_train_data):
+def eval_end_to_end(dummy_base_model, dummy_tokenizer, dummy_train_data):
     max_length = 40
     n_samples = 3
-    rows = dummy_train_data["text"][: n_samples * 2 : 2]
+    n_perturbed = 1
+    question_rows = dummy_train_data["text"][: n_samples * 2 : 2]
 
-    inp = torch.zeros((n_samples, max_length), dtype=int)
-    targets = torch.zeros((n_samples, max_length), dtype=int)
-    attention_masks = torch.zeros((n_samples, max_length), dtype=int)
+    all_inp = _get_perturbed(question_rows, n_perturbed, n_samples)
 
-    for row_id, row in enumerate(rows):
-        split = row.split("?")
-        q, a = split[0] + "?", split[1]
-        inp[row_id], targets[row_id], attention_masks[row_id] = _format(
-            q, a, dummy_tokenizer, max_length
+    inp = torch.zeros((n_samples, n_perturbed + 1, max_length), dtype=int)
+    targets = torch.zeros((n_samples, n_perturbed + 1, max_length), dtype=int)
+    attention_masks = torch.zeros((n_samples, n_perturbed + 1, max_length), dtype=int)
+
+    for row_id, row in enumerate(all_inp):
+        for sample_n in range(n_perturbed + 1):
+            q = row[0]
+            a = row[1 + sample_n]
+            (
+                inp[row_id, sample_n],
+                targets[row_id, sample_n],
+                attention_masks[row_id, sample_n],
+            ) = _format(q, a, dummy_tokenizer, max_length)
+
+    all_losses = torch.zeros((n_samples, n_perturbed + 1))
+
+    gt_batch = {
+        "input_ids": inp[:, 0, :],
+        "labels": targets[:, 0, :],
+        "attention_mask": attention_masks[:, 0, :],
+    }
+    gt_dummy_model_output = dummy_base_model(**gt_batch)
+    gt_loss = get_loss(gt_dummy_model_output.logits, targets[:, 0, :])
+
+    all_losses[:, 0] = gt_loss
+
+    for perturbed_index in range(1, n_perturbed + 1):
+        p_batch = {
+            "input_ids": inp[:, perturbed_index, :],
+            "labels": targets[:, perturbed_index, :],
+            "attention_mask": attention_masks[:, perturbed_index, :],
+        }
+        p_dummy_model_output = dummy_base_model(**p_batch)
+        all_losses[:, perturbed_index] = get_loss(
+            p_dummy_model_output.logits, targets[:, perturbed_index, :]
         )
-    batch = {"input_ids": inp, "labels": targets, "attention_mask": attention_masks}
-    dummy_model_output = dummy_base_model(**batch)
-    loss = get_loss(dummy_model_output.logits, targets)
-    # qualitative analysis use flag '-rP' in pytest
-    for row in range(n_samples):
-        row_target = targets[row][targets[row] != -100]
-        print(dummy_tokenizer.decode(inp[row]).strip("<|endoftext|>"))
-        print(dummy_tokenizer.decode(row_target))
-        output = torch.argmax(dummy_model_output.logits[row], dim=-1)
-        decoded_out = dummy_tokenizer.decode(output)
-        print(decoded_out)
-        print("\n")
 
-    print(loss)
-    raise NotImplementedError
+    means = torch.mean(all_losses, dim=0)
+    tr = truth_ratio(all_losses)
+    # checks the model performs better on the ground truth
+    assert torch.all(tr < 1).item()
+    # checks truth ratio is less than 1
+    assert (means[0] < torch.min(means[1:])).item()

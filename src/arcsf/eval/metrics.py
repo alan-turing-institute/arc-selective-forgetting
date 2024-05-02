@@ -33,7 +33,7 @@ def eval_rouge_recall(gen_outputs, ground_truths, indices):
 
 def truth_ratio(normalised_losses):
     numerator = torch.mean(
-        conditional_probability(normalised_losses)["conditional_probs"], dim=0
+        conditional_probability(normalised_losses)["conditional_probs"][1:], dim=0
     )
-    denominator = conditional_probability(normalised_losses)["conditional_probs"][0]
+    denominator = conditional_probability(normalised_losses)["conditional_probs"][0, :]
     return numerator / denominator

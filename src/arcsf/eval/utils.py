@@ -8,7 +8,8 @@ def get_loss(output_logits, labels):
     output_logits = output_logits[..., :-1, :].contiguous()
     shifted_labels = labels[..., 1:].contiguous()
     loss = _loss_function(output_logits.transpose(-1, -2), shifted_labels).sum(dim=-1)
-    loss_normalised = loss / len(labels)
+    target_len = torch.sum(labels != -100, dim=-1)
+    loss_normalised = loss / target_len
     return loss_normalised
 
 

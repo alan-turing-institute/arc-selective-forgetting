@@ -162,7 +162,7 @@ class QAForgetDataset(Dataset):
         self.retain_length = len(self.retain_data)
 
         if loss_type == "idk":
-            self.idk = get_idk_responses
+            self.idk = get_idk_responses()
             self.answer_sampler = self.get_idk
         else:
             self.answer_sampler = self.get_answer

@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from importlib import resources
 
 import torch
@@ -56,7 +57,7 @@ def get_data(
     return data
 
 
-def qa_formatter_basic(qa: tuple[str]) -> str:
+def qa_formatter_basic(qa: tuple[str, str]) -> str:
     """
     Basic QA formatter which accepts a tuple outputs:
 
@@ -83,7 +84,7 @@ class EvalQADataset(Dataset):
         self,
         data: Dataset,
         tokenizer: AutoTokenizer,
-        qa_formatter: callable,
+        qa_formatter: Callable[[tuple[str, str]], str],
         loss_type: str,
         random_seed=42,
     ):
@@ -144,7 +145,7 @@ class FinetuneDataset(Dataset):
         self,
         data: Dataset,
         tokenizer: AutoTokenizer,
-        qa_formatter: callable,
+        qa_formatter: Callable[[tuple[str, str]], str],
     ):
         """
         Dataset which returns a tokenized version of the input given a tokenizer and
@@ -184,7 +185,7 @@ class QAForgetDataset(Dataset):
         self,
         data: Dataset,
         tokenizer: AutoTokenizer,
-        qa_formatter: callable,
+        qa_formatter: Callable[[tuple[str, str]], str],
         loss_type: str,
         random_seed: int = 42,
     ):

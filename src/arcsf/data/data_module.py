@@ -9,7 +9,8 @@ from arcsf.data.tofu import load_tofu
 _dataset_dict = {"tofu": load_tofu}
 
 
-def get_idk_responses():
+def get_idk_responses() -> list[str]:
+    """Returns a list of "I don't know"-style responses."""
     idk_file = resources.files(arcsf.data) / "idk.jsonl"
     with idk_file.open() as f:
         return f.read().splitlines()

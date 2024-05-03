@@ -8,7 +8,7 @@ trainer_kwargs: # passed to TrainingArguments
   eval_accumulation_steps: 1
 
   # Core hyperparameters
-  learning_rate: 2e-5
+  learning_rate: 2.e-5
   num_train_epochs: 5
 
   # Evaluation

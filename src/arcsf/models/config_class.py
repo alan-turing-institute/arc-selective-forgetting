@@ -26,6 +26,8 @@ class ModelConfig(Config):
 
         # Training arguments: hyperparams
         self.learning_rate = trainer_kwargs["learning_rate"]
+        if isinstance(self.learning_rate, str):
+            self.learning_rate = float(self.learning_rate)
         self.num_train_epochs = trainer_kwargs["num_train_epochs"]
 
         # Evaluation

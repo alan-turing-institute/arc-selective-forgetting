@@ -22,26 +22,17 @@ class KLForgetter(Forgetter):
         super().__init__(*args, **kwargs)
 
     def compute_loss(self, model, inputs, return_outputs=False):
-        forget_inputs, retain_inputs, _ = inputs
+        forget_inputs, retain_inputs = inputs
 
-        input_ids, labels, attention_mask = forget_inputs
-        outputs = model(input_ids, labels=labels, attention_mask=attention_mask)
-        forget_loss = outputs.loss
-        forget_loss = forget_loss * -1
+        outputs = model(**forget_inputs)
+        forget_loss = -outputs.loss
 
-        retain_input_ids, retain_labels, retain_attention_mask = retain_inputs
         with torch.no_grad():
-            retain_outputs = self.oracle_model(
-                retain_input_ids,
-                labels=retain_labels,
-                attention_mask=retain_attention_mask,
-            )
+            retain_outputs = self.oracle_model(**retain_inputs)
         retain_probs = log_softmax(retain_outputs.logits, dim=-1)
         retain_probs = retain_probs.view(-1, retain_outputs.logits.shape[-1])
 
-        current_outputs = model(
-            retain_input_ids, labels=retain_labels, attention_mask=retain_attention_mask
-        )
+        current_outputs = model(**retain_inputs)
         current_probs = log_softmax(current_outputs.logits, dim=-1)
         current_probs = current_probs.view(-1, current_outputs.logits.shape[-1])
 

@@ -17,16 +17,17 @@ class IDKForgetter(Forgetter):
     """
 
     def compute_loss(self, model, inputs, return_outputs=False):
-        _, retain_inputs, idk_inputs = inputs
-        idk_input_ids, idk_labels, idk_attention_mask = idk_inputs
-        retain_input_ids, retain_labels, retain_attention_mask = retain_inputs
+        idk_inputs, retain_inputs = inputs
 
-        # concatenate the inputs. single forward pass is much more efficient
-        input_ids = torch.cat((idk_input_ids, retain_input_ids), dim=0)
-        labels = torch.cat((idk_labels, retain_labels), dim=0)
-        attention_mask = torch.cat((idk_attention_mask, retain_attention_mask), dim=0)
+        # concatenate the inputs. single forward pass is more efficient
+        input_ids = torch.cat(
+            (idk_inputs["input_ids"], retain_inputs["input_ids"]), dim=0
+        )
+        labels = torch.cat((idk_inputs["labels"], retain_inputs["labels"]), dim=0)
+        attention_mask = torch.cat(
+            (idk_inputs["attention_mask"], retain_inputs["attention_mask"]), dim=0
+        )
 
         outputs = model(input_ids, labels=labels, attention_mask=attention_mask)
         loss = outputs.loss
-
         return (loss, outputs) if return_outputs else loss

@@ -14,7 +14,7 @@ class GradientAscentForgetter(Forgetter):
     """
 
     def compute_loss(self, model, inputs, return_outputs=False):
-        forget_inputs, _, _ = inputs
+        forget_inputs, _ = inputs
         # input_ids, labels, attention_mask = forget_inputs
         outputs = model(**forget_inputs)
         forget_loss = -1 * outputs.loss

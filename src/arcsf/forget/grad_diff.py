@@ -15,16 +15,12 @@ class GradientDifferenceForgetter(Forgetter):
     """
 
     def compute_loss(self, model, inputs, return_outputs=False):
-        forget_inputs, retain_inputs, _ = inputs
+        forget_inputs, retain_inputs = inputs
 
-        input_ids, labels, attention_mask = forget_inputs
-        outputs = model(input_ids, labels=labels, attention_mask=attention_mask)
+        outputs = model(**forget_inputs)
         forget_loss = -1 * outputs.loss
 
-        retain_input_ids, retain_labels, retain_attention_mask = retain_inputs
-        retain_outputs = model(
-            retain_input_ids, labels=retain_labels, attention_mask=retain_attention_mask
-        )
+        retain_outputs = model(**retain_inputs)
         retain_loss = retain_outputs.loss
         loss = forget_loss + retain_loss
 

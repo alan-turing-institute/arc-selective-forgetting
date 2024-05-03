@@ -34,6 +34,11 @@ def dummy_tofu_data():
 
 
 @pytest.fixture
+def dummy_train_data():
+    return load_dataset(test_train_data_path, split="train")
+
+
+@pytest.fixture
 def dummy_retain_data(dummy_train_data):
     """Samples where "forget" is False in the dummy data."""
     return dummy_train_data.filter(lambda sample: not sample["forget"])

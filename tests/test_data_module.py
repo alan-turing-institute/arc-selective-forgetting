@@ -6,6 +6,7 @@ from arcsf.data.data_module import (
     QAForgetDataset,
     QAformatter_basic,
     get_data,
+    get_idk_responses,
 )
 
 
@@ -110,8 +111,7 @@ def test_idk_targets():
         _identity,
         loss_type="idk",
     )
-    with open("src/arcsf/data/idk.jsonl") as idk_file:
-        idk_targets = idk_file.read().splitlines()
+    idk_targets = get_idk_responses()
 
     for idx, (_, target) in enumerate(idk_set):
         assert target in idk_targets

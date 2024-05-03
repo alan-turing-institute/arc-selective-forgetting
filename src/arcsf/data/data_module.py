@@ -1,9 +1,18 @@
+from importlib import resources
+
 import torch
 from torch.utils.data import Dataset
 
+import arcsf.data
 from arcsf.data.tofu import load_tofu
 
 _dataset_dict = {"tofu": load_tofu}
+
+
+def get_idk_responses():
+    idk_file = resources.files(arcsf.data) / "idk.jsonl"
+    with idk_file.open() as f:
+        return f.read().splitlines()
 
 
 def get_data(
@@ -66,8 +75,7 @@ class EvalQADataset(Dataset):
         self.data = data
 
         if loss_type == "idk":
-            with open("src/arcsf/data/idk.jsonl") as idk_file:
-                self.idk = idk_file.read().splitlines()
+            self.idk = get_idk_responses()
             self.answer_sampler = self.get_idk
         else:
             self.answer_sampler = self.get_answer
@@ -154,8 +162,7 @@ class QAForgetDataset(Dataset):
         self.retain_length = len(self.retain_data)
 
         if loss_type == "idk":
-            with open("src/arcsf/data/idk.jsonl") as idk_file:
-                self.idk = idk_file.read().splitlines()
+            self.idk = get_idk_responses
             self.answer_sampler = self.get_idk
         else:
             self.answer_sampler = self.get_answer

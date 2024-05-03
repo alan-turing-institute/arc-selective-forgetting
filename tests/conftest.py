@@ -35,17 +35,18 @@ def dummy_tofu_data():
 
 @pytest.fixture
 def dummy_retain_data(dummy_train_data):
+    """Samples where "forget" is False in the dummy data."""
     return dummy_train_data.filter(lambda sample: not sample["forget"])
 
 
 @pytest.fixture
 def dummy_forget_data(dummy_train_data):
-    # Return only the samples where "forget" is True
+    """Samples where "forget" is True in the dummy data."""
     return dummy_train_data.filter(lambda sample: sample["forget"])
 
 
 @pytest.fixture
-def dummy_tokenizer(dummy_train_data):
+def dummy_tokenizer():
     return AutoTokenizer.from_pretrained(test_base_model_path)
 
 

@@ -3,10 +3,10 @@ import warnings
 from copy import copy
 from itertools import product
 
+import wandb
 import yaml
 from jinja2 import Environment, FileSystemLoader
 
-import wandb
 from arcsf.config.config_class import Config
 from arcsf.models.config_class import ModelConfig
 
@@ -122,12 +122,16 @@ class ExperimentConfig(Config):
         return cls(**dict)
 
     # TODO: complete this method
-    def to_dict(self):
+    def to_dict(self) -> dict:
         return {
             "experiment_name": self.experiment_name,
             "data_name": self.data_name,
             "data_config": self.data_config,
         }
+
+    def save(self, path: str) -> None:
+        with open(path, "w") as f:
+            yaml.dump(self.to_dict(), f)
 
     def init_wandb(self, job_type: str) -> None:
         """Initialise a wandb run if the config specifies to use wandb and a run has not

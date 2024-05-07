@@ -1,4 +1,5 @@
 import argparse
+from datetime import datetime
 
 from arcsf import ExperimentConfig, load_model_and_tokenizer, load_trainer
 from arcsf.data.tofu import load_tofu
@@ -6,6 +7,8 @@ from arcsf.utils import seed_everything
 
 
 def main(experiment_name):
+    start_time = datetime.strftime(datetime.now(), "%Y%m%d-%H%M%S-%f")
+
     # Step 1: Process configs to dicts
     experiment_config = ExperimentConfig.from_yaml(
         f"configs/experiment/{experiment_name}.yaml"
@@ -59,8 +62,10 @@ def main(experiment_name):
 
     # Step 8: save model after fine-tuning
     # TODO: customise to vary save location according to config
-    model.save_pretrained("temp/test_results")
-    tokenizer.save_pretrained("temp/test_results")
+    save_dir = f"temp/test_results/{start_time}"
+    experiment_config.save(f"{save_dir}/experiment_config.yaml")
+    model.save_pretrained(save_dir)
+    tokenizer.save_pretrained(save_dir)
 
 
 if __name__ == "__main__":

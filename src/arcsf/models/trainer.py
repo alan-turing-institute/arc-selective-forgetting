@@ -44,6 +44,7 @@ def load_trainer(
         save_steps=config.save_steps,
         load_best_model_at_end=config.load_best_model_at_end,
         metric_for_best_model=config.metric_for_best_model,
+        save_total_limit=config.save_total_limit,
         # TODO add seed, consider other args
     )
 

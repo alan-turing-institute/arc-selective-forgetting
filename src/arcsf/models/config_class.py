@@ -47,6 +47,7 @@ class ModelConfig(Config):
         self.save_steps = trainer_kwargs["logging_steps"]
         self.load_best_model_at_end = trainer_kwargs["load_best_model_at_end"]
         self.metric_for_best_model = trainer_kwargs["metric_for_best_model"]
+        self.save_total_limit = trainer_kwargs["save_total_limit"]
 
     @classmethod
     def from_dict(cls, dict) -> "ModelConfig":

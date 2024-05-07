@@ -22,6 +22,7 @@ trainer_kwargs: # passed to TrainingArguments
   load_best_model_at_end: true
   metric_for_best_model: eval_loss
   save_strategy: epoch
+  save_total_limit: 1
 
   # Outputs
   output_dir: output

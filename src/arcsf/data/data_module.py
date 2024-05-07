@@ -83,6 +83,22 @@ class QAFormatter:
         return self.template.format(question=question, answer=answer)
 
 
+def qa_formatter_autoregression(qa: tuple[str, str]) -> str:
+    """
+    Basic QA formatter which accepts a tuple outputs:
+
+    "[input question] [input answer]"
+
+    Args:
+        QA: Tuple of question answer pair
+
+    Returns:
+        full_text: formatted question--answer pair
+    """
+    question, answer = qa
+    return f"{question} {answer}"
+
+
 class EvalQADataset(Dataset):
     """
     Question answer format dataset, __getitem__ returns a tokenized question--answer
@@ -138,11 +154,13 @@ class EvalQADataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        input = self.data[idx]["question"]
-
-        target = self.answer_sampler(self.data[idx]["answer"])
-
-        return self.tokenizer(input), self.tokenizer(target)
+        inp = self.data[idx]["question"]
+        target = self.answer_sampler(self.data[idx])
+        formatted = self.qa_formatter((inp, target))
+        return self.tokenizer(formatted), (
+            self.tokenizer(inp, return_tensors="pt", add_special_tokens=True),
+            self.tokenizer(target, return_tensors="pt", add_special_tokens=True),
+        )
 
 
 class FinetuneDataset(Dataset):

@@ -20,4 +20,4 @@ CONDA_ENV_PATH=/bask/projects/v/vjgo8416-sltv-forget/sfenv
 conda activate ${CONDA_ENV_PATH}
 
 # Run script
-python scripts/train.py --experiment_name gpt2_longer_experiment
+python scripts/train.py --experiment_name gpt2_longer_experiment_all

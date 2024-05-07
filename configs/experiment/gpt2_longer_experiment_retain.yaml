@@ -2,6 +2,7 @@
 data_config: example_tofu_1
 model_config: gpt2_longer
 # TODO: add other configs that define a single experiment end to end
+train_type: retain
 
 # Seed for random components
 seed: 42

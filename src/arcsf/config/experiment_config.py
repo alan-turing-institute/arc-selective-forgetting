@@ -83,6 +83,7 @@ class ExperimentConfig(Config):
         self,
         data_config: str,
         model_config: str,
+        train_type: str,
         use_wandb: bool,
         wandb_config: dict | None,
         seed: int | None,
@@ -95,6 +96,9 @@ class ExperimentConfig(Config):
             self.data_config = yaml.safe_load(f)
         # self.data_config = None
         self.model_config = ModelConfig.from_yaml(f"configs/model/{model_config}.yaml")
+
+        # Either "all" (train on full dataset) or "retain" (train on retain split only)
+        self.train_type = train_type
 
         # Wandb args
         self.use_wandb = use_wandb
@@ -127,6 +131,7 @@ class ExperimentConfig(Config):
             "experiment_name": self.experiment_name,
             "data_name": self.data_name,
             "data_config": self.data_config,
+            "train_type": self.train_type,
         }
 
     def save(self, path: str) -> None:

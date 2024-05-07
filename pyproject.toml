@@ -35,3 +35,5 @@ include = '\.pyi?$'
 
 [tool.isort]
 profile = "black"
+known_third_party = ["wandb"]
+known_first_party = ["arcsf"]

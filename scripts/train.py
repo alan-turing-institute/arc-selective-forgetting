@@ -1,6 +1,8 @@
 import argparse
 from datetime import datetime
 
+from datasets import concatenate_datasets
+
 from arcsf import ExperimentConfig, load_model_and_tokenizer, load_trainer
 from arcsf.data.tofu import load_tofu
 from arcsf.utils import seed_everything
@@ -29,17 +31,26 @@ def main(experiment_name):
 
     # Step 5: Load and prepreprocess data
     # TODO: change placeholder which assumes always tuning on retain set alone
-    _, retain = load_tofu(
+    forget, retain = load_tofu(
         **experiment_config.data_config,
         random_seed=experiment_config.seed,
     )
+    if experiment_config.train_type == "all":
+        dataset = concatenate_datasets([forget, retain])
+    elif experiment_config.train_type == "retain":
+        dataset = retain
+    else:
+        raise ValueError(
+            f"train_type must be one of ['all', 'retain'], got "
+            f"{experiment_config.train_type}"
+        )
 
     # TODO: remove placeholder preprocessing below
     def template_sample(sample):
         sample["text"] = f"{sample['question']} {sample['answer']}{tokenizer.eos_token}"
         return sample
 
-    dataset = retain.map(template_sample)
+    dataset = dataset.map(template_sample)
     dataset = dataset.map(
         lambda sample: tokenizer(sample["text"]),
         remove_columns=dataset.features,

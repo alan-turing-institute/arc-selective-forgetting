@@ -1,3 +1,5 @@
+import argparse
+
 import torch
 from torch.utils.data import DataLoader
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
@@ -29,21 +31,31 @@ def qualitative_eval(model, tokenizer, dataset, random_seed, **generate_kwargs):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description=(
+            "Runs qualitative evaluation, comparing outputs of model"
+            " against target strings."
+        )
+    )
+    parser.add_argument("directory", type=str, help="Relative path to model directory.")
+    args = parser.parse_args()
+    model_dir = args.directory
+
     rand = 42
-    model = GPT2LMHeadModel.from_pretrained("gpt2")
-    tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+    model = GPT2LMHeadModel.from_pretrained(model_dir)
+    tokenizer = GPT2Tokenizer.from_pretrained(model_dir)
     model.config.pad_token_id = tokenizer.eos_token_id
     forget_data, retain_data = get_data(
         "tofu", "author", True, True, 0.2, 0.2, random_seed=rand
     )
     qa_formatter = qa_formatter_autoregression
-    dataset = EvalQADataset(forget_data, tokenizer, qa_formatter, "standard")
+    dataset = EvalQADataset(retain_data, tokenizer, qa_formatter, "standard")
     qualitative_eval(
         model,
         tokenizer,
         dataset,
         random_seed=rand,
         max_new_tokens=50,
-        temperature=0.9,
-        do_sample=True,
+        # temperature=0.9,
+        # do_sample=True,
     )

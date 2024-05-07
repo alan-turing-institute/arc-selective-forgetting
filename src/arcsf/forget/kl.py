@@ -5,7 +5,10 @@ https://github.com/locuslab/tofu/blob/main/dataloader.py
 """
 
 import torch
+from torch import Tensor
 from torch.nn.functional import kl_div, log_softmax
+from transformers import BatchEncoding, PreTrainedModel
+from transformers.utils.generic import ModelOutput
 
 from arcsf.forget.base import Forgetter
 
@@ -14,14 +17,28 @@ class KLForgetter(Forgetter):
     """
     Forgetter with a KL divergence loss function, which aims to maximise the loss of the
     model on the forget inputs, and minimise the KL divergence between the current
-    model and the original (Oracle) model's logits on the retain inputs.
+    model and the original (Oracle) model's logits on the retain inputs. See the parent
+    Forgetter class for more information.
     """
 
-    def __init__(self, *args, oracle_model, **kwargs):
+    def __init__(self, *args, oracle_model: PreTrainedModel, **kwargs):
+        """
+        Args:
+            oracle_model: A copy of the original model (before unlearning) to compare
+                the current model's logits to.
+            *args, **kwargs: Arguments passed to the parent Forgetter class (and via
+                that to the HuggingFace Trainer).
+        """
         self.oracle_model = oracle_model
         super().__init__(*args, **kwargs)
 
-    def compute_loss(self, model, inputs, return_outputs=False):
+    def compute_loss(
+        self,
+        model: PreTrainedModel,
+        inputs: tuple[BatchEncoding, BatchEncoding],
+        return_outputs: bool = False,
+    ) -> Tensor | tuple[Tensor, ModelOutput]:
+        """See the parent Forgetter class for docs on expected inputs."""
         forget_inputs, retain_inputs = inputs
 
         outputs = model(**forget_inputs)

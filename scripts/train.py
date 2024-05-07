@@ -36,9 +36,7 @@ def main(experiment_name):
 
     # TODO: remove placeholder preprocessing below
     def template_sample(sample):
-        sample["text"] = (
-            f"{sample['question']}: {sample['answer']}{tokenizer.eos_token}"
-        )
+        sample["text"] = f"{sample['question']} {sample['answer']}{tokenizer.eos_token}"
         return sample
 
     dataset = retain.map(template_sample)

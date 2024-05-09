@@ -20,7 +20,8 @@ class ModelConfig(Config):
         if isinstance(trainer_kwargs["learning_rate"], str):
             trainer_kwargs["learning_rate"] = float(trainer_kwargs["learning_rate"])
         trainer_kwargs["logging_dir"] = f'{trainer_kwargs["output_dir"]}/logs'
-        trainer_kwargs["save_steps"] = trainer_kwargs["logging_steps"]
+        if "logging_steps" in trainer_kwargs.keys():
+            trainer_kwargs["save_steps"] = trainer_kwargs["logging_steps"]
 
         # TODO: work out how to manage logging steps in line w/ varying dataset size
 

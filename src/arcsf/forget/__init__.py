@@ -4,8 +4,8 @@ from arcsf.forget.idk import IDKForgetter
 from arcsf.forget.kl import KLForgetter
 
 FORGET_CLASSES = {
-    "GradientAscent": GradientAscentForgetter,
-    "GradientDifference": GradientDifferenceForgetter,
-    "IDK": IDKForgetter,
-    "KL": KLForgetter,
+    "ascent": GradientAscentForgetter,
+    "difference": GradientDifferenceForgetter,
+    "idk": IDKForgetter,
+    "kl": KLForgetter,
 }

@@ -1,4 +1,3 @@
-from collections.abc import Callable
 from importlib import resources
 
 import torch
@@ -57,20 +56,29 @@ def get_data(
     return data
 
 
-def qa_formatter_basic(qa: tuple[str, str]) -> str:
+class QAFormatter:
     """
-    Basic QA formatter which accepts a tuple outputs:
-
-    "Question: [input question]\nAnswer: [input answer]"
-
-    Args:
-        QA: Tuple of question answer pair
-
-    Returns:
-        full_text: formatted question--answer pair
+    Formats question-answer pairs into a single string using a template.
     """
-    question, answer = qa
-    return f"Question: {question}\nAnswer: {answer}"
+
+    def __init__(self, template: str):
+        """
+        Args:
+            template: A string template containing "{question}" and "{answer}".
+        """
+        if "{question}" not in template or "{answer}" not in template:
+            raise ValueError("Template must contain '{question}' and '{answer}'")
+        self.template = template
+
+    def __call__(self, question: str, answer: str) -> str:
+        """
+        Formats a question-answer pair using the template.
+
+        Args:
+            question: Question to format
+            answer: Answer to format
+        """
+        return self.template.format(question=question, answer=answer)
 
 
 class EvalQADataset(Dataset):
@@ -84,7 +92,7 @@ class EvalQADataset(Dataset):
         self,
         data: Dataset,
         tokenizer: AutoTokenizer,
-        qa_formatter: Callable[[tuple[str, str]], str],
+        qa_formatter: QAFormatter,
         loss_type: str,
         random_seed=42,
     ):
@@ -96,7 +104,8 @@ class EvalQADataset(Dataset):
         Args:
             data: torch Dataset containing data for the dataset
             tokenizer : Used to tokenize the input
-            qa_formatter : Function used to format input before passing it to the model
+            qa_formatter : QAFormatter instance used to format input before passing it
+                to the model
             loss_type : type of loss used, currently only one option changes behaviour:
                     "idk" : labels are sampled from 'idk.jsonl'
             random_seed: random seed for sampling the retain and idk samples, if used
@@ -145,7 +154,7 @@ class FinetuneDataset(Dataset):
         self,
         data: Dataset,
         tokenizer: AutoTokenizer,
-        qa_formatter: Callable[[tuple[str, str]], str],
+        qa_formatter: QAFormatter,
     ):
         """
         Dataset which returns a tokenized version of the input given a tokenizer and
@@ -154,7 +163,8 @@ class FinetuneDataset(Dataset):
         Args:
             data: torch Dataset containing data for the dataset
             tokenizer : Used to tokenize the input
-            qa_formatter : Function used to format input before passing it to the model
+            qa_formatter : QAFormatter instance used to format input before passing it
+                to the model
         """
         super().__init__()
         self.tokenizer = tokenizer
@@ -169,7 +179,7 @@ class FinetuneDataset(Dataset):
         question = self.data[idx]["question"]
         answer = self.data[idx]["answer"]
 
-        inp = self.qa_formatter((question, answer))
+        inp = self.qa_formatter(question, answer)
 
         return self.tokenizer(inp)
 
@@ -185,7 +195,7 @@ class QAForgetDataset(Dataset):
         self,
         data: Dataset,
         tokenizer: AutoTokenizer,
-        qa_formatter: Callable[[tuple[str, str]], str],
+        qa_formatter: QAFormatter,
         loss_type: str,
         random_seed: int = 42,
     ):
@@ -196,7 +206,8 @@ class QAForgetDataset(Dataset):
         Args:
             data: torch Dataset containing data for the dataset
             tokenizer : Used to tokenize the input
-            qa_formatter : Function used to format input before passing it to the model
+            qa_formatter : QAFormatter used to format input before passing it to the
+                model
             loss_type : type of loss used, currently only one option changes behaviour:
                     "idk" : labels are sampled from 'idk.jsonl'
             random_seed: random seed for sampling the retain and idk samples, if used
@@ -249,7 +260,7 @@ class QAForgetDataset(Dataset):
 
         forget_answer = self.answer_sampler(forget_row)
 
-        retain = self.qa_formatter((retain_question, retain_answer))
-        forget = self.qa_formatter((forget_question, forget_answer))
+        retain = self.qa_formatter(retain_question, retain_answer)
+        forget = self.qa_formatter(forget_question, forget_answer)
 
         return self.tokenizer(retain), self.tokenizer(forget)

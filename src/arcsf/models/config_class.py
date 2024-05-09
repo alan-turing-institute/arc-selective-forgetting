@@ -16,38 +16,24 @@ class ModelConfig(Config):
         self.model_id = model_id
         self.model_kwargs = model_kwargs
 
+        # Process trainer kwargs
+        if isinstance(trainer_kwargs["learning_rate"], str):
+            trainer_kwargs["learning_rate"] = float(trainer_kwargs["learning_rate"])
+        trainer_kwargs["logging_dir"] = f'{trainer_kwargs["output_dir"]}/logs'
+        trainer_kwargs["save_steps"] = trainer_kwargs["logging_steps"]
+
+        # TODO: work out how to manage logging steps in line w/ varying dataset size
+
+        # Add trainer kwargs to self
+        self.trainer_kwargs = trainer_kwargs
+
         # Output dir
         self.output_dir = trainer_kwargs["output_dir"]
-
-        # Training arguments: batch size
-        self.train_batch_size = trainer_kwargs["train_batch_size"]
-        self.eval_batch_size = trainer_kwargs["eval_batch_size"]
-        self.eval_accumulation_steps = trainer_kwargs["eval_accumulation_steps"]
-
-        # Training arguments: hyperparams
-        self.learning_rate = trainer_kwargs["learning_rate"]
-        if isinstance(self.learning_rate, str):
-            self.learning_rate = float(self.learning_rate)
-        self.num_train_epochs = trainer_kwargs["num_train_epochs"]
-
-        # Evaluation
-        self.evaluation_strategy = trainer_kwargs["evaluation_strategy"]
-
-        # Logging
-        # TODO: work out how to manage this in line w/ varying dataset size
-        self.logging_strategy = trainer_kwargs["logging_strategy"]
-        self.logging_dir = f'{trainer_kwargs["output_dir"]}/logs'
-        self.logging_steps = trainer_kwargs["logging_steps"]
 
         # Wandb
         self.use_wandb = use_wandb
 
-        # Early stopping - TODO make optional
-        self.save_strategy = trainer_kwargs["save_strategy"]
-        self.save_steps = trainer_kwargs["logging_steps"]
-        self.load_best_model_at_end = trainer_kwargs["load_best_model_at_end"]
-        self.metric_for_best_model = trainer_kwargs["metric_for_best_model"]
-        self.save_total_limit = trainer_kwargs["save_total_limit"]
+        # TODO make early stopping optional
 
     @classmethod
     def from_dict(cls, dict) -> "ModelConfig":

@@ -69,6 +69,7 @@ def main(experiment_name):
         tokenizer,
         dataset=dataset,
         trainer_kwargs=experiment_config.model_config.trainer_kwargs,
+        use_wandb=experiment_config.use_wandb,
     )
 
     # Step 7: train

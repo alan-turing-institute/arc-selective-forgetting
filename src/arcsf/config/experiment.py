@@ -7,8 +7,8 @@ import wandb
 import yaml
 from jinja2 import Environment, FileSystemLoader
 
-from arcsf.config.config_class import Config
-from arcsf.models.config_class import ModelConfig
+from arcsf.config.config import Config
+from arcsf.models.config import ModelConfig
 from arcsf.utils import PROJECT_DIR
 
 

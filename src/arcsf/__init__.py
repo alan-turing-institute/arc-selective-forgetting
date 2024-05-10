@@ -1,4 +1,4 @@
-from arcsf.config.experiment_config import (  # noqa F401
+from arcsf.config.experiment import (  # noqa F401
     ExperimentConfig,
     generate_experiment_configs,
 )

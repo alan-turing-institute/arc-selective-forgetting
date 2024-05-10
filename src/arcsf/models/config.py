@@ -1,4 +1,4 @@
-from arcsf.config.config_class import Config
+from arcsf.config.config import Config
 
 
 class ModelConfig(Config):

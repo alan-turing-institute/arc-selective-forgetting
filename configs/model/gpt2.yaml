@@ -26,6 +26,3 @@ trainer_kwargs: # passed to TrainingArguments
 
   # Outputs
   output_dir: output
-
-# TODO: placeholder
-use_wandb: true

@@ -23,7 +23,7 @@ def load_trainer(
     training_args = TrainingArguments(
         **trainer_kwargs,
         overwrite_output_dir=True,
-        report_to="wandb" if use_wandb else None,
+        report_to="wandb" if use_wandb else "none",
         # TODO make Early stopping optional
         # TODO add seed, consider other args
     )

@@ -1,5 +1,13 @@
 from pathlib import Path
 
+from transformers import DataCollatorForLanguageModeling, Trainer
+
+from arcsf.data.data_module import ForgetterDataCollator
+from arcsf.forget.grad_ascent import GradientAscentForgetter
+from arcsf.forget.grad_diff import GradientDifferenceForgetter
+from arcsf.forget.idk import IDKForgetter
+from arcsf.forget.kl import KLForgetter
+
 PROJECT_DIR = Path(__file__, "..", "..", "..").resolve()
 CONFIG_DIR = Path(PROJECT_DIR, "configs")
 
@@ -19,3 +27,28 @@ def _get_config_dir(location):
 EXPERIMENT_CONFIG_DIR = _get_config_dir("experiment")
 MODEL_CONFIG_DIR = _get_config_dir("model")
 DATA_CONFIG_DIR = _get_config_dir("data")
+
+
+# Dict for selecting trainer type and associated data collator
+TRAINER_CLS_DICT = {
+    "trainer": {
+        "trainer_cls": Trainer,
+        "data_collator": DataCollatorForLanguageModeling,
+    },
+    "ascent": {
+        "trainer_cls": GradientAscentForgetter,
+        "data_collator": ForgetterDataCollator,
+    },
+    "difference": {
+        "trainer_cls": GradientDifferenceForgetter,
+        "data_collator": ForgetterDataCollator,
+    },
+    "idk": {
+        "trainer_cls": IDKForgetter,
+        "data_collator": ForgetterDataCollator,
+    },
+    "kl": {
+        "trainer_cls": KLForgetter,
+        "data_collator": ForgetterDataCollator,
+    },
+}

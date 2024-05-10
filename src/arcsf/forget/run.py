@@ -3,8 +3,10 @@ import os
 from datetime import datetime
 
 import wandb
-from arcsf import ForgetConfig, load_model_and_tokenizer, load_trainer
 from arcsf.data.data_module import QAForgetDataset, QAFormatter, get_data
+from arcsf.forget.config import ForgetConfig
+from arcsf.models.model import load_model_and_tokenizer
+from arcsf.models.trainer import load_trainer
 from arcsf.utils import seed_everything
 
 
@@ -14,14 +16,15 @@ def main(experiment_name):
     os.makedirs(save_dir)
 
     # Step 1: Process configs to dicts
-    forget_config = ForgetConfig.from_yaml(f"configs/experiment/{experiment_name}.yaml")
+    forget_config = ForgetConfig.from_yaml(f"configs/forget/{experiment_name}.yaml")
 
     # Step 2: Seed everything
     seed_everything(forget_config.seed)
 
     # Step 3: Initialise wandb
-    forget_config.init_wandb(job_type="train")
-    wandb.log({"save_dir": save_dir, "start_time": start_time})
+    if forget_config.use_wandb:
+        forget_config.init_wandb(job_type="train")
+        wandb.log({"save_dir": save_dir, "start_time": start_time})
 
     # Step 4: Load model
     model, tokenizer = load_model_and_tokenizer(
@@ -38,7 +41,7 @@ def main(experiment_name):
     )
 
     qa_formatter = QAFormatter("{question} {answer}" + tokenizer.eos_token)
-    dataset = QAForgetDataset(
+    train_dataset = QAForgetDataset(
         (forget, retain),
         tokenizer,
         qa_formatter,
@@ -48,10 +51,11 @@ def main(experiment_name):
 
     # Step 6: Load trainer
     forgetter = load_trainer(
-        forget_type=forget_config.forget_class,
         model=model,
         tokenizer=tokenizer,
-        dataset=dataset,
+        train_dataset=train_dataset,
+        eval_dataset=None,
+        trainer_type=forget_config.forget_class,
         trainer_kwargs=forget_config.model_config.trainer_kwargs,
         use_wandb=forget_config.use_wandb,
     )
@@ -82,7 +86,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--experiment_name",
         type=str,
-        help="Name of experiment yaml file contained in configs/experiment",
+        help="Name of experiment yaml file contained in configs/forget",
         required=True,
     )
 

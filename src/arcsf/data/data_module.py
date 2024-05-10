@@ -1,8 +1,10 @@
 from importlib import resources
+from typing import Any, Callable, Dict, List
 
 import torch
 from torch.utils.data import Dataset
 from transformers import AutoTokenizer
+from transformers.data.data_collator import InputDataClass
 
 import arcsf.data
 from arcsf.data.tofu import load_tofu
@@ -242,25 +244,50 @@ class QAForgetDataset(Dataset):
         return forget_row["answer"]
 
     def __len__(self):
-        return len(self.data)
+        return len(self.forget_data)
 
     def __getitem__(self, idx):
+        # forget data works as in above examples
+        forget_row = self.forget_data[idx]
+        forget_question = forget_row["question"]
+        forget_answer = self.answer_sampler(forget_row)
+
         # this takes the first item in our retain data permutation using item_index
         retain_row = self.retain_data[self.item_index]
         # then rolls the permutation vector using the item_index to ensure
         # samples aren't reused without first exhausting all retain samples
         self.item_index = (self.item_index + 1) % self.retain_length
-
         retain_question = retain_row["question"]
         retain_answer = retain_row["answer"]
 
-        # forget data works as in above examples
-        forget_row = self.forget_data[idx]
-        forget_question = forget_row["question"]
-
-        forget_answer = self.answer_sampler(forget_row)
-
-        retain = self.qa_formatter(retain_question, retain_answer)
         forget = self.qa_formatter(forget_question, forget_answer)
+        retain = self.qa_formatter(retain_question, retain_answer)
 
-        return self.tokenizer(retain), self.tokenizer(forget)
+        return self.tokenizer(forget), self.tokenizer(retain)
+
+
+class ForgetterDataCollator:
+    """
+    Data collator that parses lists of forget and retain inputs as provided by
+    QAForgetDataset.
+    """
+
+    def __init__(self, base_collator: Callable[[List[InputDataClass]], Dict[str, Any]]):
+        """
+        Args:
+            base_collator: An instance of a normal HuggingFace (or custom) data collator
+                which takes a list of model inputs and collates them into a batch.
+        """
+        self.base_collator = base_collator
+
+    def __call__(self, features: List[Dict[str, Any]], **kwargs) -> Dict[str, Any]:
+        """
+        Args:
+            features: A list of outputs from QAForgetDataset, containing tuples of
+                forget and retain data.
+            kwargs: Additional arguments to pass to the base collator.
+        """
+        forget = self.base_collator([sample[0] for sample in features], **kwargs)
+        retain = self.base_collator([sample[1] for sample in features], **kwargs)
+
+        return forget, retain

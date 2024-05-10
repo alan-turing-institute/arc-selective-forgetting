@@ -9,13 +9,7 @@ from transformers import (
     TrainingArguments,
 )
 
-# Dict for selecting trainer type and associated data collator
-TRAINER_CLS_DICT = {
-    "trainer": {
-        "trainer_cls": Trainer,
-        "data_collator": DataCollatorForLanguageModeling,
-    },
-}
+from arcsf.constants import TRAINER_CLS_DICT
 
 
 def load_trainer(

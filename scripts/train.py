@@ -5,9 +5,10 @@ from datetime import datetime
 import wandb
 from datasets import concatenate_datasets
 
-from arcsf import ExperimentConfig, load_model_and_tokenizer, load_trainer
-from arcsf.config.experiment import EXPERIMENT_CONFIG_DIR
+from arcsf.config.experiment import EXPERIMENT_CONFIG_DIR, ExperimentConfig
 from arcsf.data.tofu import load_tofu
+from arcsf.models.model import load_model_and_tokenizer
+from arcsf.models.trainer import load_trainer
 from arcsf.utils import seed_everything
 
 

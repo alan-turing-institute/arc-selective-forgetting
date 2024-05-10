@@ -34,7 +34,7 @@ def main(experiment_name):
     # Step 4: Load model
     model, tokenizer = load_model_and_tokenizer(
         model_id=experiment_config.model_config.model_id,
-        peft_kwargs=None,  # TODO: placeholder
+        peft_kwargs=experiment_config.model_config.peft_kwargs,
         **experiment_config.model_config.model_kwargs,
     )
 

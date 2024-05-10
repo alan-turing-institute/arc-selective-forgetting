@@ -11,6 +11,7 @@ class ModelConfig(Config):
         model_kwargs: dict,
         trainer_kwargs: dict,
         early_stopping_kwargs: dict | None,
+        peft_kwargs: dict | None,
         add_padding_token: bool = False,
     ) -> None:
         super().__init__()
@@ -18,6 +19,7 @@ class ModelConfig(Config):
         # Process main inputs
         self.model_id = model_id
         self.model_kwargs = model_kwargs
+        self.peft_kwargs = peft_kwargs
         self.early_stopping_kwargs = early_stopping_kwargs
         self.add_padding_token = add_padding_token
 
@@ -62,6 +64,8 @@ class ModelConfig(Config):
             early_stopping_kwargs=hyperparameter_dict.get(
                 "early_stopping_kwargs", None
             ),
+            peft_kwargs=hyperparameter_dict.get("peft_kwargs", None),
+            add_padding_token=model_dict.get("add_padding_token", None),
         )
 
     def to_dict(self) -> dict:

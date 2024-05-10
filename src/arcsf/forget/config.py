@@ -2,9 +2,9 @@ import os
 import warnings
 from copy import copy
 
+import wandb
 import yaml
 
-import wandb
 from arcsf.config.config_class import Config
 from arcsf.models.config_class import ModelConfig
 
@@ -41,7 +41,7 @@ class ForgetConfig(Config):
         # Setup run name
         self.data_name = data_config
         self.model_name = model_config
-        self.experiment_name = f"{data_config}-{model_config}"
+        self.experiment_name = f"{data_config}-{model_config}-{forget_class}"
 
         # seed
         self.seed = seed

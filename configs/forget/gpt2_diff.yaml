@@ -3,7 +3,7 @@ data_config: example_tofu_1
 model_config: gpt2_forget
 model_path: temp/20240507-232355-483306
 
-forget_class: ascent
+forget_class: difference
 
 # Seed for random components
 seed: 42

@@ -3,6 +3,7 @@ import os
 from datetime import datetime
 
 import wandb
+
 from arcsf.data.data_module import QAForgetDataset, QAFormatter, get_data
 from arcsf.forget.config import ForgetConfig
 from arcsf.models.model import load_model_and_tokenizer
@@ -23,7 +24,7 @@ def main(experiment_name):
 
     # Step 3: Initialise wandb
     if forget_config.use_wandb:
-        forget_config.init_wandb(job_type="train")
+        forget_config.init_wandb(job_type="forget")
         wandb.log({"save_dir": save_dir, "start_time": start_time})
 
     # Step 4: Load model

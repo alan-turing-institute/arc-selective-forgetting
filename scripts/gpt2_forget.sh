@@ -2,7 +2,7 @@
 #SBATCH --account vjgo8416-sltv-forget
 #SBATCH --qos turing
 #SBATCH --job-name example-job
-#SBATCH --time 0-5:0:0
+#SBATCH --time 0-1:0:0
 #SBATCH --nodes 1
 #SBATCH --gpus 1
 #SBATCH --cpus-per-gpu 36

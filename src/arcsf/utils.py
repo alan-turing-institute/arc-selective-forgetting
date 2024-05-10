@@ -4,6 +4,8 @@ import random
 import numpy as np
 import torch
 
+PROJECT_DIR = os.path.abspath(os.path.join(os.path.abspath(__file__), "..", "..", ".."))
+
 
 def seed_everything(seed: int) -> None:
     """Set random seeds for torch, numpy, random, and python.

@@ -111,6 +111,7 @@ class ExperimentConfig(Config):
 
         # seed
         self.seed = seed
+        self.model_config.trainer_kwargs["seed"] = seed
 
     @classmethod
     def from_dict(cls, dict) -> "ModelConfig":

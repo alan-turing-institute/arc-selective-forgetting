@@ -9,12 +9,21 @@ from transformers import (
     TrainingArguments,
 )
 
+# Dicts for selecting trainer type and associated data collator
+TRAINER_CLS_DICT = {
+    "trainer": Trainer,
+}
+DATA_COLLATOR_DICT = {
+    "trainer": DataCollatorForLanguageModeling,
+}
+
 
 def load_trainer(
     model: PreTrainedModel | PeftModel,
     tokenizer: PreTrainedTokenizer,
     train_dataset: Dataset,
     eval_dataset: Dataset | None,
+    trainer_type: str,
     trainer_kwargs: dict,
     use_wandb: bool,
 ) -> Trainer:
@@ -24,12 +33,11 @@ def load_trainer(
         **trainer_kwargs,
         overwrite_output_dir=True,
         report_to="wandb" if use_wandb else "none",
-        # TODO make Early stopping optional
-        # TODO add seed, consider other args
     )
 
     # Setup data collator
-    data_collator = DataCollatorForLanguageModeling(
+    DataCollatorCls = DATA_COLLATOR_DICT[trainer_type]
+    data_collator = DataCollatorCls(
         tokenizer,
         mlm=False,
     )
@@ -41,8 +49,11 @@ def load_trainer(
         early_stopping_patience=2,
     )
 
+    # Get trainer cls
+    TrainerCls = TRAINER_CLS_DICT[trainer_type]
+
     # Load trainer
-    trainer = Trainer(
+    trainer = TrainerCls(
         model,
         args=training_args,
         data_collator=data_collator,

@@ -143,12 +143,12 @@ class ExperimentConfig(Config):
         """
         return cls(**dict)
 
-    # TODO: complete this method
     def to_dict(self) -> dict:
         return {
             "experiment_name": self.experiment_name,
             "data_name": self.data_name,
             "data_config": self.data_config,
+            "model_config": self.model_config.to_dict(),
             "train_type": self.train_type,
         }
 

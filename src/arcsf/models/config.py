@@ -1,3 +1,5 @@
+import yaml
+
 from arcsf.config.config import Config
 
 
@@ -35,7 +37,15 @@ class ModelConfig(Config):
         self.output_dir = trainer_kwargs["output_dir"]
 
     @classmethod
-    def from_dict(cls, dict) -> "ModelConfig":
+    def from_yaml(cls, model_path: str, hyperparameter_path: str) -> "Config":
+        with open(model_path, "r") as f:
+            model_config = yaml.safe_load(f)
+        with open(hyperparameter_path, "r") as f:
+            hyperparameter_config = yaml.safe_load(f)
+        return cls.from_dict(model_config, hyperparameter_config)
+
+    @classmethod
+    def from_dict(cls, model_dict, hyperparameter_dict) -> "ModelConfig":
         """Create a FineTuningConfig from a config dict.
 
         Args:
@@ -46,10 +56,12 @@ class ModelConfig(Config):
             FineTuningConfig object.
         """
         return cls(
-            model_id=dict["model_id"],
-            model_kwargs=dict["model_kwargs"],
-            trainer_kwargs=dict["trainer_kwargs"],
-            early_stopping_kwargs=dict.get("early_stopping_kwargs", None),
+            model_id=model_dict["model_id"],
+            model_kwargs=model_dict["model_kwargs"],
+            trainer_kwargs=hyperparameter_dict["trainer_kwargs"],
+            early_stopping_kwargs=hyperparameter_dict.get(
+                "early_stopping_kwargs", None
+            ),
         )
 
     def to_dict(self) -> dict:

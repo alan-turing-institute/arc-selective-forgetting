@@ -1,6 +1,7 @@
 # All of thse should be contained under configs/type/
 data_config: example_tofu_1
-model_config: gpt2_longer
+model_config: gpt2
+hyperparameter_config: longer
 
 
 # TODO: add other configs that define a single experiment end to end

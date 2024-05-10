@@ -93,6 +93,7 @@ class ExperimentConfig(Config):
         self,
         data_config: str,
         model_config: str,
+        hyperparameter_config: str,
         train_type: str,
         use_wandb: bool,
         wandb_config: dict | None,
@@ -104,8 +105,10 @@ class ExperimentConfig(Config):
         # TODO: replace data config loading
         with open(os.path.join(DATA_CONFIG_DIR, f"{model_config}.yaml"), "r") as f:
             self.data_config = yaml.safe_load(f)
+        model_dir = os.path.join(MODEL_CONFIG_DIR, model_config)
         self.model_config = ModelConfig.from_yaml(
-            os.path.join(MODEL_CONFIG_DIR, f"{model_config}.yaml")
+            os.path.join(model_dir, f"{model_config}.yaml"),
+            os.path.join(model_dir, "hyperparameters", f"{hyperparameter_config}.yaml"),
         )
 
         # Either "all" (train on full dataset) or "retain" (train on retain split only)

@@ -9,6 +9,18 @@ from jinja2 import Environment, FileSystemLoader
 
 from arcsf.config.config_class import Config
 from arcsf.models.config_class import ModelConfig
+from arcsf.utils import PROJECT_DIR
+
+
+# Constants
+def _get_project_dir(location):
+    return os.path.join(PROJECT_DIR, location)
+
+
+CONFIG_DIR = _get_project_dir("configs")
+EXPERIMENT_CONFIG_DIR = _get_project_dir("experiment")
+MODEL_CONFIG_DIR = _get_project_dir("model")
+DATA_CONFIG_DIR = _get_project_dir("data")
 
 
 def _listify(obj: object):
@@ -22,7 +34,7 @@ def generate_experiment_configs(
 ) -> None:
 
     # Read in yaml file
-    with open(f"configs/experiment/{top_config_name}.yaml") as f:
+    with open(os.path.join(EXPERIMENT_CONFIG_DIR, f"{top_config_name}.yaml")) as f:
         top_config = yaml.safe_load(f)
 
     # Loop over, construct combo dict
@@ -51,7 +63,7 @@ def generate_experiment_configs(
             os.mkdir(baskdir)
 
     # Write out dicts and optionally bask scripts
-    outdir = f"configs/experiment/{top_config_name}"
+    outdir = os.path.join(EXPERIMENT_CONFIG_DIR, f"{top_config_name}")
     if not os.path.exists(outdir):
         os.mkdir(outdir)
     for n, combo in enumerate(combo_dicts):
@@ -59,7 +71,11 @@ def generate_experiment_configs(
         with open(file_name, "w") as f:
             yaml.dump(combo, f)
         if use_bask:
-            environment = Environment(loader=FileSystemLoader("src/arcsf/config"))
+            environment = Environment(
+                loader=FileSystemLoader(
+                    os.path.join(PROJECT_DIR, "src", "arcsf", "config")
+                )
+            )
             template = environment.get_template("jobscript_template.sh")
 
             script_content = template.render(
@@ -73,7 +89,7 @@ def generate_experiment_configs(
                 experiment_file=file_name,
             )
 
-            with open(f"{baskdir}/submit_{n}.sh", "w") as f:
+            with open(os.path.join(PROJECT_DIR, baskdir, f"submit_{n}.sh"), "w") as f:
                 f.write(script_content)
 
 
@@ -92,10 +108,11 @@ class ExperimentConfig(Config):
 
         # Load in other configs
         # TODO: replace data config loading
-        with open(f"configs/data/{data_config}.yaml", "r") as f:
+        with open(os.path.join(DATA_CONFIG_DIR, f"{model_config}.yaml"), "r") as f:
             self.data_config = yaml.safe_load(f)
-        # self.data_config = None
-        self.model_config = ModelConfig.from_yaml(f"configs/model/{model_config}.yaml")
+        self.model_config = ModelConfig.from_yaml(
+            os.path.join(MODEL_CONFIG_DIR, f"{model_config}.yaml")
+        )
 
         # Either "all" (train on full dataset) or "retain" (train on retain split only)
         self.train_type = train_type

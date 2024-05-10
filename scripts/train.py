@@ -6,18 +6,20 @@ import wandb
 from datasets import concatenate_datasets
 
 from arcsf import ExperimentConfig, load_model_and_tokenizer, load_trainer
+from arcsf.config.experiment_config import EXPERIMENT_CONFIG_DIR
 from arcsf.data.tofu import load_tofu
 from arcsf.utils import seed_everything
 
 
 def main(experiment_name):
+    # Get start time
     start_time = datetime.strftime(datetime.now(), "%Y%m%d-%H%M%S-%f")
     save_dir = f"temp/{start_time}"
     os.makedirs(save_dir)
 
     # Step 1: Process configs to dicts
     experiment_config = ExperimentConfig.from_yaml(
-        f"configs/experiment/{experiment_name}.yaml"
+        os.path.join(EXPERIMENT_CONFIG_DIR, f"{experiment_name}.yaml")
     )
 
     # Step 2: Seed everything
@@ -67,7 +69,8 @@ def main(experiment_name):
     trainer = load_trainer(
         model,
         tokenizer,
-        dataset=dataset,
+        train_dataset=dataset,
+        eval_dataset=None,
         trainer_kwargs=experiment_config.model_config.trainer_kwargs,
         use_wandb=experiment_config.use_wandb,
     )
@@ -76,6 +79,7 @@ def main(experiment_name):
     trainer.train()
 
     # Step 8: save model after fine-tuning
+
     # TODO: customise to vary save location according to config
     experiment_config.save(f"{save_dir}/experiment_config.yaml")
     model.save_pretrained(save_dir)

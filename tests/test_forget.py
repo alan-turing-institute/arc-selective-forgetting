@@ -159,7 +159,6 @@ def test_kl_identical_oracle(
     """
     forgetter = KLForgetter(
         model=dummy_base_model,
-        oracle_model=dummy_base_model,
         args=dummy_training_args,
         data_collator=DataCollatorForLanguageModeling(dummy_tokenizer, mlm=False),
         train_dataset=dummy_forget_inputs,
@@ -190,11 +189,11 @@ def test_kl_diff_oracle(
     """
     forgetter = KLForgetter(
         model=dummy_base_model,
-        oracle_model=dummy_forget_model,
         args=dummy_training_args,
         data_collator=DataCollatorForLanguageModeling(dummy_tokenizer, mlm=False),
         train_dataset=dummy_forget_inputs,
     )
+    forgetter.oracle_model = dummy_forget_model
     assert isinstance(forgetter, Trainer)
 
     trainer_loss = dummy_trainer.compute_loss(

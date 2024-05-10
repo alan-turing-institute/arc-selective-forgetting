@@ -4,7 +4,6 @@ Feng, A. Schwarzschild, Z.C. Lipton, and J.Z. Kolter, 2024.
 https://github.com/locuslab/tofu/blob/main/dataloader.py
 """
 
-import torch
 from torch import Tensor
 from transformers import BatchEncoding, PreTrainedModel
 from transformers.utils.generic import ModelOutput
@@ -28,15 +27,8 @@ class IDKForgetter(Forgetter):
         """See the parent Forgetter class for docs on expected inputs."""
         idk_inputs, retain_inputs = inputs
 
-        # concatenate the inputs. single forward pass is more efficient
-        input_ids = torch.cat(
-            (idk_inputs["input_ids"], retain_inputs["input_ids"]), dim=0
-        )
-        labels = torch.cat((idk_inputs["labels"], retain_inputs["labels"]), dim=0)
-        attention_mask = torch.cat(
-            (idk_inputs["attention_mask"], retain_inputs["attention_mask"]), dim=0
-        )
+        idk_outputs = model(**idk_inputs)
+        retain_outputs = model(**retain_inputs)
+        loss = (idk_outputs.loss + retain_outputs.loss) / 2
 
-        outputs = model(input_ids, labels=labels, attention_mask=attention_mask)
-        loss = outputs.loss
-        return (loss, outputs) if return_outputs else loss
+        return (loss, idk_outputs) if return_outputs else loss

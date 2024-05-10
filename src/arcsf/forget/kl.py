@@ -7,7 +7,7 @@ https://github.com/locuslab/tofu/blob/main/dataloader.py
 import torch
 from torch import Tensor
 from torch.nn.functional import kl_div, log_softmax
-from transformers import BatchEncoding, PreTrainedModel
+from transformers import AutoModelForCausalLM, BatchEncoding, PreTrainedModel
 from transformers.utils.generic import ModelOutput
 
 from arcsf.forget.base import Forgetter
@@ -19,18 +19,22 @@ class KLForgetter(Forgetter):
     model on the forget inputs, and minimise the KL divergence between the current
     model and the original (Oracle) model's logits on the retain inputs. See the parent
     Forgetter class for more information.
+
+    Attributes:
+        oracle_model: A copy of the original model (before unlearning) to compare
+            the current model's logits to.
     """
 
-    def __init__(self, *args, oracle_model: PreTrainedModel, **kwargs):
+    def __init__(self, *args, **kwargs):
         """
         Args:
-            oracle_model: A copy of the original model (before unlearning) to compare
-                the current model's logits to.
             *args, **kwargs: Arguments passed to the parent Forgetter class (and via
                 that to the HuggingFace Trainer).
         """
-        self.oracle_model = oracle_model
         super().__init__(*args, **kwargs)
+        self.oracle_model = AutoModelForCausalLM.from_pretrained(
+            self.model.config.name_or_path
+        )
 
     def compute_loss(
         self,

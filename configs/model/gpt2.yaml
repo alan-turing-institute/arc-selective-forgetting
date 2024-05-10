@@ -16,7 +16,7 @@ trainer_kwargs: # passed to TrainingArguments
 
   # Logging
   logging_strategy: steps
-  logging_steps: 1920 #TODO: implement fractions
+  logging_steps: 0.5 #TODO: implement fractions
 
   # Early stopping
   load_best_model_at_end: true

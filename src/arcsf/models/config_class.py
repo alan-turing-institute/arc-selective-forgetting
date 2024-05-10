@@ -22,9 +22,9 @@ class ModelConfig(Config):
             trainer_kwargs["learning_rate"] = float(trainer_kwargs["learning_rate"])
         trainer_kwargs["logging_dir"] = f'{trainer_kwargs["output_dir"]}/logs'
         if "logging_steps" in trainer_kwargs.keys():
+            # Already the same by default, but this is to coerce it
             trainer_kwargs["save_steps"] = trainer_kwargs["logging_steps"]
-
-        # TODO: work out how to manage logging steps in line w/ varying dataset size
+            trainer_kwargs["eval_steps"] = trainer_kwargs["eval_steps"]
 
         # Add trainer kwargs to self
         self.trainer_kwargs = trainer_kwargs

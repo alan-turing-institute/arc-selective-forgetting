@@ -16,7 +16,6 @@ trainer_kwargs: # passed to TrainingArguments
 
   # Logging
   logging_strategy: epoch
-  logging_steps: 1920 #TODO: implement fractions
 
   # Early stopping
   load_best_model_at_end: true

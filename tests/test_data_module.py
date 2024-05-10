@@ -48,7 +48,7 @@ def qa_formatter():
     return QAFormatter("Question: {question}\nAnswer: {answer}")
 
 
-def _identity(inp):
+def _identity(inp, **kw):
     return inp
 
 
@@ -111,10 +111,7 @@ def test_idk_targets(data):
     # load idk type dataset - don't pass tokenizer or qa_formatter so we can look
     # directly at output.
     idk_set = EvalQADataset(
-        data,
-        _identity,
-        _identity,
-        loss_type="idk",
+        data, _identity, _identity, loss_type="idk", qualitative_eval=True
     )
     # load possible idk-type responses
     idk_targets = get_idk_responses()

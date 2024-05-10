@@ -2,7 +2,9 @@ import math
 
 import pytest
 import torch
+from torch.utils.data import DataLoader
 
+from arcsf.data.data_module import EvalQADataset, get_data, qa_formatter_autoregression
 from arcsf.eval.metrics import (
     conditional_probability,
     eval_accuracy,
@@ -10,6 +12,23 @@ from arcsf.eval.metrics import (
     truth_ratio,
 )
 from arcsf.eval.utils import get_loss
+
+
+@pytest.fixture
+def dummy_data():
+    return get_data(
+        "tofu",
+        granularity="author",
+        stratified=True,
+        forget_random=False,
+        forgotten_author_fraction=1 / 3,
+        forgotten_fact_fraction=1 / 3,
+        random_seed=42,
+    )
+
+
+def _identity(inp, **kw):
+    return inp
 
 
 def test_accuracy():
@@ -88,103 +107,43 @@ def test_truth_ratio():
     assert math.isinf(incorrect_ratio[0])
 
 
-def _format(question, answer, dummy_tokenizer, max_length):
-    encoded = dummy_tokenizer(
-        question + answer,
-        max_length=max_length,
-        truncation=False,
-    )
-    num_question_tokens = len(
-        dummy_tokenizer.tokenize(question, add_special_tokens=True)
-    )
-    pad_length = max_length - len(encoded.input_ids)
-    padded = encoded["input_ids"] + [dummy_tokenizer.eos_token_id] * pad_length
-    pad_attention_mask = encoded["attention_mask"] + [0] * pad_length
-    label = encoded.input_ids
-    if len(encoded.input_ids) == max_length:
-        label = encoded.input_ids
-    else:
-        label = (
-            encoded["input_ids"]
-            + [dummy_tokenizer.eos_token_id]
-            + [-100] * (pad_length - 1)
-        )
-
-    # change label to -100 for question tokens
-    for i in range(num_question_tokens):
-        label[i] = -100
-    return (
-        torch.tensor(padded),
-        torch.tensor(label),
-        torch.tensor(pad_attention_mask),
-    )
-
-
-def _get_perturbed(question_rows, n_perturbed, n_samples):
-    gt_splits = [None] * len(question_rows)
-    for row_id, row in enumerate(question_rows):
-        split = row.split("?")
-        gt_splits[row_id] = (
-            split[0] + "?",
-            split[1],
-        )
-    all_splits = [None] * len(question_rows)
-    for row_id in range(n_samples):
-        row_gt = gt_splits[row_id][1]
-        perturbed_ids = [(row_id + 1 + i) % n_samples for i in range(n_perturbed)]
-        perturbed_capitals = [
-            gt_splits[p_id][1].split(" ")[-1] for p_id in perturbed_ids
-        ]
-        answer_string = row_gt.strip(row_gt.split(" ")[-1])
-        perturbed_rows = [answer_string + p_capital for p_capital in perturbed_capitals]
-        all_splits[row_id] = gt_splits[row_id] + tuple(perturbed_rows)
-    return all_splits
-
-
 # end-to-end test
-def test_eval_end_to_end(dummy_base_model, dummy_tokenizer, dummy_train_data):
-    max_length = 40
-    n_samples = 3
+def test_eval_end_to_end(dummy_base_model, dummy_tokenizer, dummy_data):
+
+    batch_size = 3
     n_perturbed = 1
-    question_rows = dummy_train_data["text"][: n_samples * 2 : 2]
 
-    all_inp = _get_perturbed(question_rows, n_perturbed, n_samples)
+    _, retain_data = dummy_data
 
-    inp = torch.zeros((n_samples, n_perturbed + 1, max_length), dtype=int)
-    targets = torch.zeros((n_samples, n_perturbed + 1, max_length), dtype=int)
-    attention_masks = torch.zeros((n_samples, n_perturbed + 1, max_length), dtype=int)
+    eval_dataset = EvalQADataset(
+        data=retain_data,
+        tokenizer=dummy_tokenizer,
+        qa_formatter=qa_formatter_autoregression,
+        loss_type="standard",
+        return_perturbed=True,
+        n_perturbed=n_perturbed,
+    )
+    dataloader = DataLoader(eval_dataset, batch_size=batch_size)
 
-    for row_id, row in enumerate(all_inp):
-        for sample_n in range(n_perturbed + 1):
-            q = row[0]
-            a = row[1 + sample_n]
-            (
-                inp[row_id, sample_n],
-                targets[row_id, sample_n],
-                attention_masks[row_id, sample_n],
-            ) = _format(q, a, dummy_tokenizer, max_length)
+    formatted_inputs = next(iter(dataloader))
 
-    all_losses = torch.zeros((n_samples, n_perturbed + 1))
+    all_losses = torch.zeros((batch_size, n_perturbed + 1))
 
-    gt_batch = {
-        "input_ids": inp[:, 0, :],
-        "labels": targets[:, 0, :],
-        "attention_mask": attention_masks[:, 0, :],
-    }
-    gt_dummy_model_output = dummy_base_model(**gt_batch)
-    gt_loss = get_loss(gt_dummy_model_output.logits, targets[:, 0, :])
+    gt_batch = formatted_inputs[0]
+
+    gt_dummy_model_output = dummy_base_model(
+        input_ids=gt_batch["input_ids"],
+        labels=gt_batch["labels"],
+        attention_mask=gt_batch["attention_mask"],
+    )
+    gt_loss = get_loss(gt_dummy_model_output.logits, gt_batch["labels"])
 
     all_losses[:, 0] = gt_loss
-
     for perturbed_index in range(1, n_perturbed + 1):
-        p_batch = {
-            "input_ids": inp[:, perturbed_index, :],
-            "labels": targets[:, perturbed_index, :],
-            "attention_mask": attention_masks[:, perturbed_index, :],
-        }
+        p_batch = formatted_inputs[perturbed_index]
         p_dummy_model_output = dummy_base_model(**p_batch)
         all_losses[:, perturbed_index] = get_loss(
-            p_dummy_model_output.logits, targets[:, perturbed_index, :]
+            p_dummy_model_output.logits, p_batch["labels"]
         )
 
     means = torch.mean(all_losses, dim=0)

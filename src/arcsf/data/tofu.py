@@ -162,4 +162,10 @@ def load_tofu(
         all_data[forget_indices]
     ), Dataset.from_dict(all_data[retain_indices])
 
+    setattr(forget_set, "TOFU_NUM_AUTHORS", TOFU_NUM_AUTHORS)
+    setattr(forget_set, "TOFU_Q_PER_AUTHOR", TOFU_Q_PER_AUTHOR)
+
+    setattr(retain_set, "TOFU_NUM_AUTHORS", TOFU_NUM_AUTHORS)
+    setattr(retain_set, "TOFU_Q_PER_AUTHOR", TOFU_Q_PER_AUTHOR)
+
     return forget_set, retain_set

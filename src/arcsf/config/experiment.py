@@ -8,19 +8,13 @@ import yaml
 from jinja2 import Environment, FileSystemLoader
 
 from arcsf.config.config import Config
+from arcsf.constants import (
+    DATA_CONFIG_DIR,
+    EXPERIMENT_CONFIG_DIR,
+    MODEL_CONFIG_DIR,
+    PROJECT_DIR,
+)
 from arcsf.models.config import ModelConfig
-from arcsf.utils import PROJECT_DIR
-
-
-# Constants
-def _get_project_dir(location):
-    return os.path.join(PROJECT_DIR, location)
-
-
-CONFIG_DIR = _get_project_dir("configs")
-EXPERIMENT_CONFIG_DIR = _get_project_dir("experiment")
-MODEL_CONFIG_DIR = _get_project_dir("model")
-DATA_CONFIG_DIR = _get_project_dir("data")
 
 
 def _listify(obj: object):

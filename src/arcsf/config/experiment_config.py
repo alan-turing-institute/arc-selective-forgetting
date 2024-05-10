@@ -107,7 +107,7 @@ class ExperimentConfig(Config):
         # Setup run name
         self.data_name = data_config
         self.model_name = model_config
-        self.experiment_name = f"{data_config}-{model_config}"
+        self.experiment_name = f"{model_config}-{data_config}-{seed}"
 
         # seed
         self.seed = seed

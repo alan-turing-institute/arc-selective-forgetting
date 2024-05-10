@@ -83,7 +83,7 @@ class QAFormatter:
         return self.template.format(question=question, answer=answer)
 
 
-def qa_formatter_autoregression(qa: tuple[str, str]) -> str:
+def qa_formatter_autoregression(qa: tuple[str, str, int]) -> str:
     """
     Basic QA formatter which accepts a tuple outputs:
 
@@ -95,7 +95,7 @@ def qa_formatter_autoregression(qa: tuple[str, str]) -> str:
     Returns:
         full_text: formatted question--answer pair
     """
-    question, answer = qa
+    question, answer = qa[0], qa[1]
     return f"{question} {answer}"
 
 
@@ -112,7 +112,10 @@ class EvalQADataset(Dataset):
         tokenizer: AutoTokenizer,
         qa_formatter: QAFormatter,
         loss_type: str,
-        random_seed=42,
+        qualitative_eval: bool = False,
+        device: torch.device = torch.device("cpu"),
+        random_seed: int = 42,
+        **kwargs,
     ):
         """
         Dataset for evaluation purposes which returns a tokenized version of the input
@@ -126,6 +129,9 @@ class EvalQADataset(Dataset):
                 to the model
             loss_type : type of loss used, currently only one option changes behaviour:
                     "idk" : labels are sampled from 'idk.jsonl'
+            return_perturbed : Flag denoting whether returning perturbed samples for
+                    eval effects the format function, adding perturbed samples
+            device : torch.device to pass inputs to
             random_seed: random seed for sampling the retain and idk samples, if used
         """
         super().__init__()
@@ -134,6 +140,7 @@ class EvalQADataset(Dataset):
         self.rand_gen = torch.Generator().manual_seed(random_seed)
         self.loss_type = loss_type
         self.data = data
+        self.device = device
 
         if loss_type == "idk":
             self.idk = get_idk_responses()
@@ -141,26 +148,86 @@ class EvalQADataset(Dataset):
         else:
             self.answer_sampler = self.get_answer
 
+        if qualitative_eval:
+            self.format = self.qualitative_formatter
+        else:
+            self.format = self.get_perturbed
+            self.max_length = tokenizer.model_max_length
+            if "n_perturbed" in kwargs.keys():
+                self.n_perturbed = kwargs["n_perturbed"]
+            else:
+                self.n_perturbed = 1
+
     def get_idk(self, _):
         """returns randomly sampled "I don't know" answer"""
         rand_pos = torch.randint(0, len(self.idk), (1,), generator=self.rand_gen).item()
         return self.idk[rand_pos]
 
-    def get_answer(self, forget_row):
-        """returns returns answer from a given row"""
-        return forget_row["answer"]
+    def get_answer(self, row):
+        """returns answer from a given row"""
+        return self.data[row]["answer"]
+
+    def qualitative_formatter(self, qa, _):
+        encoded_inp = self.tokenizer(
+            qa[0], return_tensors="pt", add_special_tokens=True
+        )
+        encoded_tar = self.tokenizer(
+            qa[1], return_tensors="pt", add_special_tokens=True
+        )
+        return (encoded_inp, encoded_tar)
+
+    def batch_formatter(self, qa):
+        question, _ = qa
+        encoded = self.tokenizer(
+            self.qa_formatter(qa),
+            max_length=self.max_length,
+            truncation=False,
+        )
+        num_question_tokens = len(self.tokenizer.tokenize(question))
+        pad_length = self.max_length - len(encoded.input_ids)
+        padded = encoded["input_ids"] + [self.tokenizer.eos_token_id] * pad_length
+        pad_attention_mask = encoded["attention_mask"] + [0] * pad_length
+        label = encoded.input_ids
+        if len(encoded.input_ids) == self.max_length:
+            label = encoded.input_ids
+        else:
+            label = (
+                encoded["input_ids"]
+                + [self.tokenizer.eos_token_id]
+                + [-100] * (pad_length - 1)
+            )
+
+        # change label to -100 for question tokens
+        for i in range(num_question_tokens):
+            label[i] = -100
+        return {
+            "input_ids": torch.tensor(padded).to(self.device),
+            "labels": torch.tensor(label).to(self.device),
+            "attention_mask": torch.tensor(pad_attention_mask).to(self.device),
+        }
+
+    def get_perturbed(self, qa, row):
+        inp, _ = qa
+        author_q_n = row % self.data.TOFU_Q_PER_AUTHOR
+        perturbed_options = self.data[
+            row - author_q_n : row + self.data.TOFU_Q_PER_AUTHOR - author_q_n
+        ]["answer"]
+        del perturbed_options[author_q_n]
+        perturbed_options = perturbed_options[: self.n_perturbed]
+        formatted = [None] * (self.n_perturbed + 1)
+        formatted[0] = self.batch_formatter(qa)
+        for p_idx, perturbed in enumerate(perturbed_options):
+            formatted[p_idx + 1] = self.batch_formatter((inp, perturbed))
+        return formatted
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, idx):
         inp = self.data[idx]["question"]
-        target = self.answer_sampler(self.data[idx])
-        formatted = self.qa_formatter((inp, target))
-        return self.tokenizer(formatted), (
-            self.tokenizer(inp, return_tensors="pt", add_special_tokens=True),
-            self.tokenizer(target, return_tensors="pt", add_special_tokens=True),
-        )
+        tar = self.answer_sampler(idx)
+
+        return self.format((inp, tar), idx)
 
 
 class FinetuneDataset(Dataset):

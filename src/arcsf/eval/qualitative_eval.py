@@ -11,7 +11,7 @@ def qualitative_eval(model, tokenizer, dataset, random_seed, **generate_kwargs):
     gen = torch.Generator().manual_seed(random_seed)
     data_loader = DataLoader(dataset, batch_size=1, shuffle=True, generator=gen)
 
-    for batch_idx, (_, (question, answer)) in enumerate(data_loader):
+    for batch_idx, (question, answer) in enumerate(data_loader):
         input_question = tokenizer.decode(question["input_ids"][0][0])
         target = tokenizer.decode(answer["input_ids"][0][0])
         output = model.generate(
@@ -49,13 +49,13 @@ if __name__ == "__main__":
         "tofu", "author", True, True, 0.2, 0.2, random_seed=rand
     )
     qa_formatter = qa_formatter_autoregression
-    dataset = EvalQADataset(retain_data, tokenizer, qa_formatter, "standard")
+    dataset = EvalQADataset(
+        retain_data, tokenizer, qa_formatter, "standard", qualitative_eval=True
+    )
     qualitative_eval(
         model,
         tokenizer,
         dataset,
         random_seed=rand,
         max_new_tokens=50,
-        # temperature=0.9,
-        # do_sample=True,
     )

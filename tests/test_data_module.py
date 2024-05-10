@@ -74,7 +74,7 @@ def test_permutation(qa_formatter):
     # dataset creates a random permutation of retain indices
     init_perm = data_set.retain_permutation
     # iterate through dataset
-    for idx, (retain_sample, _) in enumerate(data_set):
+    for idx, (_, retain_sample) in enumerate(data_set):
         dataset_sample = data_set.retain_data[idx]
         reference = qa_formatter(dataset_sample["question"], dataset_sample["answer"])
         # check question indices line up and question--answer pair are the same

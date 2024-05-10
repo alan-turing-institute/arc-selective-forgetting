@@ -8,12 +8,14 @@ class ModelConfig(Config):
         model_id: str,
         model_kwargs: dict,
         trainer_kwargs: dict,
+        early_stopping_kwargs: dict | None,
     ) -> None:
         super().__init__()
 
-        # Main model kwargs
+        # Process main inputs
         self.model_id = model_id
         self.model_kwargs = model_kwargs
+        self.early_stopping_kwargs = early_stopping_kwargs
 
         # Process trainer kwargs
         if isinstance(trainer_kwargs["learning_rate"], str):
@@ -30,8 +32,6 @@ class ModelConfig(Config):
         # Output dir
         self.output_dir = trainer_kwargs["output_dir"]
 
-        # TODO make early stopping optional
-
     @classmethod
     def from_dict(cls, dict) -> "ModelConfig":
         """Create a FineTuningConfig from a config dict.
@@ -47,8 +47,13 @@ class ModelConfig(Config):
             model_id=dict["model_id"],
             model_kwargs=dict["model_kwargs"],
             trainer_kwargs=dict["trainer_kwargs"],
+            early_stopping_kwargs=dict.get("early_stopping_kwargs", None),
         )
 
-    # TODO: define to_dict method
     def to_dict(self) -> dict:
-        return {"todo": "not done"}
+        return {
+            "model_id": self.model_id,
+            "model_kwargs": self.model_kwargs,
+            "trainer_kwargs": self.trainer_kwargs,
+            "early_stopping_kwargs": self.early_stopping_kwargs,
+        }

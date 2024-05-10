@@ -25,6 +25,7 @@ def load_trainer(
     eval_dataset: Dataset | None,
     trainer_type: str,
     trainer_kwargs: dict,
+    early_stopping_kwargs: dict | None,
     use_wandb: bool,
 ) -> Trainer:
 
@@ -43,11 +44,10 @@ def load_trainer(
     )
 
     # Setup early stopping callback
-    # TODO make optional
-    # TODO parameterise via the config
-    early_stopping = EarlyStoppingCallback(
-        early_stopping_patience=2,
-    )
+    if trainer_kwargs["save_strategy"] != "no":
+        early_stopping = EarlyStoppingCallback(
+            **early_stopping_kwargs,
+        )
 
     # Get trainer cls
     TrainerCls = TRAINER_CLS_DICT[trainer_type]
@@ -59,7 +59,7 @@ def load_trainer(
         data_collator=data_collator,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset if eval_dataset is not None else train_dataset,
-        callbacks=[early_stopping],
+        callbacks=[early_stopping] if trainer_kwargs["save_strategy"] != "no" else None,
     )
 
     # Return

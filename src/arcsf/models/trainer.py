@@ -13,7 +13,8 @@ from transformers import (
 def load_trainer(
     model: PreTrainedModel | PeftModel,
     tokenizer: PreTrainedTokenizer,
-    dataset: Dataset,
+    train_dataset: Dataset,
+    eval_dataset: Dataset | None,
     trainer_kwargs: dict,
     use_wandb: bool,
 ) -> Trainer:
@@ -45,8 +46,8 @@ def load_trainer(
         model,
         args=training_args,
         data_collator=data_collator,
-        train_dataset=dataset,
-        eval_dataset=dataset,
+        train_dataset=train_dataset,
+        eval_dataset=eval_dataset if eval_dataset is not None else train_dataset,
         callbacks=[early_stopping],
     )
 

@@ -8,7 +8,6 @@ class ModelConfig(Config):
         model_id: str,
         model_kwargs: dict,
         trainer_kwargs: dict,
-        use_wandb: bool,
     ) -> None:
         super().__init__()
 
@@ -31,9 +30,6 @@ class ModelConfig(Config):
         # Output dir
         self.output_dir = trainer_kwargs["output_dir"]
 
-        # Wandb
-        self.use_wandb = use_wandb
-
         # TODO make early stopping optional
 
     @classmethod
@@ -51,7 +47,6 @@ class ModelConfig(Config):
             model_id=dict["model_id"],
             model_kwargs=dict["model_kwargs"],
             trainer_kwargs=dict["trainer_kwargs"],
-            use_wandb=dict["use_wandb"],
         )
 
     # TODO: define to_dict method

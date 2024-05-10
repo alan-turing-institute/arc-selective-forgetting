@@ -3,10 +3,10 @@ import warnings
 from copy import copy
 from itertools import product
 
+import wandb
 import yaml
 from jinja2 import Environment, FileSystemLoader
 
-import wandb
 from arcsf.config.config_class import Config
 from arcsf.models.config_class import ModelConfig
 

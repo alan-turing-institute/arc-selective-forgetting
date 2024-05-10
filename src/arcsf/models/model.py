@@ -11,6 +11,7 @@ from transformers import (
 def load_model_and_tokenizer(
     model_id: str,
     peft_kwargs: dict | None = None,
+    add_padding_token: bool = False,
     **model_kwargs,
 ) -> tuple[PreTrainedModel | PeftModel, PreTrainedTokenizer]:
 
@@ -21,7 +22,7 @@ def load_model_and_tokenizer(
     tokenizer = AutoTokenizer.from_pretrained(model_id)
 
     # Optionally add padding token
-    if tokenizer.pad_token is None:
+    if tokenizer.pad_token is None and add_padding_token:
         tokenizer.add_special_tokens({"pad_token": "<|padding|>"})
         add_token_to_model = True
 

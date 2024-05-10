@@ -9,6 +9,7 @@ class ModelConfig(Config):
         model_kwargs: dict,
         trainer_kwargs: dict,
         early_stopping_kwargs: dict | None,
+        add_padding_token: bool = False,
     ) -> None:
         super().__init__()
 
@@ -16,6 +17,7 @@ class ModelConfig(Config):
         self.model_id = model_id
         self.model_kwargs = model_kwargs
         self.early_stopping_kwargs = early_stopping_kwargs
+        self.add_padding_token = add_padding_token
 
         # Process trainer kwargs
         if isinstance(trainer_kwargs["learning_rate"], str):

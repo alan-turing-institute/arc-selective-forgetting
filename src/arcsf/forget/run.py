@@ -1,5 +1,6 @@
 import argparse
 import os
+import shutil
 from datetime import datetime
 
 import wandb
@@ -51,6 +52,7 @@ def main(experiment_name):
     )
 
     # Step 6: Load trainer
+    forget_config.model_config.trainer_kwargs["output_dir"] += f"/{start_time}"
     forgetter = load_trainer(
         model=model,
         tokenizer=tokenizer,
@@ -69,6 +71,8 @@ def main(experiment_name):
     forget_config.save(f"{save_dir}/experiment_config.yaml")
     model.save_pretrained(save_dir)
     tokenizer.save_pretrained(save_dir)
+    # Delete checkpoints to save space if training finished successfully
+    shutil.rmtree(forget_config.model_config.trainer_kwargs["output_dir"])
 
 
 if __name__ == "__main__":

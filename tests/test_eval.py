@@ -27,11 +27,8 @@ def dummy_data():
     )
 
 
-def _identity(inp, **kw):
-    return inp
-
-
 def test_accuracy():
+    """Tests that accuracy function is outputting correct values"""
     # random predictions for test outputs
     test_outputs_correct = torch.randn(100, 5)
     # argmax predictions for test targets
@@ -47,6 +44,9 @@ def test_accuracy():
 
 
 def test_conditional_probability():
+    """Tests that conditional probability gives the correct probabilities given a couple
+    of edge cases.
+    """
     correct_losses = torch.full((100, 5), 100)
     incorrect_losses = torch.full_like(correct_losses, 100)
 
@@ -62,6 +62,7 @@ def test_conditional_probability():
 
 
 def test_ks_test():
+    """Tests that KS score is minimised given equal cdf functions"""
     probability_density, bin_edges = torch.histogram(
         torch.randn(1000), bins=10, density=True
     )
@@ -72,6 +73,12 @@ def test_ks_test():
 
 
 def test_loss(dummy_tokenizer, dummy_forget_model):
+    """Tests that the loss works as intended, outputting a loss with a gradient
+
+    Args:
+        dummy_tokenizer : tokenizer
+        dummy_forget_model model
+    """
     tokenizer = dummy_tokenizer
     model = dummy_forget_model
 
@@ -95,6 +102,7 @@ def test_loss(dummy_tokenizer, dummy_forget_model):
 
 
 def test_truth_ratio():
+    """Tests to see if the truth ratio works as intended, given some edge cases"""
     n_perturbed = 5
     correct_losses = torch.full((4, (n_perturbed + 1)), 10000)
     correct_losses[:, 0] = 0
@@ -109,7 +117,13 @@ def test_truth_ratio():
 
 # end-to-end test
 def test_eval_end_to_end(dummy_base_model, dummy_tokenizer, dummy_data):
+    """End-to-end test to ensure the evaluation pipeline works as intended.
 
+    Args:
+        dummy_base_model : model for tests
+        dummy_tokenizer : tokenizer for the dummy model
+        dummy_data : dummy data for tests
+    """
     batch_size = 3
     n_perturbed = 1
 

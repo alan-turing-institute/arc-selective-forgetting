@@ -176,7 +176,19 @@ class EvalQADataset(Dataset):
         )
         return (encoded_inp, encoded_tar)
 
-    def batch_formatter(self, qa):
+    def batch_formatter(
+        self, qa: tuple[str, str, int]
+    ) -> dict[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Formats the question-answer pair with padding and appropriately masked labels
+            allowing for batch computation.
+
+        Args:
+            qa : Tuple containing a question--answer pair
+
+        Returns:
+            formatted : formatted version of the input which can readily be passed to
+            model
+        """
         question, _ = qa
         encoded = self.tokenizer(
             self.qa_formatter(qa),
@@ -206,7 +218,20 @@ class EvalQADataset(Dataset):
             "attention_mask": torch.tensor(pad_attention_mask).to(self.device),
         }
 
-    def get_perturbed(self, qa, row):
+    def get_perturbed(
+        self, qa: tuple[str, str], row: int
+    ) -> list[dict[torch.Tensor, torch.Tensor, torch.Tensor]]:
+        """Returns batch-formatted version of the question answer pair along with
+            perturbed, erroneous question-answer pairs. For evaluation purposes.
+
+        Args:
+            qa : ground truth question answer tuple
+            row : question row ID for obtaining perturbed input
+
+        Returns:
+            formatted: batch formatted version of the perturbed inputs along with
+                formatted ground truth inputs
+        """
         inp, _ = qa
         author_q_n = row % self.data.TOFU_Q_PER_AUTHOR
         perturbed_options = self.data[

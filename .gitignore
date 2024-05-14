@@ -5,6 +5,9 @@ wandb/
 # For models
 temp*
 
+# For eval
+run_eval.sh
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

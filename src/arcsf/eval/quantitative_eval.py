@@ -1,7 +1,9 @@
 import argparse
+import os
 
 import numpy as np
 import torch
+import yaml
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
@@ -65,6 +67,9 @@ def quantitative_eval(
 
 
 if __name__ == "__main__":
+    # currently this is our random seed
+    rand = 42
+
     parser = argparse.ArgumentParser(
         description=(
             "Runs quantitative evaluation, comparing output logits of model against"
@@ -73,26 +78,49 @@ if __name__ == "__main__":
     )
     batch_size = 5
     parser.add_argument("directory", type=str, help="Relative path to model directory.")
+    parser.add_argument(
+        "--data_split",
+        "-s",
+        default="forget",
+        type=str,
+        help="Split of data to evaluate on",
+    )
     args = parser.parse_args()
     model_dir = args.directory
 
     # these are hardcoded for now
     model = GPT2LMHeadModel.from_pretrained(model_dir)
     tokenizer = GPT2Tokenizer.from_pretrained(model_dir)
+
+    # experiment_config
+
     model.config.pad_token_id = tokenizer.eos_token_id
-    forget_data, retain_data = get_data("tofu", "author", True, True, 0.2, 0.2)
+
+    experiment_config = yaml.safe_load(open(model_dir + "/experiment_config.yaml"))
+    forget_data, retain_data = get_data(
+        "tofu", **experiment_config["data_config"], random_seed=rand
+    )
+    splits = {
+        "retain": retain_data,
+        "forget": forget_data,
+    }
+
     device = get_device()
     print(f"Pytorch device: {device}")
     qa_formatter = qa_formatter_autoregression
     dataset = EvalQADataset(
-        retain_data,
+        splits[args.data_split],
         tokenizer,
         qa_formatter,
         "standard",
         device=get_device(),
         n_perturbed=2,
+        random_seed=rand,
     )
+
     # pass all to the function
     truth_ratios, all_losses = quantitative_eval(model, dataset, batch_size, device)
-    np.savetxt(model_dir + "/../eval/truth_ratios.txt", truth_ratios)
-    np.savetxt(model_dir + "/../eval/all_losses.txt", all_losses)
+    save_dir = f"{model_dir}/eval/{args.data_split}/"
+    os.makedirs(save_dir, exist_ok=True)
+    np.savetxt(save_dir + "/truth_ratios.txt", truth_ratios)
+    np.savetxt(save_dir + "/all_losses.txt", all_losses)

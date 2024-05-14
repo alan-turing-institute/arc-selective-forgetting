@@ -1,6 +1,7 @@
 import argparse
 
 import torch
+import yaml
 from torch.utils.data import DataLoader, Dataset
 from transformers import AutoTokenizer, GPT2LMHeadModel, GPT2Tokenizer
 
@@ -64,6 +65,13 @@ if __name__ == "__main__":
         )
     )
     parser.add_argument("directory", type=str, help="Relative path to model directory.")
+    parser.add_argument(
+        "--data_split",
+        "-s",
+        default="forget",
+        type=str,
+        help="Split of data to evaluate on",
+    )
     args = parser.parse_args()
     model_dir = args.directory
 
@@ -72,12 +80,23 @@ if __name__ == "__main__":
     model = GPT2LMHeadModel.from_pretrained(model_dir)
     tokenizer = GPT2Tokenizer.from_pretrained(model_dir)
     model.config.pad_token_id = tokenizer.eos_token_id
+
+    experiment_config = yaml.safe_load(open(model_dir + "/experiment_config.yaml"))
     forget_data, retain_data = get_data(
-        "tofu", "author", True, True, 0.2, 0.2, random_seed=rand
+        "tofu", random_seed=rand, **experiment_config["data_config"]
     )
+    splits = {
+        "retain": retain_data,
+        "forget": forget_data,
+    }
+
     qa_formatter = qa_formatter_autoregression
     dataset = EvalQADataset(
-        retain_data, tokenizer, qa_formatter, "standard", qualitative_eval=True
+        splits[args.data_split],
+        tokenizer,
+        qa_formatter,
+        "standard",
+        qualitative_eval=True,
     )
     # pass all to the function
     qualitative_eval(

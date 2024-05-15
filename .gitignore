@@ -2,6 +2,9 @@
 .DS_Store
 wandb/
 
+# Editor
+.vscode/
+
 # For models
 temp*
 

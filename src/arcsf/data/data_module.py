@@ -280,12 +280,17 @@ class ForgetterDataCollator:
         """
         self.base_collator = base_collator
 
-    def __call__(self, features: List[Dict[str, Any]], **kwargs) -> Dict[str, Any]:
+    def __call__(
+        self, features: List[Dict[str, Any]], **kwargs
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
         """
         Args:
             features: A list of outputs from QAForgetDataset, containing tuples of
                 forget and retain data.
             kwargs: Additional arguments to pass to the base collator.
+
+        Returns:
+            Batch of forget and retain inputs.
         """
         forget = self.base_collator([sample[0] for sample in features], **kwargs)
         retain = self.base_collator([sample[1] for sample in features], **kwargs)

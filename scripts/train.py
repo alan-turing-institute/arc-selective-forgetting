@@ -39,7 +39,6 @@ def main(experiment_name):
     )
 
     # Step 5: Load and prepreprocess data
-    # TODO: change placeholder which assumes always tuning on retain set alone
     forget, retain = load_tofu(
         **experiment_config.data_config.data_kwargs,
         random_seed=experiment_config.seed,
@@ -68,6 +67,9 @@ def main(experiment_name):
     )
 
     # Step 6: Load trainer
+    experiment_config.model_config.trainer_kwargs["output_dir"] = (
+        f"{save_dir}/{experiment_config.model_config.trainer_kwargs['output_dir']}"
+    )
     trainer = load_trainer(
         model,
         tokenizer,

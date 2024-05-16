@@ -111,7 +111,12 @@ def test_idk_targets(data):
     # load idk type dataset - don't pass tokenizer or qa_formatter so we can look
     # directly at output.
     idk_set = EvalQADataset(
-        data, _identity, _identity, loss_type="idk", qualitative_eval=True
+        data,
+        _identity,
+        _identity,
+        loss_type="idk",
+        qualitative_eval=True,
+        quantitative_eval=False,
     )
     # load possible idk-type responses
     idk_targets = get_idk_responses()

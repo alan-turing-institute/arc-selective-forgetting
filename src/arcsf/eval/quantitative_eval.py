@@ -58,8 +58,6 @@ def quantitative_eval(
             all_losses[batch_start_index:batch_end_index, perturbed_index] = get_loss(
                 p_output.logits, p_batch["labels"]
             )
-        if batch_idx > 5:
-            break
     # calculate truth_ratio and return them along with losses
     means = torch.mean(all_losses, dim=0)
     print(f"Mean losses:\n\tground_truth:{means[0]}\n\tperturbed:{means[1:].numpy()}")

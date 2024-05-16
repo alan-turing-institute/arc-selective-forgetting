@@ -1,13 +1,14 @@
 from importlib import resources
 from typing import Any, Callable, Dict, List
 
+import datasets
 import torch
-from torch.utils.data import Dataset
 from transformers import AutoTokenizer
 from transformers.data.data_collator import InputDataClass
 
 import arcsf.data
 from arcsf.data.tofu import load_tofu
+from arcsf.utils import hf_progress_bars_disabled
 
 _dataset_dict = {"tofu": load_tofu}
 
@@ -99,7 +100,7 @@ def qa_formatter_autoregression(qa: tuple[str, str, int]) -> str:
     return f"{question} {answer}"
 
 
-class EvalQADataset(Dataset):
+class EvalQADataset(torch.utils.data.Dataset):
     """
     Question answer format dataset, __getitem__ returns a tokenized question--answer
     pair as a tuple. There is an option to output the answers using "I don't know"
@@ -108,13 +109,15 @@ class EvalQADataset(Dataset):
 
     def __init__(
         self,
-        data: Dataset,
+        data: datasets.Dataset,
         tokenizer: AutoTokenizer,
         qa_formatter: QAFormatter,
         loss_type: str,
+        quantitative_eval: bool = True,
         qualitative_eval: bool = False,
         device: torch.device = torch.device("cpu"),
         random_seed: int = 42,
+        padding: bool = True,
         **kwargs,
     ):
         """
@@ -141,6 +144,13 @@ class EvalQADataset(Dataset):
         self.loss_type = loss_type
         self.data = data
         self.device = device
+        self.padding_flag = int(padding)
+
+        self.max_length = tokenizer.model_max_length
+        if "n_perturbed" in kwargs.keys():
+            self.n_perturbed = kwargs["n_perturbed"]
+        else:
+            self.n_perturbed = 1
 
         if loss_type == "idk":
             self.idk = get_idk_responses()
@@ -148,15 +158,12 @@ class EvalQADataset(Dataset):
         else:
             self.answer_sampler = self.get_answer
 
-        if qualitative_eval:
+        if qualitative_eval and quantitative_eval:
+            self.format = self.eval_script_formatter
+        elif qualitative_eval:
             self.format = self.qualitative_formatter
         else:
             self.format = self.get_perturbed
-            self.max_length = tokenizer.model_max_length
-            if "n_perturbed" in kwargs.keys():
-                self.n_perturbed = kwargs["n_perturbed"]
-            else:
-                self.n_perturbed = 1
 
     def get_idk(self, _):
         """returns randomly sampled "I don't know" answer"""
@@ -174,10 +181,12 @@ class EvalQADataset(Dataset):
         encoded_tar = self.tokenizer(
             qa[1], return_tensors="pt", add_special_tokens=True
         )
-        return (encoded_inp, encoded_tar)
+        return (encoded_inp.to(self.device), encoded_tar.to(self.device))
 
     def batch_formatter(
-        self, qa: tuple[str, str, int]
+        self,
+        qa: tuple[str, str, int],
+        padding_flag: int = 1,
     ) -> dict[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Formats the question-answer pair with padding and appropriately masked labels
             allowing for batch computation.
@@ -197,16 +206,19 @@ class EvalQADataset(Dataset):
         )
         num_question_tokens = len(self.tokenizer.tokenize(question))
         pad_length = self.max_length - len(encoded.input_ids)
-        padded = encoded["input_ids"] + [self.tokenizer.eos_token_id] * pad_length
-        pad_attention_mask = encoded["attention_mask"] + [0] * pad_length
+        padded = (
+            encoded["input_ids"]
+            + padding_flag * [self.tokenizer.eos_token_id] * pad_length
+        )
+        pad_attention_mask = encoded["attention_mask"] + padding_flag * [0] * pad_length
         label = encoded.input_ids
         if len(encoded.input_ids) == self.max_length:
             label = encoded.input_ids
         else:
             label = (
                 encoded["input_ids"]
-                + [self.tokenizer.eos_token_id]
-                + [-100] * (pad_length - 1)
+                + padding_flag * [self.tokenizer.eos_token_id]
+                + padding_flag * [-100] * (pad_length - 1)
             )
 
         # change label to -100 for question tokens
@@ -233,17 +245,25 @@ class EvalQADataset(Dataset):
                 formatted ground truth inputs
         """
         inp, _ = qa
-        author_q_n = row % self.data.TOFU_Q_PER_AUTHOR
-        perturbed_options = self.data[
-            row - author_q_n : row + self.data.TOFU_Q_PER_AUTHOR - author_q_n
-        ]["answer"]
-        del perturbed_options[author_q_n]
-        perturbed_options = perturbed_options[: self.n_perturbed]
-        formatted = [None] * (self.n_perturbed + 1)
-        formatted[0] = self.batch_formatter(qa)
-        for p_idx, perturbed in enumerate(perturbed_options):
-            formatted[p_idx + 1] = self.batch_formatter((inp, perturbed))
-        return formatted
+        author_n = self.data[row]["author_index"]
+        question_n = self.data[row]["question_index"]
+
+        with hf_progress_bars_disabled():
+            perturbed_options = self.data.filter(
+                lambda sample: sample["author_index"] == author_n
+                and sample["question_index"] != question_n
+            ).shuffle(seed=self.rand_gen.seed())
+
+        perturbed_options = perturbed_options[: self.n_perturbed]["answer"]
+
+        formatted = [
+            self.batch_formatter((inp, perturbed), padding_flag=self.padding_flag)
+            for perturbed in perturbed_options
+        ]
+        return [self.batch_formatter(qa, padding_flag=self.padding_flag)] + formatted
+
+    def eval_script_formatter(self, qa, idx):
+        return self.get_perturbed(qa, idx), self.qualitative_formatter(qa, idx)
 
     def __len__(self):
         return len(self.data)
@@ -255,7 +275,7 @@ class EvalQADataset(Dataset):
         return self.format((inp, tar), idx)
 
 
-class FinetuneDataset(Dataset):
+class FinetuneDataset(torch.utils.data.Dataset):
     """
     Finetune version of the dataset, __getitem__ returns a sample taken either from
     retain, forget subsets, or a combination of both. Samples are formatted using a
@@ -264,7 +284,7 @@ class FinetuneDataset(Dataset):
 
     def __init__(
         self,
-        data: Dataset,
+        data: datasets.Dataset,
         tokenizer: AutoTokenizer,
         qa_formatter: QAFormatter,
     ):
@@ -296,7 +316,7 @@ class FinetuneDataset(Dataset):
         return self.tokenizer(inp)
 
 
-class QAForgetDataset(Dataset):
+class QAForgetDataset(torch.utils.data.Dataset):
     """
     Q+A Forget version of the dataset, __getitem__ returns a retain and forget sample.
     Both are formatted using a question formatter. There is an option to output samples
@@ -305,7 +325,7 @@ class QAForgetDataset(Dataset):
 
     def __init__(
         self,
-        data: Dataset,
+        data: datasets.Dataset,
         tokenizer: AutoTokenizer,
         qa_formatter: QAFormatter,
         loss_type: str,
@@ -364,8 +384,7 @@ class QAForgetDataset(Dataset):
 
         # this takes the first item in our retain data permutation using item_index
         retain_row = self.retain_data[self.item_index]
-        # then rolls the permutation vector using the item_index to ensure
-        # samples aren't reused without first exhausting all retain samples
+        # then iterates the item_index to ensure a new sample is chosen next time
         self.item_index = (self.item_index + 1) % self.retain_length
         retain_question = retain_row["question"]
         retain_answer = retain_row["answer"]

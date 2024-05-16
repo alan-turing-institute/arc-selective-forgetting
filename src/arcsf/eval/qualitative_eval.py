@@ -17,7 +17,7 @@ def qualitative_eval(
     **generate_kwargs: dict,
 ) -> None:
     """Performs qualitative evaluation of the selected model over selected data.
-    Prints the generated text give a question followed by the ground truth target.
+    Prints the generated text given a question followed by the ground truth target.
 
     Args:
         model : Transformers model used to perform evaluation on
@@ -26,9 +26,6 @@ def qualitative_eval(
         n_inputs : number of inputs to sample
         random_seed : Random seed for the dataloader
         generate_kwargs : keyword arguments for the model.generate() method
-
-    Returns:
-        None
     """
     # create dataloader with dataset
     gen = torch.Generator().manual_seed(random_seed)
@@ -53,6 +50,7 @@ def qualitative_eval(
         print(f"Question: {input_question}")
         print(f"Generated: {generated_text}")
         print(f"Target: {target}")
+
         if batch_idx >= n_inputs:
             break
 
@@ -64,7 +62,14 @@ if __name__ == "__main__":
             " against target strings."
         )
     )
-    parser.add_argument("directory", type=str, help="Relative path to model directory.")
+    parser.add_argument(
+        "model_path", type=str, help="Relative path to model directory."
+    )
+    parser.add_argument(
+        "config_path",
+        type=str,
+        help="Relative path (from args.model_path) to the experiment config file.",
+    )
     parser.add_argument(
         "--data_split",
         "-s",
@@ -73,7 +78,7 @@ if __name__ == "__main__":
         help="Split of data to evaluate on",
     )
     args = parser.parse_args()
-    model_dir = args.directory
+    model_dir = args.model_path
 
     # these are hardcoded for now
     rand = 42
@@ -81,7 +86,7 @@ if __name__ == "__main__":
     tokenizer = GPT2Tokenizer.from_pretrained(model_dir)
     model.config.pad_token_id = tokenizer.eos_token_id
 
-    experiment_config = yaml.safe_load(open(model_dir + "/experiment_config.yaml"))
+    experiment_config = yaml.safe_load(open(model_dir + args.config_path))
     forget_data, retain_data = get_data(
         "tofu", random_seed=rand, **experiment_config["data_config"]
     )

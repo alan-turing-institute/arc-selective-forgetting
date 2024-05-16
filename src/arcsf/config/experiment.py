@@ -19,6 +19,15 @@ from arcsf.models.config import ModelConfig
 
 
 def _listify(obj: object):
+    """Takes an object. If a list, returns it. If not, returns a list containing
+    the object.
+
+    Args:
+        obj: Object to ensure is a list.
+
+    Returns:
+        Either the original object if a list or a list containing the object.
+    """
     if isinstance(obj, list):
         return obj
     return [obj]
@@ -89,9 +98,24 @@ def generate_experiment_configs(
 
 
 class ExperimentConfig(Config):
+    """Experiment config class.
+
+    Attributes:
+        data_config: Dataset config class.
+        model_config: Model config class, covering both model and hyperparameters.
+        train_type: Either "retain" or "full": whether fine-tuning on a full dataset
+                    or a retain set.
+        full_model_name: If train_type is "retain", the name of the experiment yaml
+                         file used for fine-tuning the full model to be compared against
+        use_wandb: Whether or not to use wandb for logging
+        wandb_config: Dict of wandb arguments
+        experiment_name: Name of the yaml file used to generate this config
+        seed: Seed for random generation
+    """
 
     def __init__(
         self,
+        experiment_name: str,
         data_config: str,
         model_config: str,
         hyperparameter_config: str,
@@ -99,7 +123,7 @@ class ExperimentConfig(Config):
         use_wandb: bool,
         wandb_config: dict | None,
         seed: int | None,
-        full_model_path: str | None = None,
+        full_model_name: str | None = None,
     ) -> None:
         super().__init__()
 
@@ -117,7 +141,7 @@ class ExperimentConfig(Config):
         # otherwise if train_type == "full", these can be optional
         # Check kwargs optional for full are present if doing retain tuning
         if train_type == "retain":
-            if full_model_path is None:
+            if full_model_name is None:
                 raise ValueError(
                     "If train_type is retain, full_model must be type str and is "
                     "currently None"
@@ -128,16 +152,14 @@ class ExperimentConfig(Config):
 
         # If this is a retain model, this points to the full model against which
         # the retain model should be compared
-        self.full_model_path = full_model_path
+        self.full_model_name = full_model_name
 
         # Wandb args
         self.use_wandb = use_wandb
         self.wandb_config = wandb_config
 
         # Setup run name
-        self.data_name = data_config
-        self.model_name = model_config
-        self.experiment_name = f"{model_config}-{data_config}-{seed}"
+        self.experiment_name = experiment_name
 
         # seed
         self.seed = seed
@@ -145,27 +167,39 @@ class ExperimentConfig(Config):
 
     @classmethod
     def from_dict(cls, dict) -> "ExperimentConfig":
-        """Create a FineTuningConfig from a config dict.
+        """Create an ExperimentConfig from a config dict.
 
         Args:
-            config: Dict that must contain "model_id", "model_kwargs", and
-                "trainer_kwargs" keys.
+            config: Dict that must contain all kwargs required to initialise an
+                    ExperimentConfig.
 
         Returns:
-            FineTuningConfig object.
+            ExperimentConfig object.
         """
         return cls(**dict)
 
     def to_dict(self) -> dict:
+        """Convert the config class into a dictionary format. Useful for saving.
+
+        Returns:
+            Dictionary containing the the attributes of the ExperimentConfig,
+            expect those relating to wandb.
+        """
         return {
             "experiment_name": self.experiment_name,
-            "data_name": self.data_name,
-            "data_config": self.data_config,
-            "model_config": self.model_config.to_dict(),
             "train_type": self.train_type,
+            "data_config": self.data_config.to_dict(),
+            "model_config": self.model_config.to_dict(),
+            "full_model_name": self.full_model_name,
+            "seed": self.seed,
         }
 
     def save(self, path: str) -> None:
+        """Save the config class into a yaml file.
+
+        Args:
+            path: Path and file name under which to save the config class.
+        """
         with open(path, "w") as f:
             yaml.dump(self.to_dict(), f)
 

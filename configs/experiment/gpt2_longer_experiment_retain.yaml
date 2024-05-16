@@ -1,8 +1,9 @@
 # Type: retain or full model
+experiment_name: gpt2_longer_experiment_retain
 train_type: retain
 
 # Path to full model to compare this model against.
-full_model_path: gpt2_longer_experiment_full
+full_model_name: gpt2_longer_experiment_full
 
 # All of thse should be contained under configs/type/
 data_config: example_tofu_1

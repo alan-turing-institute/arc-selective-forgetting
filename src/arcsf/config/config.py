@@ -4,6 +4,7 @@ import yaml
 
 
 class Config(ABC):
+    """Base class for config files."""
 
     def __init__(
         self,
@@ -13,16 +14,13 @@ class Config(ABC):
     @classmethod
     @abstractmethod
     def from_dict(cls, dict) -> "Config":
-        """Create a FineTuningConfig from a config dict.
+        """Create a Config from a config dict.
 
         Args:
-            config: Dict that must contain "model_name" and "dataset_name" keys. Can
-                also contain "run_name", "random_state", "dataset_args",
-                "training_args", "use_wandb" and "wandb_args" keys. If "use_wandb" is
-                not specified, it is set to True if "wandb" is in the config dict.
+            config: Dict containing arguments with which to initialise the Config.
 
         Returns:
-            FineTuningConfig object.
+            Config object.
         """
         raise NotImplementedError
 
@@ -31,10 +29,10 @@ class Config(ABC):
         """Create a FineTuningConfig from a yaml file.
 
         Args:
-            path: Path to yaml file.
+            path: Path to yaml file from which a config dict can be read.
 
         Returns:
-            FineTuningConfig object.
+            Config object.
         """
         with open(path, "r") as f:
             config = yaml.safe_load(f)

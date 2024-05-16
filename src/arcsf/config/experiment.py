@@ -99,6 +99,7 @@ class ExperimentConfig(Config):
         use_wandb: bool,
         wandb_config: dict | None,
         seed: int | None,
+        full_model_path: str | None = None,
     ) -> None:
         super().__init__()
 
@@ -112,8 +113,22 @@ class ExperimentConfig(Config):
             os.path.join(model_dir, "hyperparameters", f"{hyperparameter_config}.yaml"),
         )
 
+        # TODO on another PR: if train_type == "retain", require forget + eval configs
+        # otherwise if train_type == "full", these can be optional
+        # Check kwargs optional for full are present if doing retain tuning
+        if train_type == "retain":
+            if full_model_path is None:
+                raise ValueError(
+                    "If train_type is retain, full_model must be type str and is "
+                    "currently None"
+                )
+
         # Either "all" (train on full dataset) or "retain" (train on retain split only)
         self.train_type = train_type
+
+        # If this is a retain model, this points to the full model against which
+        # the retain model should be compared
+        self.full_model_path = full_model_path
 
         # Wandb args
         self.use_wandb = use_wandb

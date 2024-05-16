@@ -16,7 +16,7 @@ from arcsf.utils import seed_everything
 def main(experiment_name):
     # Get start time
     start_time = datetime.strftime(datetime.now(), "%Y%m%d-%H%M%S-%f")
-    save_dir = f"{experiment_name}/retain/{start_time}"  # TODO: make dir variable
+    save_dir = f"{experiment_name}/{start_time}"
     os.makedirs(save_dir)
 
     # Step 1: Process configs to dicts
@@ -81,8 +81,6 @@ def main(experiment_name):
     trainer.train()
 
     # Step 8: save model after fine-tuning
-
-    # TODO: customise to vary save location according to config
     experiment_config.save(f"{save_dir}/experiment_config.yaml")
     model.save_pretrained(save_dir)
     tokenizer.save_pretrained(save_dir)

@@ -1,15 +1,16 @@
+# Type
+train_type: full
+
 # All of thse should be contained under configs/type/
 data_config: example_tofu_1
 model_config: gpt2
 hyperparameter_config: longer
-
-
 # TODO: add other configs that define a single experiment end to end
-train_type: all
 
 # Seed for random components
 seed: 42
 
+# Wandb kwargs
 use_wandb: true
 wandb_config:
   entity: turing-arc

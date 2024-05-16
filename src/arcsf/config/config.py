@@ -26,7 +26,7 @@ class Config(ABC):
 
     @classmethod
     def from_yaml(cls, path: str) -> "Config":
-        """Create a FineTuningConfig from a yaml file.
+        """Create a Config from a yaml file.
 
         Args:
             path: Path to yaml file from which a config dict can be read.

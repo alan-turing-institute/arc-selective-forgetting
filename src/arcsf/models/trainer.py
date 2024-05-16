@@ -9,12 +9,12 @@ from transformers import (
     TrainingArguments,
 )
 
-# Dicts for selecting trainer type and associated data collator
+# Dict for selecting trainer type and associated data collator
 TRAINER_CLS_DICT = {
-    "trainer": Trainer,
-}
-DATA_COLLATOR_DICT = {
-    "trainer": DataCollatorForLanguageModeling,
+    "trainer": {
+        "trainer_cls": Trainer,
+        "data_collator": DataCollatorForLanguageModeling,
+    },
 }
 
 
@@ -28,6 +28,24 @@ def load_trainer(
     early_stopping_kwargs: dict | None,
     use_wandb: bool,
 ) -> Trainer:
+    """Function that takes a model, tokenizer, and data, and returns a trainer. Allows
+    different trainer classes.
+
+    Args:
+        model: The model you wish to fine-tune/perform forgetting on.
+        tokenizer: Tokenizer for the model.
+        train_dataset: Fine-tuning dataset. Used as eval set if no eval set is provided
+        eval_dataset: Evaluation dataset.
+        trainer_type: String which selects trainer type and data collator. See
+                      TRAINER_CLS_DICT in source code.
+        trainer_kwargs: Kwargs passed to TrainingArguments, in turn passed to the
+                        trainer class
+        early_stopping_kwargs: Kwargs relating to early stopping
+        use_wandb: Whether to use wandb
+
+    Returns:
+        Trainer: initialised trainer, with class conditional on arguments passed.
+    """
 
     # Load training arguments
     training_args = TrainingArguments(
@@ -37,7 +55,7 @@ def load_trainer(
     )
 
     # Setup data collator
-    DataCollatorCls = DATA_COLLATOR_DICT[trainer_type]
+    DataCollatorCls = TRAINER_CLS_DICT["data_collator"][trainer_type]
     data_collator = DataCollatorCls(
         tokenizer,
         mlm=False,
@@ -50,7 +68,7 @@ def load_trainer(
         )
 
     # Get trainer cls
-    TrainerCls = TRAINER_CLS_DICT[trainer_type]
+    TrainerCls = TRAINER_CLS_DICT["trainer_cls"][trainer_type]
 
     # Load trainer
     trainer = TrainerCls(

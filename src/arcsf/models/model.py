@@ -14,6 +14,21 @@ def load_model_and_tokenizer(
     add_padding_token: bool = False,
     **model_kwargs,
 ) -> tuple[PreTrainedModel | PeftModel, PreTrainedTokenizer]:
+    """Function which given a model id and kwargs loads a HuggingFace model and
+    associated tokenizer.
+
+    Args:
+        model_id: ID on huggingface of the model in question.
+        peft_kwargs: Optional dictionary of kwargs to initialise a LoRA config which
+                     is then used to make the model a PeftModel if LoRA fine-tuning
+                     is desired.
+        add_padding_token: Optional argument. If True and no padding token is present,
+                           then a padding token will be added to the model.
+        **model_kwargs: Additional kwargs passed to initialise the model.
+
+    Returns:
+        A tuple containing the model and the tokenizer.
+    """
 
     # Initialise
     add_token_to_model = True

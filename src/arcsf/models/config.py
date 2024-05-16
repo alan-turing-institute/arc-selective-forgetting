@@ -4,6 +4,20 @@ from arcsf.config.config import Config
 
 
 class ModelConfig(Config):
+    """Model config class.
+
+    Attributes:
+        model_id: HuggingFace ID for the model
+        model_kwargs: Dict of kwargs relating to the model itself, including
+                      hyperparameters
+        trainer_kwargs: Dict of kwargs passed to the trainer
+        early_stopping_kwargs: Optional dict of kwargs relating to early stopping
+        peft_kwargs: Optional dict of LoRA kwargs if using LoRA fine-tuning
+        add_padding_token: Optional argument which if True means that if no padding
+                           token is present in the tokenizer it will be added.
+        output_dir: Relative path for storing outputs produced during training. In
+                    training script, subdirectory of save dir.
+    """
 
     def __init__(
         self,
@@ -40,6 +54,16 @@ class ModelConfig(Config):
 
     @classmethod
     def from_yaml(cls, model_path: str, hyperparameter_path: str) -> "Config":
+        """Create a ModelConfig from model and hyperparameter yaml files.
+
+        Args:
+            model_path: Path to yaml file from which model kwargs can be read.
+            hyperparameter_path: Path to yaml file from which hyperparameters can be
+                                 read.
+
+        Returns:
+            ModelConfig object.
+        """
         with open(model_path, "r") as f:
             model_config = yaml.safe_load(f)
         with open(hyperparameter_path, "r") as f:
@@ -48,14 +72,14 @@ class ModelConfig(Config):
 
     @classmethod
     def from_dict(cls, model_dict, hyperparameter_dict) -> "ModelConfig":
-        """Create a FineTuningConfig from a config dict.
+        """Create a ModelConfig from model and hyperparameter config dicts.
 
         Args:
-            config: Dict that must contain "model_id", "model_kwargs", and
-                "trainer_kwargs" keys.
+            model_dict: Dict contaiing model-specific arguments.
+            hyperparameter_dict: Dict containing hyperparameters.
 
         Returns:
-            FineTuningConfig object.
+            ModelConfig object.
         """
         return cls(
             model_id=model_dict["model_id"],
@@ -69,9 +93,17 @@ class ModelConfig(Config):
         )
 
     def to_dict(self) -> dict:
+        """
+        Converts the ModelConfig's attributes into a dict.
+
+        Returns:
+            dict: Dict containing the ModelConfig's attributes.
+        """
         return {
             "model_id": self.model_id,
             "model_kwargs": self.model_kwargs,
             "trainer_kwargs": self.trainer_kwargs,
+            "peft_kwargs": self.peft_kwargs,
             "early_stopping_kwargs": self.early_stopping_kwargs,
+            "add_padding_token": self.add_padding_token,
         }

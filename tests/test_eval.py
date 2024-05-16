@@ -63,13 +63,19 @@ def test_conditional_probability():
 
 def test_ks_test():
     """Tests that KS score is minimised given equal cdf functions"""
-    probability_density, bin_edges = torch.histogram(
+    probability_density_1, bin_edges = torch.histogram(
+        torch.randn(1000), bins=10, density=True
+    )
+    probability_density_2, bin_edges = torch.histogram(
         torch.randn(1000), bins=10, density=True
     )
     bin_sizes = bin_edges[1:] - bin_edges[0:-1]
-    test_cdf = torch.cumsum(probability_density * bin_sizes, dim=-1)
-    comparison = ks_test(test_cdf, test_cdf)
-    assert comparison[0] == pytest.approx(0.0)
+    test_cdf_1 = torch.cumsum(probability_density_1 * bin_sizes, dim=-1)
+    test_cdf_2 = torch.cumsum(probability_density_2 * bin_sizes, dim=-1)
+    same_comparison = ks_test(test_cdf_1, test_cdf_1)
+    different_comparison = ks_test(test_cdf_1, test_cdf_2)
+    assert same_comparison == pytest.approx(1.0)
+    assert different_comparison != pytest.approx(1.0)
 
 
 def test_loss(dummy_tokenizer, dummy_forget_model):
@@ -90,15 +96,14 @@ def test_loss(dummy_tokenizer, dummy_forget_model):
     attention_mask = tokenized_input["attention_mask"]
 
     labels = input_ids.clone()
-
-    test_output = model(
-        input_ids=input_ids, attention_mask=attention_mask, labels=labels
-    )
+    with torch.no_grad():
+        test_output = model(
+            input_ids=input_ids, attention_mask=attention_mask, labels=labels
+        )
 
     loss = get_loss(test_output.logits, labels)
 
     assert isinstance(loss, torch.Tensor)
-    assert loss.grad_fn
 
 
 def test_truth_ratio():

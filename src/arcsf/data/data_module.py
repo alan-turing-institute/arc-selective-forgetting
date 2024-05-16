@@ -146,7 +146,6 @@ class EvalQADataset(torch.utils.data.Dataset):
         self.device = device
         self.padding_flag = int(padding)
 
-        self.max_length = tokenizer.model_max_length
         if "n_perturbed" in kwargs.keys():
             self.n_perturbed = kwargs["n_perturbed"]
         else:
@@ -159,10 +158,12 @@ class EvalQADataset(torch.utils.data.Dataset):
             self.answer_sampler = self.get_answer
 
         if qualitative_eval and quantitative_eval:
+            self.max_length = tokenizer.model_max_length
             self.format = self.eval_script_formatter
         elif qualitative_eval:
             self.format = self.qualitative_formatter
         else:
+            self.max_length = tokenizer.model_max_length
             self.format = self.get_perturbed
 
     def get_idk(self, _):
@@ -181,7 +182,7 @@ class EvalQADataset(torch.utils.data.Dataset):
         encoded_tar = self.tokenizer(
             qa[1], return_tensors="pt", add_special_tokens=True
         )
-        return (encoded_inp.to(self.device), encoded_tar.to(self.device))
+        return (encoded_inp, encoded_tar)
 
     def batch_formatter(
         self,
@@ -263,7 +264,11 @@ class EvalQADataset(torch.utils.data.Dataset):
         return [self.batch_formatter(qa, padding_flag=self.padding_flag)] + formatted
 
     def eval_script_formatter(self, qa, idx):
-        return self.get_perturbed(qa, idx), self.qualitative_formatter(qa, idx)
+        (formatted_question, formatted_answer) = self.qualitative_formatter(qa, idx)
+        return self.get_perturbed(qa, idx), (
+            formatted_question.to(self.device),
+            formatted_answer.to(self.device),
+        )
 
     def __len__(self):
         return len(self.data)

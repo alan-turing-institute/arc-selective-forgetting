@@ -3,6 +3,13 @@ from datasets import Dataset
 
 from arcsf.data.tofu import load_tofu
 
+# hard coded dummy data values for now
+num_authors = 3
+q_per_author = 3
+forgot_a_frac = 1 / 3
+forgot_q_frac = 1 / 3
+n_bio_q = 1
+
 
 def _check_type(dataset):
     """check datasets are in fact datasets"""
@@ -13,7 +20,6 @@ def _check_dropped_qs(granularity, stratify, forget_random, debug_dict):
     """check correct number of questions dropped per author/indices lie in range of
     forget authors -> not needed if random"""
 
-    forgot_q_frac = 0.1
     q_per_author, forget_authors = (
         debug_dict["q_per_author"],
         debug_dict["forget_author_numbers"],
@@ -27,7 +33,7 @@ def _check_dropped_qs(granularity, stratify, forget_random, debug_dict):
             author_qs_dropped = q_per_author
         else:
             # this is currently hardcoded
-            author_qs_dropped = int(4)
+            author_qs_dropped = int(1)
     elif granularity == "question" and stratify and forget_random:
         author_qs_dropped = int(q_per_author * forgot_q_frac)
     else:
@@ -69,7 +75,7 @@ def _check_dataset_len(
         else:
             # n_questions_per_author*n_authors_dropped
             # n_forget currently hardcoded in this instance
-            n_forget = 4
+            n_forget = n_bio_q
             assert len(forget_indices) == int(n_authors * n_forget * forgot_a_frac)
     elif granularity == "question" and forget_random and stratified:
         # n_questions_per_author*frac_q_dropped*n_authors_dropped
@@ -82,10 +88,6 @@ def _check_dataset_len(
 
 
 def _test_load_tofu(granularity, stratified, forget_random, seed=42):
-
-    forgot_a_frac = 0.1
-    forgot_q_frac = 0.1
-
     # forget_set, retain_set = load_tofu(
     forget_set, retain_set = load_tofu(
         granularity=granularity,
@@ -95,8 +97,6 @@ def _test_load_tofu(granularity, stratified, forget_random, seed=42):
         forgotten_fact_fraction=forgot_q_frac,
         random_seed=seed,
     )
-    num_authors = 200  # hard coding author count for now
-    q_per_author = 20  # hard coding author question count for now
 
     debug_dict = {"author_count": num_authors, "q_per_author": q_per_author}
     debug_dict["forget_indices"] = forget_set["question_index"]

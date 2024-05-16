@@ -14,6 +14,7 @@ from arcsf.constants import (
     MODEL_CONFIG_DIR,
     PROJECT_DIR,
 )
+from arcsf.data.config import DataConfig
 from arcsf.models.config import ModelConfig
 
 
@@ -102,7 +103,7 @@ class ExperimentConfig(Config):
         super().__init__()
 
         # Load in other configsg
-        self.data_config = yaml.safe_load(
+        self.data_config = DataConfig.from_yaml(
             os.path.join(DATA_CONFIG_DIR, f"{data_config}.yaml")
         )
         model_dir = os.path.join(MODEL_CONFIG_DIR, model_config)
@@ -128,7 +129,7 @@ class ExperimentConfig(Config):
         self.model_config.trainer_kwargs["seed"] = seed
 
     @classmethod
-    def from_dict(cls, dict) -> "ModelConfig":
+    def from_dict(cls, dict) -> "ExperimentConfig":
         """Create a FineTuningConfig from a config dict.
 
         Args:

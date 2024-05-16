@@ -16,7 +16,7 @@ from arcsf.utils import seed_everything
 def main(experiment_name):
     # Get start time
     start_time = datetime.strftime(datetime.now(), "%Y%m%d-%H%M%S-%f")
-    save_dir = f"temp/{start_time}"
+    save_dir = f"{experiment_name}/retain/{start_time}"  # TODO: make dir variable
     os.makedirs(save_dir)
 
     # Step 1: Process configs to dicts
@@ -41,7 +41,7 @@ def main(experiment_name):
     # Step 5: Load and prepreprocess data
     # TODO: change placeholder which assumes always tuning on retain set alone
     forget, retain = load_tofu(
-        **experiment_config.data_config,
+        **experiment_config.data_config.data_kwargs,
         random_seed=experiment_config.seed,
     )
     if experiment_config.train_type == "all":

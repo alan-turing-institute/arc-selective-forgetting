@@ -101,10 +101,10 @@ class ExperimentConfig(Config):
     ) -> None:
         super().__init__()
 
-        # Load in other configs
-        # TODO: replace data config loading
-        with open(os.path.join(DATA_CONFIG_DIR, f"{model_config}.yaml"), "r") as f:
-            self.data_config = yaml.safe_load(f)
+        # Load in other configsg
+        self.data_config = yaml.safe_load(
+            os.path.join(DATA_CONFIG_DIR, f"{data_config}.yaml")
+        )
         model_dir = os.path.join(MODEL_CONFIG_DIR, model_config)
         self.model_config = ModelConfig.from_yaml(
             os.path.join(model_dir, f"{model_config}.yaml"),

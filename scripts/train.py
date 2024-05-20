@@ -3,7 +3,6 @@ import os
 from datetime import datetime
 
 import wandb
-from datasets import concatenate_datasets
 
 from arcsf.config.experiment import ExperimentConfig
 from arcsf.constants import EXPERIMENT_CONFIG_DIR
@@ -14,44 +13,37 @@ from arcsf.utils import seed_everything
 
 
 def main(experiment_name):
-    # Get start time
+    # Step 0: get start time
     start_time = datetime.strftime(datetime.now(), "%Y%m%d-%H%M%S-%f")
-    save_dir = f"{experiment_name}/{start_time}"
-    os.makedirs(save_dir)
 
     # Step 1: Process configs to dicts
     experiment_config = ExperimentConfig.from_yaml(
         os.path.join(EXPERIMENT_CONFIG_DIR, f"{experiment_name}.yaml")
     )
 
-    # Step 2: Seed everything
+    # Step 2: make save dirs
+    save_dir = f"{experiment_name}/{experiment_config.train_type}/{start_time}"
+    os.makedirs(save_dir)
+
+    # Step 3: Seed everything
     seed_everything(experiment_config.seed)
 
-    # Step 3: Initialise wandb
+    # Step 4: Initialise wandb
     experiment_config.init_wandb(job_type="train")
     wandb.log({"save_dir": save_dir, "start_time": start_time})
 
-    # Step 4: Load model
+    # Step 5: Load model
     model, tokenizer = load_model_and_tokenizer(
         model_id=experiment_config.model_config.model_id,
         peft_kwargs=experiment_config.model_config.peft_kwargs,
         **experiment_config.model_config.model_kwargs,
     )
 
-    # Step 5: Load and prepreprocess data
-    forget, retain = load_tofu(
+    # Step 6: Load and prepreprocess data
+    _, dataset = load_tofu(
         **experiment_config.data_config.data_kwargs,
         random_seed=experiment_config.seed,
     )
-    if experiment_config.train_type == "all":
-        dataset = concatenate_datasets([forget, retain])
-    elif experiment_config.train_type == "retain":
-        dataset = retain
-    else:
-        raise ValueError(
-            f"train_type must be one of ['all', 'retain'], got "
-            f"{experiment_config.train_type}"
-        )
 
     # TODO: remove placeholder preprocessing below
     def template_sample(sample):
@@ -66,7 +58,7 @@ def main(experiment_name):
         batch_size=4,
     )
 
-    # Step 6: Load trainer
+    # Step 7: Load trainer
     experiment_config.model_config.trainer_kwargs["output_dir"] = (
         f"{save_dir}/{experiment_config.model_config.trainer_kwargs['output_dir']}"
     )
@@ -79,10 +71,10 @@ def main(experiment_name):
         use_wandb=experiment_config.use_wandb,
     )
 
-    # Step 7: train
+    # Step 8: train
     trainer.train()
 
-    # Step 8: save model after fine-tuning
+    # Step 9: save model after fine-tuning
     experiment_config.save(f"{save_dir}/experiment_config.yaml")
     model.save_pretrained(save_dir)
     tokenizer.save_pretrained(save_dir)

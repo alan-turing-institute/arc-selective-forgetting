@@ -33,6 +33,54 @@ def _listify(obj: object):
     return [obj]
 
 
+def _make_config_name(
+    top_config_name: str,
+    n: int,
+) -> str:
+    return f"{top_config_name}/experiment_{n}"
+
+
+def _generate_combos_from_dict(
+    combo_dict: dict,
+    full: bool,
+) -> dict:
+    # Convert combo dict into dict of combos
+    sweep_dict_keys, sweep_dict_vals = zip(*combo_dict.items())
+    combinations = [
+        dict(zip(sweep_dict_keys, v)) for v in product(*list(sweep_dict_vals))
+    ]
+
+    # Initialise train_type
+    train_type = "retain"
+    if full:
+        train_type = "full"
+
+    # Add train_type to each combination
+    for n, _ in enumerate(combinations):
+        combinations[n]["train_type"] = train_type
+
+    # Return
+    return combinations
+
+
+def generate_combos_from_dict(
+    combo_dict: dict,
+    full: bool,
+    wandb_kwargs: dict,
+) -> dict:
+    # Generate combinations
+    combinations = _generate_combos_from_dict(combo_dict, full)
+
+    # Process model kwargs
+    for n, _ in enumerate(combinations):
+        combinations[n]["hyperparameter_config"] = combinations[n]["model_config"][1]
+        combinations[n]["model_config"] = combinations[n]["model_config"][0]
+        combinations[n] = {**combinations[n], **wandb_kwargs}
+
+    # Return
+    return combinations
+
+
 def generate_experiment_configs(
     top_config_name: str,
 ) -> None:
@@ -43,35 +91,61 @@ def generate_experiment_configs(
 
     # Loop over, construct combo dict
     combo_dict = {}
-    for key, value in top_config["configs"].items():
+    for key, value in top_config["combinations"].items():
         combo_dict[key] = _listify(value)
 
-    # Construct full set of combinations
-    sweep_dict_keys, sweep_dict_vals = zip(*combo_dict.items())
-    combo_dicts = [
-        dict(zip(sweep_dict_keys, v)) for v in product(*list(sweep_dict_vals))
-    ]
+    # Construct same dict with full dataset
+    combo_dict_full = copy(combo_dict)
+    combo_dict_full["data_configs"] = [top_config["full_data_config"]]
+
+    # Get wandb kwargs
+    wandb_kwargs = {}
+    if "wandb_kwargs" in top_config.keys():
+        wandb_kwargs = {**top_config["wandb_kwargs"]}
+
+    # Get combinations
+    full_combinations = generate_combos_from_dict(combo_dict_full, True, wandb_kwargs)
+    retain_combinations = generate_combos_from_dict(combo_dict, False, wandb_kwargs)
+
+    # Add full config path to
+    for n, retain_combo in enumerate(retain_combinations):
+        for m, full_combo in enumerate(full_combinations):
+            if (
+                full_combo["model_config"] == retain_combo["model_config"]
+                and full_combo["seed"] == retain_combo["seed"]
+                and full_combo["hyperparameter_config"]
+                == retain_combo["hyperparameter_config"]
+            ):
+                retain_combinations[n]["full_model_name"] = _make_config_name(
+                    top_config_name, m
+                )
+
+    # All combinations to generate yaml files for
+    all_combinations = [*full_combinations, *retain_combinations]
 
     # Check this is a reasonably number of jobs for an array of training jobs
-    if len(combo_dicts) > 1001:
+    if len(all_combinations) > 1001:
         warnings.warn("Slurm array jobs cannot exceed more than 1001!")
 
     # Check whether to generate baskerville scripts:
     use_bask = False
     if top_config["use_bask"]:
         use_bask = True
-        if not os.path.exists("bask"):
-            os.mkdir("bask")
-        baskdir = f"bask/{top_config_name}"
-        if not os.path.exists(baskdir):
-            os.mkdir(baskdir)
+        train_dir = os.path.join(PROJECT_DIR, "train_scripts")
+        if not os.path.exists(train_dir):
+            os.mkdir(train_dir)
+        train_dir = os.path.join(train_dir, top_config_name)
+        if not os.path.exists(train_dir):
+            os.mkdir(train_dir)
 
     # Write out dicts and optionally bask scripts
-    outdir = os.path.join(EXPERIMENT_CONFIG_DIR, f"{top_config_name}")
+    outdir = os.path.join(EXPERIMENT_CONFIG_DIR, top_config_name)
     if not os.path.exists(outdir):
         os.mkdir(outdir)
-    for n, combo in enumerate(combo_dicts):
-        file_name = f"{outdir}/run_{n}.yaml"
+    for n, combo in enumerate(all_combinations):
+        file_name = (
+            f"{EXPERIMENT_CONFIG_DIR}/{_make_config_name(top_config_name, n)}.yaml"
+        )
         with open(file_name, "w") as f:
             yaml.dump(combo, f)
         if use_bask:
@@ -93,7 +167,7 @@ def generate_experiment_configs(
                 experiment_file=file_name,
             )
 
-            with open(os.path.join(PROJECT_DIR, baskdir, f"submit_{n}.sh"), "w") as f:
+            with open(os.path.join(train_dir, f"submit_{n}.sh"), "w") as f:
                 f.write(script_content)
 
 

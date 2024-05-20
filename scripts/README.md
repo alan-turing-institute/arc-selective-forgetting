@@ -28,7 +28,7 @@ defines for a single experiment which data arguments and model to use. later on 
 To convert a top experiment config into a collection of configs collected under `configs/experiments/top_config_name/`
 
 ```python
-from arcsf import generate_experiment_configs
+from arcsf.config.experiment import generate_experiment_configs
 generate_experiment_configs("example_top_experiment_config")
 ```
 

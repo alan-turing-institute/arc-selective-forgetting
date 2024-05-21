@@ -7,13 +7,8 @@ import wandb
 import yaml
 from jinja2 import Environment, FileSystemLoader
 
+import arcsf.constants
 from arcsf.config.config import Config
-from arcsf.constants import (
-    DATA_CONFIG_DIR,
-    EXPERIMENT_CONFIG_DIR,
-    MODEL_CONFIG_DIR,
-    PROJECT_DIR,
-)
 from arcsf.data.config import DataConfig
 from arcsf.models.config import ModelConfig
 
@@ -86,7 +81,9 @@ def generate_experiment_configs(
 ) -> None:
 
     # Read in yaml file
-    with open(os.path.join(EXPERIMENT_CONFIG_DIR, f"{top_config_name}.yaml")) as f:
+    with open(
+        os.path.join(arcsf.constants.EXPERIMENT_CONFIG_DIR, f"{top_config_name}.yaml")
+    ) as f:
         top_config = yaml.safe_load(f)
 
     # Loop over, construct combo dict
@@ -131,7 +128,7 @@ def generate_experiment_configs(
     use_bask = False
     if top_config["use_bask"]:
         use_bask = True
-        train_dir = os.path.join(PROJECT_DIR, "train_scripts")
+        train_dir = os.path.join(arcsf.constants.PROJECT_DIR, "train_scripts")
         if not os.path.exists(train_dir):
             os.mkdir(train_dir)
         train_dir = os.path.join(train_dir, top_config_name)
@@ -139,19 +136,20 @@ def generate_experiment_configs(
             os.mkdir(train_dir)
 
     # Write out dicts and optionally bask scripts
-    outdir = os.path.join(EXPERIMENT_CONFIG_DIR, top_config_name)
+    outdir = os.path.join(arcsf.constants.EXPERIMENT_CONFIG_DIR, top_config_name)
     if not os.path.exists(outdir):
         os.mkdir(outdir)
     for n, combo in enumerate(all_combinations):
         file_name = (
-            f"{EXPERIMENT_CONFIG_DIR}/{_make_config_name(top_config_name, n)}.yaml"
+            f"{arcsf.constants.EXPERIMENT_CONFIG_DIR}/"
+            f"{_make_config_name(top_config_name, n)}.yaml"
         )
         with open(file_name, "w") as f:
             yaml.dump(combo, f)
         if use_bask:
             environment = Environment(
                 loader=FileSystemLoader(
-                    os.path.join(PROJECT_DIR, "src", "arcsf", "config")
+                    os.path.join(arcsf.constants.PROJECT_DIR, "src", "arcsf", "config")
                 )
             )
             template = environment.get_template("jobscript_template.sh")
@@ -189,7 +187,6 @@ class ExperimentConfig(Config):
 
     def __init__(
         self,
-        experiment_name: str,
         data_config: str,
         model_config: str,
         hyperparameter_config: str,
@@ -203,9 +200,9 @@ class ExperimentConfig(Config):
 
         # Load in other configsg
         self.data_config = DataConfig.from_yaml(
-            os.path.join(DATA_CONFIG_DIR, f"{data_config}.yaml")
+            os.path.join(arcsf.constants.DATA_CONFIG_DIR, f"{data_config}.yaml")
         )
-        model_dir = os.path.join(MODEL_CONFIG_DIR, model_config)
+        model_dir = os.path.join(arcsf.constants.MODEL_CONFIG_DIR, model_config)
         self.model_config = ModelConfig.from_yaml(
             os.path.join(model_dir, f"{model_config}.yaml"),
             os.path.join(model_dir, "hyperparameters", f"{hyperparameter_config}.yaml"),

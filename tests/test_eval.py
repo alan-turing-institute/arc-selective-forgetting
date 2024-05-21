@@ -36,11 +36,18 @@ def test_accuracy():
     # flip random predictions for incorrect predictions
     test_outputs_incorrect = test_outputs_correct * -1
 
+    test_outputs_middle = torch.concat(
+        [test_outputs_correct[:50, :], test_outputs_incorrect[50:, :]]
+    )
+
     correct = eval_accuracy(test_outputs_correct, test_targets)
-    assert correct["eval_accuracy"] == pytest.approx(1.0)
+    assert correct["eval_accuracy"] == 1.0
 
     incorrect = eval_accuracy(test_outputs_incorrect, test_targets)
-    assert incorrect["eval_accuracy"] == pytest.approx(0.0)
+    assert incorrect["eval_accuracy"] == 0.0
+
+    incorrect = eval_accuracy(test_outputs_middle, test_targets)
+    assert incorrect["eval_accuracy"] == 0.5
 
 
 def test_conditional_probability():

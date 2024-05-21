@@ -2,7 +2,7 @@ import arcsf.constants
 from arcsf.models.config import ModelConfig
 
 
-def test_data_config():
+def test_data_config_from_yaml():
     model_dir = f"{arcsf.constants.MODEL_CONFIG_DIR}/dummy_gpt2"
     model_path = f"{model_dir}/dummy_gpt2.yaml"
     hyperparameters_path = f"{model_dir}/hyperparameters/dummy_hyperparams_config.yaml"

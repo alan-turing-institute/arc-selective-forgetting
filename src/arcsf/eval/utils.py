@@ -18,3 +18,9 @@ def get_losses(output, targets):
     for index, target in enumerate(targets):
         losses[index] = get_loss(output, target)
     return losses
+
+
+def ecdf(x):
+    xs, _ = torch.sort(x)
+    ys = torch.arange(1, len(xs) + 1) / float(len(xs))
+    return xs, ys

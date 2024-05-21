@@ -3,6 +3,7 @@ import os
 
 import numpy as np
 import torch
+import transformers
 import yaml
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -19,6 +20,7 @@ def all_eval(
     dataset: EvalQADataset,
     batch_size: int,
     device: torch.device,
+    tokenizer: transformers.PreTrainedTokenizer,
     **generate_kwargs: dict,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Performs quantitative evaluation of the selected model over selected data.
@@ -58,6 +60,7 @@ def all_eval(
             gen_outputs = model.generate(
                 question["input_ids"][0],
                 attention_mask=question["attention_mask"][0],
+                pad_token_id=tokenizer.eos_token_id,
                 **generate_kwargs,
             )
             generated_text = tokenizer.decode(
@@ -152,6 +155,7 @@ if __name__ == "__main__":
         dataset,
         batch_size,
         device,
+        tokenizer,
         max_new_tokens=50,
     )
     save_dir = f"{model_dir}/eval/{args.data_split}/"

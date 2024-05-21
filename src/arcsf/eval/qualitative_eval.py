@@ -86,7 +86,7 @@ if __name__ == "__main__":
     tokenizer = GPT2Tokenizer.from_pretrained(model_dir)
     model.config.pad_token_id = tokenizer.eos_token_id
 
-    experiment_config = yaml.safe_load(open(model_dir + args.config_path))
+    experiment_config = yaml.safe_load(open(f"{model_dir}/{args.config_path}"))
     forget_data, retain_data = get_data(
         "tofu", random_seed=rand, **experiment_config["data_config"]
     )
@@ -102,6 +102,7 @@ if __name__ == "__main__":
         qa_formatter,
         "standard",
         qualitative_eval=True,
+        quantitative_eval=False,
     )
     # pass all to the function
     qualitative_eval(

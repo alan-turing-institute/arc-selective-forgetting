@@ -1,5 +1,4 @@
 # Type: retain or full model
-experiment_name: gpt2_longer_experiment_retain
 train_type: retain
 
 # Path to full model to compare this model against.

@@ -183,7 +183,7 @@ class ExperimentConfig(Config):
                          file used for fine-tuning the full model to be compared against
         use_wandb: Whether or not to use wandb for logging
         wandb_config: Dict of wandb arguments
-        experiment_name: Name of the yaml file used to generate this config
+        run_name: Name of the run logged to wandb
         seed: Seed for random generation
     """
 
@@ -233,7 +233,7 @@ class ExperimentConfig(Config):
         self.wandb_config = wandb_config
 
         # Setup run name
-        self.experiment_name = experiment_name
+        self.run_name = f"{model_config}-{data_config}-{seed}"
 
         # seed
         self.seed = seed
@@ -303,6 +303,7 @@ class ExperimentConfig(Config):
             wandb_config.pop("log_model")
 
         # set default names for any that haven't been specified
-        wandb_config["name"] = f"{self.experiment_name}-{job_type}"
+        wandb_config["name"] = self.run_name
+        wandb_config["job_type"] = job_type
 
         wandb.init(config={"selective-forgetting": self.to_dict()}, **wandb_config)

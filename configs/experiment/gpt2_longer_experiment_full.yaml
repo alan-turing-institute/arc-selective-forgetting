@@ -1,5 +1,4 @@
-# name + type
-experiment_name: gpt2_longer_experiment_full
+# Type: retain or full model
 train_type: full
 
 # All of thse should be contained under configs/type/

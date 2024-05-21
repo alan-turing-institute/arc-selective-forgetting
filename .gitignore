@@ -136,5 +136,5 @@ dmypy.json
 .vscode/
 
 # Project related
-scripts/experiment/example_top_experiment_config/
+configs/experiment/*/
 train_scripts/

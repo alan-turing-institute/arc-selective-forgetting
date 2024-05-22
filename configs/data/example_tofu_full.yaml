@@ -1,7 +1,9 @@
 # The only fields that matter in this one are the fractions - this means the full
 # TOFU dataset will be returned as retain and nothing will be returned as forget
-granularity: question
-stratified: false
-forget_random: false
-forgotten_author_fraction: 0.0
-forgotten_fact_fraction: 0.0
+dataset_name: tofu
+data_kwargs:
+  granularity: question
+  stratified: false
+  forget_random: false
+  forgotten_author_fraction: 0.0
+  forgotten_fact_fraction: 0.0

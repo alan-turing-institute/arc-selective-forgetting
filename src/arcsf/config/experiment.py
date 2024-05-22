@@ -93,7 +93,7 @@ def generate_experiment_configs(
 
     # Construct same dict with full dataset
     combo_dict_full = copy(combo_dict)
-    combo_dict_full["data_configs"] = [top_config["full_data_config"]]
+    combo_dict_full["data_config"] = [top_config["full_data_config"]]
 
     # Get wandb kwargs
     wandb_kwargs = {}

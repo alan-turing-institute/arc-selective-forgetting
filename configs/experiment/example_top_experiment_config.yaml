@@ -1,6 +1,6 @@
 # Combinations to build runs over
 combinations:
-  data_configs:
+  data_config:
     - example_tofu_1
     - example_tofu_2
   model_config:

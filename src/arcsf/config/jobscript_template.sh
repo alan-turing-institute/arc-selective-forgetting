@@ -22,4 +22,4 @@ conda activate ${CONDA_ENV_PATH}
 
 # Run script
 echo "${SLURM_JOB_ID}: Job ${SLURM_ARRAY_TASK_ID} in the array"
-python {{ script_name }} --experiment_name "{{ experiment_file }}_${SLURM_ARRAY_TASK_ID}.yaml"
+python {{ script_name }} --experiment_name "{{ experiment_file }}_${SLURM_ARRAY_TASK_ID}"

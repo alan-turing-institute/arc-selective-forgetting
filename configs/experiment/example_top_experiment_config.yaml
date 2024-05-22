@@ -26,7 +26,7 @@ bask:
 # Wandb kwargs
 wandb_kwargs:
   use_wandb: true
-  wandb:
+  wandb_config:
     entity: turing-arc
     project: selective-forgetting
     log_model: "false"

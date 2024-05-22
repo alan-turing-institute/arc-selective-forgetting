@@ -124,17 +124,6 @@ def generate_experiment_configs(
     if len(all_combinations) > 1001:
         warnings.warn("Slurm array jobs cannot exceed more than 1001!")
 
-    # Check whether to generate baskerville scripts:
-    use_bask = False
-    if top_config["use_bask"]:
-        use_bask = True
-        train_dir = os.path.join(arcsf.constants.PROJECT_DIR, "train_scripts")
-        if not os.path.exists(train_dir):
-            os.mkdir(train_dir)
-        train_dir = os.path.join(train_dir, top_config_name)
-        if not os.path.exists(train_dir):
-            os.mkdir(train_dir)
-
     # Write out dicts and optionally bask scripts
     outdir = os.path.join(arcsf.constants.EXPERIMENT_CONFIG_DIR, top_config_name)
     if not os.path.exists(outdir):
@@ -146,27 +135,37 @@ def generate_experiment_configs(
         )
         with open(file_name, "w") as f:
             yaml.dump(combo, f)
-        if use_bask:
-            environment = Environment(
-                loader=FileSystemLoader(
-                    os.path.join(arcsf.constants.PROJECT_DIR, "src", "arcsf", "config")
-                )
-            )
-            template = environment.get_template("jobscript_template.sh")
 
-            script_content = template.render(
-                job_name=f"submit_{n}",
-                walltime=top_config["bask"]["walltime"],
-                node_number=top_config["bask"]["node_number"],
-                gpu_number=top_config["bask"]["gpu_number"],
-                cpu_per_gpu=top_config["bask"]["cpu_per_gpu"],
-                # array_number=, #TODO
-                script_name="scripts/train.py",
-                experiment_file=file_name,
-            )
+    # Check whether to generate baskerville scripts:
+    if top_config["use_bask"]:
 
-            with open(os.path.join(train_dir, f"submit_{n}.sh"), "w") as f:
-                f.write(script_content)
+        # Create directory for train script for experiment if it doesn't exist
+        train_dir = os.path.join(arcsf.constants.PROJECT_DIR, "train_scripts")
+        if not os.path.exists(train_dir):
+            os.mkdir(train_dir)
+
+        # Get jinja template
+        environment = Environment(
+            loader=FileSystemLoader(
+                os.path.join(arcsf.constants.PROJECT_DIR, "src", "arcsf", "config")
+            )
+        )
+        template = environment.get_template("jobscript_template.sh")
+
+        # Generate and save train script
+        job_name = f"{top_config_name}_train"
+        train_script = template.render(
+            job_name=job_name,
+            walltime=top_config["bask"]["walltime"],
+            node_number=top_config["bask"]["node_number"],
+            gpu_number=top_config["bask"]["gpu_number"],
+            cpu_per_gpu=top_config["bask"]["cpu_per_gpu"],
+            array_number=len(all_combinations) - 1,
+            script_name="scripts/train.py",
+            experiment_file=f"{top_config_name}/experiment",
+        )
+        with open(os.path.join(train_dir, f"{job_name}.sh"), "w") as f:
+            f.write(train_script)
 
 
 class ExperimentConfig(Config):

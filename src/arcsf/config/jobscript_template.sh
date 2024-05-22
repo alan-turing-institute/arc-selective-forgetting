@@ -7,6 +7,7 @@
 #SBATCH --gpus {{ gpu_number }}
 #SBATCH --cpus-per-gpu {{ cpu_per_gpu }}
 #SBATCH --output ./slurm_logs/{{ job_name }}-%j.out
+#SBATCH --array=0-{{ array_number }}
 
 # Load required modules here (pip etc.)
 module purge
@@ -20,4 +21,5 @@ CONDA_ENV_PATH=/bask/projects/v/vjgo8416-sltv-forget/sfenv
 conda activate ${CONDA_ENV_PATH}
 
 # Run script
-python {{ script_name }} --experiment_name {{ experiment_file }}
+echo "${SLURM_JOB_ID}: Job ${SLURM_ARRAY_TASK_ID} in the array"
+python {{ script_name }} --experiment_name "{{ experiment_file }}_${SLURM_ARRAY_TASK_ID}.yaml"

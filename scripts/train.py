@@ -6,7 +6,7 @@ import wandb
 
 from arcsf.config.experiment import ExperimentConfig
 from arcsf.constants import EXPERIMENT_CONFIG_DIR
-from arcsf.data.tofu import load_tofu
+from arcsf.data.data_module import FinetuneDataset, get_data, qa_formatter_basic
 from arcsf.models.model import load_model_and_tokenizer
 from arcsf.models.trainer import load_trainer
 from arcsf.utils import seed_everything
@@ -40,22 +40,15 @@ def main(experiment_name):
     )
 
     # Step 6: Load and prepreprocess data
-    _, dataset = load_tofu(
+    _, dataset = get_data(
+        dataset_name=experiment_config.data_config.dataset_name,
         **experiment_config.data_config.data_kwargs,
         random_seed=experiment_config.seed,
     )
-
-    # TODO: remove placeholder preprocessing below
-    def template_sample(sample):
-        sample["text"] = f"{sample['question']} {sample['answer']}{tokenizer.eos_token}"
-        return sample
-
-    dataset = dataset.map(template_sample)
-    dataset = dataset.map(
-        lambda sample: tokenizer(sample["text"]),
-        remove_columns=dataset.features,
-        batched=True,
-        batch_size=4,
+    dataset = FinetuneDataset(
+        dataset=dataset,
+        tokenizer=tokenizer,
+        qa_formatter=qa_formatter_basic,
     )
 
     # Step 7: Load trainer

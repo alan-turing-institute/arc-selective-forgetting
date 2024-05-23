@@ -18,7 +18,7 @@ class DataConfig(Config):
         super().__init__()
 
         # Process main inputs
-        self.dataset_name = (dataset_name,)
+        self.dataset_name = dataset_name
         self.data_kwargs = data_kwargs
 
     @classmethod

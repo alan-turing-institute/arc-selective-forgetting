@@ -256,7 +256,6 @@ class ExperimentConfig(Config):
             expect those relating to wandb.
         """
         return {
-            "experiment_name": self.experiment_name,
             "train_type": self.train_type,
             "data_config": self.data_config.to_dict(),
             "model_config": self.model_config.to_dict(),

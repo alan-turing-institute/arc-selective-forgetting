@@ -167,7 +167,7 @@ class FinetuneDataset(Dataset):
     def __getitem__(self, idx):
 
         question = self.data[idx]["question"]
-        answer = self.qa_formatter(self.data[idx]["answer"])
+        answer = self.data[idx]["answer"]
 
         inp = self.qa_formatter((question, answer))
 

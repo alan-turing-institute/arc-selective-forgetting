@@ -55,7 +55,7 @@ def load_trainer(
     )
 
     # Setup data collator
-    DataCollatorCls = TRAINER_CLS_DICT["data_collator"][trainer_type]
+    DataCollatorCls = TRAINER_CLS_DICT[trainer_type]["data_collator"]
     data_collator = DataCollatorCls(
         tokenizer,
         mlm=False,
@@ -68,7 +68,7 @@ def load_trainer(
         )
 
     # Get trainer cls
-    TrainerCls = TRAINER_CLS_DICT["trainer_cls"][trainer_type]
+    TrainerCls = TRAINER_CLS_DICT[trainer_type]["trainer_cls"]
 
     # Load trainer
     trainer = TrainerCls(

@@ -24,4 +24,4 @@ trainer_kwargs: # passed to TrainingArguments
   output_dir: output
 # Early stopping kwargs (only needed if save strategy is not null)
 early_stopping_kwargs:
-  patience: 2
+  early_stopping_patience: 2

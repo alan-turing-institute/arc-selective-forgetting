@@ -22,7 +22,7 @@ def main(experiment_name):
     )
 
     # Step 2: make save dirs
-    save_dir = f"{experiment_name}/{experiment_config.train_type}/{start_time}"
+    save_dir = f"output/{experiment_name}/{experiment_config.train_type}/{start_time}"
     os.makedirs(save_dir)
 
     # Step 3: Seed everything
@@ -37,6 +37,7 @@ def main(experiment_name):
         model_id=experiment_config.model_config.model_id,
         peft_kwargs=experiment_config.model_config.peft_kwargs,
         **experiment_config.model_config.model_kwargs,
+        add_padding_token=experiment_config.model_config.add_padding_token,
     )
 
     # Step 6: Load and prepreprocess data
@@ -46,7 +47,7 @@ def main(experiment_name):
         random_seed=experiment_config.seed,
     )
     dataset = FinetuneDataset(
-        dataset=dataset,
+        data=dataset,
         tokenizer=tokenizer,
         qa_formatter=qa_formatter_basic,
     )
@@ -60,8 +61,10 @@ def main(experiment_name):
         tokenizer,
         train_dataset=dataset,
         eval_dataset=None,
+        trainer_type="trainer",
         trainer_kwargs=experiment_config.model_config.trainer_kwargs,
         use_wandb=experiment_config.use_wandb,
+        early_stopping_kwargs=experiment_config.model_config.early_stopping_kwargs,
     )
 
     # Step 8: train

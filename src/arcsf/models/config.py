@@ -42,9 +42,9 @@ class ModelConfig(Config):
             trainer_kwargs["learning_rate"] = float(trainer_kwargs["learning_rate"])
         trainer_kwargs["logging_dir"] = f'{trainer_kwargs["output_dir"]}/logs'
         if "logging_steps" in trainer_kwargs.keys():
-            # Already the same by default, but this is to coerce it
+            # Keep save steps and eval steps in line with logging steps
             trainer_kwargs["save_steps"] = trainer_kwargs["logging_steps"]
-            trainer_kwargs["eval_steps"] = trainer_kwargs["eval_steps"]
+            trainer_kwargs["eval_steps"] = trainer_kwargs["logging_steps"]
 
         # Add trainer kwargs to self
         self.trainer_kwargs = trainer_kwargs

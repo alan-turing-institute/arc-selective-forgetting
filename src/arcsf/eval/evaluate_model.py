@@ -3,8 +3,7 @@ import torch
 import transformers
 
 from arcsf.data.data_module import EvalQADataset, get_data, qa_formatter_autoregression
-from arcsf.eval.scripts.analysis import get_metrics
-from arcsf.eval.utils import all_eval, combine_dicts
+from arcsf.eval.utils import all_eval, combine_dicts, get_metrics
 from arcsf.utils import get_device
 
 RAND = 42

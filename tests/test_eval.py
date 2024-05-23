@@ -214,4 +214,4 @@ def test_evaluate_model(dummy_base_model, dummy_tokenizer, dummy_exp_config):
     # check we get the correct outputs and that theyre all native float
     assert list(test_eval.keys()) == metric_keys
     for key in metric_keys:
-        assert isinstance(type(test_eval[key]), float)
+        assert isinstance(test_eval[key], float)

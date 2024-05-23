@@ -78,9 +78,12 @@ def get_metrics(
         result_dict : dictionary contatining the metrics we would like to track
     """
     forget_quality_one_sided = np.log(
+        # the case when the truth ratio CDF for forget is greater than the base model
         ks_test(test_values["forget_tr"], base_truth_ratios, alternative="greater")
     )
     forget_quality_two_sided = np.log(
+        # the general measure of 'closeness' of the truth ratio CDF for forget
+        # against the base model
         ks_test(test_values["forget_tr"], base_truth_ratios)
     )
 

@@ -87,7 +87,10 @@ def get_metrics(
         ks_test(test_values["forget_tr"], base_truth_ratios)
     )
 
-    retain_tr = torch.mean(test_values["retain_tr"])
+    # need to transform these according to table 1 in the TOFU paper
+    transform_retain_tr = torch.clamp((1 - test_values["retain_tr"]), 0)
+    retain_tr = torch.mean(transform_retain_tr)
+    # calculate other scores
     rouge_score = torch.mean(test_values["rouge_scores"])
     model_utilty = hmean([retain_tr, rouge_score])
 

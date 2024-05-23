@@ -29,8 +29,9 @@ def main(experiment_name):
     seed_everything(experiment_config.seed)
 
     # Step 4: Initialise wandb
-    experiment_config.init_wandb(job_type="train")
-    wandb.log({"save_dir": save_dir, "start_time": start_time})
+    if experiment_config.use_wandb:
+        experiment_config.init_wandb(job_type="train")
+        wandb.log({"save_dir": save_dir, "start_time": start_time})
 
     # Step 5: Load model
     model, tokenizer = load_model_and_tokenizer(

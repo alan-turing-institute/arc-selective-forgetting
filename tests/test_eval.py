@@ -5,6 +5,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from arcsf.data.data_module import EvalQADataset, get_data, qa_formatter_autoregression
+from arcsf.eval.evaluate_model import evaluate_model
 from arcsf.eval.metrics import (
     conditional_probability,
     eval_accuracy,
@@ -25,6 +26,19 @@ def dummy_data():
         forgotten_fact_fraction=1 / 3,
         random_seed=42,
     )
+
+
+@pytest.fixture
+def dummy_exp_config():
+    return {
+        "data_config": {
+            "forget_random": False,
+            "forgotten_author_fraction": 1 / 3,
+            "forgotten_fact_fraction": 1 / 3,
+            "granularity": "author",
+            "stratified": True,
+        }
+    }
 
 
 def test_accuracy():
@@ -178,3 +192,26 @@ def test_eval_end_to_end(dummy_base_model, dummy_tokenizer, dummy_data):
     assert torch.all(tr < 1).item()
     # checks truth ratio is less than 1
     assert (means[0] < torch.min(means[1:])).item()
+
+
+#
+def test_evaluate_model(dummy_base_model, dummy_tokenizer, dummy_exp_config):
+    # we load in some random numbers for the truth ratios
+    dummy_truth_ratios = "tests/data/dummy_truth_ratios.txt"
+    # these are the metrics the function should output
+    metric_keys = [
+        "mean_tr_retain",
+        "mean_rouge_score",
+        "forget_quality_1",
+        "forget_quality_2",
+        "model_utility",
+    ]
+
+    test_eval = evaluate_model(
+        dummy_base_model, dummy_truth_ratios, dummy_tokenizer, dummy_exp_config
+    )
+
+    # check we get the correct outputs and that theyre all native float
+    assert list(test_eval.keys()) == metric_keys
+    for key in metric_keys:
+        assert isinstance(type(test_eval[key]), float)

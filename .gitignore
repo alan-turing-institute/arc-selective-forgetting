@@ -9,7 +9,7 @@ wandb/
 temp*
 
 # For eval
-run_eval.sh
+**.sh
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

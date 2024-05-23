@@ -6,7 +6,7 @@ from scipy.stats import ks_2samp
 scorer = RougeScorer(["rouge1", "rougeL"], use_stemmer=True)
 
 
-def ks_test(forget: torch.Tensor, retain: torch.Tensor) -> float:
+def ks_test(forget: torch.Tensor, retain: torch.Tensor, **kwargs) -> float:
     """KS test figures 4-6 in the paper
 
     Args:
@@ -16,7 +16,7 @@ def ks_test(forget: torch.Tensor, retain: torch.Tensor) -> float:
     Returns:
         p_value: returns the p_value of the ks_test for use in the forget quality
     """
-    return ks_2samp(forget, retain).pvalue
+    return ks_2samp(forget, retain, **kwargs).pvalue
 
 
 def eval_accuracy(logits: torch.Tensor, labels: torch.Tensor) -> dict[torch.Tensor]:
@@ -44,12 +44,15 @@ def conditional_probability(
 
     Args:
         token_normalised_losses : losses on the answer normalised by number of tokens
+            shape: n_samples x n_perturbed
 
     Returns:
         conditional_probs: conditional probabilities in the form of a dictionary
     """
-    probs = torch.exp(-1 * token_normalised_losses)
-    cond_probs = probs.T / torch.sum(probs, dim=-1)
+    probs = torch.exp(-1 * token_normalised_losses)  # shape : n_samples x n_perturbed
+    sum = torch.sum(probs, dim=-1)  # shape : n_samples
+    # transpose here ensures that the n_samples dimension is in the right place
+    cond_probs = probs.T / sum  # shape : n_perturbed x n_samples
     return {"conditional_probs": cond_probs}
 
 
@@ -80,12 +83,16 @@ def truth_ratio(normalised_losses: torch.Tensor) -> torch.Tensor:
 
     Args:
         normalised_losses : Token length normalised losses.
+            shape: n_samples x number_perturbed
 
     Returns:
         truth_ratio : the truth ratio
     """
-    numerator = torch.mean(
-        conditional_probability(normalised_losses)["conditional_probs"][1:], dim=0
-    )
-    denominator = conditional_probability(normalised_losses)["conditional_probs"][0, :]
-    return numerator / denominator
+    # getting conditional probability of the losses, this does perform a transpose
+    # which doesn't affect the output values, but also isn't strictly necessary.
+
+    # cond_probs shape: n_perturbed x n_samples
+    cond_probs = conditional_probability(normalised_losses)["conditional_probs"]
+    numerator = torch.mean(cond_probs[1:, :], dim=0)  # shape: n_samples
+    denominator = cond_probs[0, :]  # shape: n_samples
+    return numerator / denominator  # shape: n_samples

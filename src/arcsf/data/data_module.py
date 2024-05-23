@@ -149,7 +149,7 @@ class EvalQADataset(torch.utils.data.Dataset):
         if "n_perturbed" in kwargs.keys():
             self.n_perturbed = kwargs["n_perturbed"]
         else:
-            self.n_perturbed = 1
+            self.n_perturbed = 2
 
         if loss_type == "idk":
             self.idk = get_idk_responses()

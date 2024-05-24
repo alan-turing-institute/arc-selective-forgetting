@@ -99,6 +99,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "model_path", type=str, help="Relative path to model directory."
     )
+    parser.add_argument(
+        "base_vals_path", type=str, help="Relative path to base model truth ratios."
+    )
 
     args = parser.parse_args()
     model_dir = args.model_path
@@ -109,9 +112,8 @@ if __name__ == "__main__":
     tokenizer = GPT2Tokenizer.from_pretrained(model_dir)
     model.config.pad_token_id = tokenizer.eos_token_id
     exp_config = yaml.safe_load(open(f"{model_dir}/experiment_config.yaml"))
-    base_vals_path = "temp/20240507-233700-957103"
 
-    vals = evaluate_model(model, base_vals_path, tokenizer, exp_config)
+    vals = evaluate_model(model, args.base_vals_path, tokenizer, exp_config)
     save_dir = f"{model_dir}/eval/analysis/"
     os.makedirs(save_dir, exist_ok=True)
     print(vals)

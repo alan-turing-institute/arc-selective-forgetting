@@ -95,8 +95,8 @@ def test_ks_test():
     test_cdf_2 = torch.cumsum(probability_density_2 * bin_sizes, dim=-1)
     same_comparison = ks_test(test_cdf_1, test_cdf_1)
     different_comparison = ks_test(test_cdf_1, test_cdf_2)
-    assert same_comparison == pytest.approx(1.0)
-    assert different_comparison != pytest.approx(1.0)
+    assert same_comparison == 1.0
+    assert different_comparison != 1.0
 
 
 def test_loss(dummy_tokenizer, dummy_forget_model):
@@ -208,7 +208,11 @@ def test_evaluate_model(dummy_base_model, dummy_tokenizer, dummy_exp_config):
     ]
 
     test_eval = evaluate_model(
-        dummy_base_model, dummy_truth_ratios, dummy_tokenizer, dummy_exp_config
+        dummy_base_model,
+        dummy_truth_ratios,
+        dummy_tokenizer,
+        dummy_exp_config,
+        max_new_tokens=10,
     )
 
     # check we get the correct outputs and that theyre all native float

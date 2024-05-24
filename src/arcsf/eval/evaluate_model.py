@@ -20,6 +20,7 @@ def evaluate_model(
     base_truth_ratios_path: str,
     tokenizer: transformers.AutoTokenizer,
     experiment_config: dict,
+    **generate_kwargs: dict,
 ) -> dict[float, float, float, float, float]:
     """
     Evaluates the model against a baseline model, given the model, tokenizer, experiment
@@ -70,7 +71,7 @@ def evaluate_model(
         1,
         device,
         tokenizer,
-        max_new_tokens=50,
+        **generate_kwargs,
     )
     forget_values = all_eval(
         model,
@@ -78,7 +79,7 @@ def evaluate_model(
         1,
         device,
         tokenizer,
-        max_new_tokens=50,
+        **generate_kwargs,
     )
 
     # combine dictionaries and load the baseline model truth ratios
@@ -113,7 +114,9 @@ if __name__ == "__main__":
     model.config.pad_token_id = tokenizer.eos_token_id
     exp_config = yaml.safe_load(open(f"{model_dir}/experiment_config.yaml"))
 
-    vals = evaluate_model(model, args.base_vals_path, tokenizer, exp_config)
+    vals = evaluate_model(
+        model, args.base_vals_path, tokenizer, exp_config, max_new_tokens=50
+    )
     save_dir = f"{model_dir}/eval/analysis/"
     os.makedirs(save_dir, exist_ok=True)
     print(vals)

@@ -1,6 +1,12 @@
+import argparse
+import json
+import os
+
 import numpy as np
 import torch
 import transformers
+import yaml
+from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
 from arcsf.data.data_module import EvalQADataset, get_data, qa_formatter_autoregression
 from arcsf.eval.utils import all_eval, combine_dicts, get_metrics
@@ -64,6 +70,7 @@ def evaluate_model(
         1,
         device,
         tokenizer,
+        max_new_tokens=50,
     )
     forget_values = all_eval(
         model,
@@ -71,6 +78,7 @@ def evaluate_model(
         1,
         device,
         tokenizer,
+        max_new_tokens=50,
     )
 
     # combine dictionaries and load the baseline model truth ratios
@@ -79,3 +87,33 @@ def evaluate_model(
 
     # return the aggregated metrics using the get metrics function
     return get_metrics(base_truth_ratios, analysis_vals)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description=(
+            "Runs qualitative evaluation, comparing outputs of model"
+            " against target strings."
+        )
+    )
+    parser.add_argument(
+        "model_path", type=str, help="Relative path to model directory."
+    )
+
+    args = parser.parse_args()
+    model_dir = args.model_path
+
+    # these are hardcoded for now
+    rand = 42
+    model = GPT2LMHeadModel.from_pretrained(model_dir)
+    tokenizer = GPT2Tokenizer.from_pretrained(model_dir)
+    model.config.pad_token_id = tokenizer.eos_token_id
+    exp_config = yaml.safe_load(open(f"{model_dir}/experiment_config.yaml"))
+    base_vals_path = "temp/20240507-233700-957103"
+
+    vals = evaluate_model(model, base_vals_path, tokenizer, exp_config)
+    save_dir = f"{model_dir}/eval/analysis/"
+    os.makedirs(save_dir, exist_ok=True)
+    print(vals)
+    with open(f"{save_dir}/metrics.json", "w") as f:
+        json.dump(vals, f)

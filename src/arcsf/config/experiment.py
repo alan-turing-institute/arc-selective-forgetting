@@ -116,9 +116,7 @@ def generate_experiment_configs(top_config_name: str) -> None:
     """
 
     # Read in yaml file
-    with open(
-        os.path.join(arcsf.constants.EXPERIMENT_CONFIG_DIR, f"{top_config_name}.yaml")
-    ) as f:
+    with open(arcsf.constants.EXPERIMENT_CONFIG_DIR / f"{top_config_name}.yaml") as f:
         top_config = yaml.safe_load(f)
 
     # Loop over, construct combo dict

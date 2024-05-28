@@ -20,7 +20,7 @@ test_forget_model_path = build_data_path("dummy_forget_gpt2")
 
 
 def build_config_path(rel_path: str | Path) -> str:
-    return str((TEST_CONFIG_DIR / rel_path).resolve())
+    return (TEST_CONFIG_DIR / rel_path).resolve()
 
 
 test_exerperiment_config_dir = build_config_path("experiment")

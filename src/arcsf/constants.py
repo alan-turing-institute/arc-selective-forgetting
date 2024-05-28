@@ -13,7 +13,7 @@ def _get_project_dir(location):
     Returns:
         String giving path of PROJECT_ROOT/configs/location
     """
-    return str((CONFIG_DIR / location))
+    return CONFIG_DIR / location
 
 
 EXPERIMENT_CONFIG_DIR = _get_project_dir("experiment")

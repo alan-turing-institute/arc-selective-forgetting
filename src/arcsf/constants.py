@@ -27,6 +27,9 @@ def _get_config_dir(location):
 EXPERIMENT_CONFIG_DIR = _get_config_dir("experiment")
 MODEL_CONFIG_DIR = _get_config_dir("model")
 DATA_CONFIG_DIR = _get_config_dir("data")
+FORGET_CONFIG_DIR = _get_config_dir("forget")
+
+EXPERIMENT_OUTPUT_DIR = PROJECT_DIR / "output"
 
 
 # Dict for selecting trainer type and associated data collator

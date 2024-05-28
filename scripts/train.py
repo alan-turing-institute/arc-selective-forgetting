@@ -81,9 +81,7 @@ if __name__ == "__main__":
     # Step 1: script kwargs
     parser = argparse.ArgumentParser(
         description="""
-        This script takes some paths to dataset, and trainer configs, along with
-        arguments to the dataset config as inputs. The arguments to the dataset
-        config specify which dataset pair to perform the experiment on.
+        This script takes the name of an experiment config stored in configs/experiment.
 
         It then trains both models for the experiment with the parameters specified
         in the trainer config, and logs the results to wandb. See README for more

@@ -180,7 +180,7 @@ def generate_experiment_configs(top_config_name: str) -> None:
         # Get jinja template
         environment = Environment(
             loader=FileSystemLoader(
-                os.path.join(arcsf.constants.PROJECT_DIR, "src", "arcsf", "config")
+                arcsf.constants.PROJECT_DIR / "src" / "arcsf" / "config"
             )
         )
         template = environment.get_template("jobscript_template.sh")

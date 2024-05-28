@@ -31,7 +31,7 @@ def load_model_and_tokenizer(
     """
 
     # Initialise
-    add_token_to_model = True
+    add_token_to_model = False
 
     # Load tokenizer
     tokenizer = AutoTokenizer.from_pretrained(model_id)

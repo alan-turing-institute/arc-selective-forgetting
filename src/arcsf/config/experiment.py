@@ -33,6 +33,18 @@ def _make_config_name(top_config_name: str, n: int) -> str:
 
 
 def _generate_combos_from_dict(combo_dict: dict, full: bool) -> dict:
+    """
+    Takes a dictionary containing lists, and produces all combinations of the elements
+    of those lists. If any entry is not a list, it is treated as a list of length 1.
+    Adds train_type to each output combination depending on the 'full' argument.
+
+    Args:
+        combo_dict: Dictionary of lists to create combinations from
+        full: If True, train_type in output combinations is 'full', else is 'retain'
+
+    Returns:
+        A dictionary containing all possible combinations
+    """
     # Convert combo dict into dict of combos
     sweep_dict_keys, sweep_dict_vals = zip(*combo_dict.items())
     combinations = [
@@ -57,6 +69,19 @@ def generate_combos_from_dict(
     full: bool,
     wandb_kwargs: dict,
 ) -> dict:
+    """
+    Takes a dictionary containing lists, and produces all combinations of the elements
+    of those lists. If any entry is not a list, it is treated as a list of length 1.
+    Adds train_type to each output combination depending on the 'full' argument.
+
+    Args:
+        combo_dict: Dictionary of lists to create combinations from
+        full: If True, train_type in output combinations is 'full', else is 'retain'
+        wandb_kwargs: A dictionary of wandb arguments added to each combination
+
+    Returns:
+        A dictionary containing all possible combinations
+    """
     # Generate combinations
     combinations = _generate_combos_from_dict(combo_dict, full)
 
@@ -71,6 +96,24 @@ def generate_combos_from_dict(
 
 
 def generate_experiment_configs(top_config_name: str) -> None:
+    """
+    Takes a top config and generates all experiments from combinations of data configs,
+    model/hyperparameter config pairs, and seeds.
+
+    The top config structure is described in more detail in scripts/README, but broadly
+    it is expected to contain a combinations argument with the following nested
+    underneath:
+
+    - data_config: a list of data configs
+    - model_config: a list of [model_config, hyperparameter_config] pairs
+    - seeds: a list of seeds
+
+    It should also contain a full fine-tuning data config, wandb kwargs (if desired),
+    and baskerville kwargs (if desired).
+
+    Args:
+        top_config_name: The name of a top config YAML file in configs/experiments
+    """
 
     # Read in yaml file
     with open(

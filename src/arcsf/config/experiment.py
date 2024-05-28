@@ -151,7 +151,7 @@ def generate_experiment_configs(top_config_name: str) -> None:
                 )
 
     # All combinations to generate yaml files for
-    all_combinations = [*full_combinations, *retain_combinations]
+    all_combinations = full_combinations + retain_combinations
 
     # Check this is a reasonably number of jobs for an array of training jobs
     if len(all_combinations) > 1001:

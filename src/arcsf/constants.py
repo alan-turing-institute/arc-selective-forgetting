@@ -4,7 +4,7 @@ PROJECT_DIR = Path(__file__, "..", "..", "..").resolve()
 CONFIG_DIR = Path(PROJECT_DIR, "configs")
 
 
-def _get_project_dir(location):
+def _get_config_dir(location):
     """Helper function for creating project config paths.
 
     Args:
@@ -16,6 +16,6 @@ def _get_project_dir(location):
     return CONFIG_DIR / location
 
 
-EXPERIMENT_CONFIG_DIR = _get_project_dir("experiment")
-MODEL_CONFIG_DIR = _get_project_dir("model")
-DATA_CONFIG_DIR = _get_project_dir("data")
+EXPERIMENT_CONFIG_DIR = _get_config_dir("experiment")
+MODEL_CONFIG_DIR = _get_config_dir("model")
+DATA_CONFIG_DIR = _get_config_dir("data")

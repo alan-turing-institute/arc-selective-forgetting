@@ -28,17 +28,11 @@ def _listify(obj: object):
     return [obj]
 
 
-def _make_config_name(
-    top_config_name: str,
-    n: int,
-) -> str:
+def _make_config_name(top_config_name: str, n: int) -> str:
     return f"{top_config_name}/experiment_{n}"
 
 
-def _generate_combos_from_dict(
-    combo_dict: dict,
-    full: bool,
-) -> dict:
+def _generate_combos_from_dict(combo_dict: dict, full: bool) -> dict:
     # Convert combo dict into dict of combos
     sweep_dict_keys, sweep_dict_vals = zip(*combo_dict.items())
     combinations = [
@@ -76,9 +70,7 @@ def generate_combos_from_dict(
     return combinations
 
 
-def generate_experiment_configs(
-    top_config_name: str,
-) -> None:
+def generate_experiment_configs(top_config_name: str) -> None:
 
     # Read in yaml file
     with open(

@@ -173,8 +173,8 @@ def generate_experiment_configs(top_config_name: str) -> None:
     if top_config["use_bask"]:
 
         # Create directory for train script for experiment if it doesn't exist
-        train_dir = os.path.join(arcsf.constants.PROJECT_DIR, "train_scripts")
-        if not os.path.exists(train_dir):
+        train_dir = arcsf.constants.PROJECT_DIR / "train_scripts"
+        if not train_dir.is_dir():
             os.mkdir(train_dir)
 
         # Get jinja template

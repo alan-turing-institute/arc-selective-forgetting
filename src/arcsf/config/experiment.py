@@ -1,6 +1,6 @@
 import os
 import warnings
-from copy import copy
+from copy import deepcopy
 from itertools import product
 
 import wandb
@@ -125,7 +125,7 @@ def generate_experiment_configs(top_config_name: str) -> None:
         combo_dict[key] = _listify(value)
 
     # Construct same dict with full dataset
-    combo_dict_full = copy(combo_dict)
+    combo_dict_full = deepcopy(combo_dict)
     combo_dict_full["data_config"] = [top_config["full_data_config"]]
 
     # Get wandb kwargs
@@ -320,7 +320,7 @@ class ExperimentConfig(Config):
             raise ValueError("A wandb run has already been initialised")
 
         wandb.login()
-        wandb_config = copy(self.wandb_config)
+        wandb_config = deepcopy(self.wandb_config)
 
         if "log_model" in wandb_config:
             # log_model can only be specified as an env variable, so we set the env

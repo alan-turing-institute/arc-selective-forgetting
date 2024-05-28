@@ -197,16 +197,15 @@ class ExperimentConfig(Config):
     ) -> None:
         super().__init__()
 
-        # Load in other configsg
+        # Load in other configs
         self.data_config = DataConfig.from_yaml(
-            os.path.join(arcsf.constants.DATA_CONFIG_DIR, f"{data_config}.yaml")
+            arcsf.constants.DATA_CONFIG_DIR / f"{data_config}.yaml"
         )
-        model_dir = os.path.join(arcsf.constants.MODEL_CONFIG_DIR, model_config)
+        model_dir = arcsf.constants.MODEL_CONFIG_DIR / model_config
         self.model_config = ModelConfig.from_yaml(
-            os.path.join(model_dir, f"{model_config}.yaml"),
-            os.path.join(model_dir, "hyperparameters", f"{hyperparameter_config}.yaml"),
+            model_dir / f"{model_config}.yaml",
+            model_dir / "hyperparameters" / f"{hyperparameter_config}.yaml",
         )
-
         # TODO on another PR: if train_type == "retain", require forget + eval configs
         # otherwise if train_type == "full", these can be optional
         # Check kwargs optional for full are present if doing retain tuning

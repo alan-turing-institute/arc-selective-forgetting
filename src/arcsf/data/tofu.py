@@ -46,7 +46,7 @@ def load_tofu(
     forgotten_author_fraction: float,
     forgotten_fact_fraction: float,
     random_seed: int,
-) -> tuple[Dataset, Dataset, dict] | tuple[Dataset, Dataset]:
+) -> tuple[Dataset, Dataset, dict] | tuple[Dataset, Dataset] | tuple[None, Dataset]:
     """
     Loads TOFU dataset given different flags for retain--forget split.
     Args:
@@ -61,6 +61,10 @@ def load_tofu(
     Returns:
         Two datasets with forget and retain sets
     """
+    if granularity not in ["question", "author"]:
+        raise ValueError(
+            f"granularity is {granularity} but must be one of question or author"
+        )
 
     all_data = load_dataset(TOFU_PATH, TOFU_SUBSET)["train"]
 
@@ -69,6 +73,10 @@ def load_tofu(
 
     all_data = all_data.add_column("question_index", q_indices)
     all_data = all_data.add_column("author_index", a_indices)
+
+    # if the fractions are both 0, return the full dataset and None
+    if forgotten_fact_fraction == 0.0 and forgotten_author_fraction == 0.0:
+        return None, all_data
 
     # if author, then the number of questions to forget (per author) is all of them
     if granularity == "author":

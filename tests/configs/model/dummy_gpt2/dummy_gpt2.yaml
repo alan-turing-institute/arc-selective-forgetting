@@ -1,0 +1,4 @@
+model_id: gpt2 # The name as found on HuggingFace to load the model with
+model_kwargs: # passed to AutoModelForCausalLM.from_pretrained
+  device_map: auto
+add_padding_token: True

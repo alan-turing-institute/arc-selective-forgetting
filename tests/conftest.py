@@ -5,16 +5,27 @@ import pytest
 from datasets import load_dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-TEST_DATA_DIR = Path(__file__, "..", "data", "tofu")
+TEST_DIR = Path(__file__, "..")
+TEST_CONFIG_DIR = Path(TEST_DIR, "configs")
+TEST_DATA_DIR = Path(TEST_DIR, "data", "tofu")
 
 
-def build_path(rel_path: str | Path) -> str:
+def build_data_path(rel_path: str | Path) -> str:
     return str((TEST_DATA_DIR / rel_path).resolve())
 
 
-test_train_data_path = build_path("dummy_tofu_data")
-test_base_model_path = build_path("dummy_base_gpt2")
-test_forget_model_path = build_path("dummy_forget_gpt2")
+test_train_data_path = build_data_path("dummy_tofu_data")
+test_base_model_path = build_data_path("dummy_base_gpt2")
+test_forget_model_path = build_data_path("dummy_forget_gpt2")
+
+
+def build_config_path(rel_path: str | Path) -> str:
+    return (TEST_CONFIG_DIR / rel_path).resolve()
+
+
+test_exerperiment_config_dir = build_config_path("experiment")
+test_model_config_dir = build_config_path("model")
+test_data_config_dir = build_config_path("data")
 
 
 @pytest.fixture
@@ -53,4 +64,16 @@ def mock_tofu_constants():
         patch("arcsf.data.tofu.TOFU_Q_PER_AUTHOR", 3),
         patch("arcsf.data.tofu.TOFU_BIO_Q_PER_AUTHOR", 1),
     ):
-        yield
+        yield None
+
+
+@pytest.fixture(scope="session", autouse=True)
+def mock_path_constants():
+    """Makes all tests use dummy configs."""
+    with (
+        patch("arcsf.constants.CONFIG_DIR", TEST_CONFIG_DIR),
+        patch("arcsf.constants.EXPERIMENT_CONFIG_DIR", test_exerperiment_config_dir),
+        patch("arcsf.constants.MODEL_CONFIG_DIR", test_model_config_dir),
+        patch("arcsf.constants.DATA_CONFIG_DIR", test_data_config_dir),
+    ):
+        yield None

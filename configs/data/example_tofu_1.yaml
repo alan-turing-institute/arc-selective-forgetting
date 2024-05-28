@@ -1,0 +1,7 @@
+dataset_name: tofu
+data_kwargs:
+  granularity: question
+  stratified: true
+  forget_random: true
+  forgotten_author_fraction: 0.2
+  forgotten_fact_fraction: 0.2

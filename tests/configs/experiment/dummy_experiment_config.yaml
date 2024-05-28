@@ -1,0 +1,22 @@
+# Type: retain or full model
+train_type: retain
+
+# Path to full model to compare this model against.
+full_model_name: this_string_not_used_yet
+
+# All of thse should be contained under configs/type/
+data_config: dummy_data_config
+model_config: dummy_gpt2
+hyperparameter_config: dummy_hyperparams_config
+# TODO: add other configs that define a single experiment end to end
+
+# Seed for random components
+seed: 42
+
+# wandb kwargs
+use_wandb: true
+wandb_config:
+  entity: turing-arc
+  project: selective-forgetting
+  log_model: "false"
+  group: test

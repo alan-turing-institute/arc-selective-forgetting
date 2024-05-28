@@ -32,7 +32,7 @@ def _make_config_name(top_config_name: str, n: int) -> str:
     return f"{top_config_name}/experiment_{n}"
 
 
-def _generate_combos_from_dict(combo_dict: dict, full: bool) -> dict:
+def _generate_combos_from_dict(combo_dict: dict) -> dict:
     """
     Takes a dictionary containing lists, and produces all combinations of the elements
     of those lists. If any entry is not a list, it is treated as a list of length 1.
@@ -51,22 +51,12 @@ def _generate_combos_from_dict(combo_dict: dict, full: bool) -> dict:
         dict(zip(sweep_dict_keys, v)) for v in product(*list(sweep_dict_vals))
     ]
 
-    # Initialise train_type
-    train_type = "retain"
-    if full:
-        train_type = "full"
-
-    # Add train_type to each combination
-    for n, _ in enumerate(combinations):
-        combinations[n]["train_type"] = train_type
-
     # Return
     return combinations
 
 
 def generate_combos_from_dict(
     combo_dict: dict,
-    full: bool,
     wandb_kwargs: dict,
 ) -> dict:
     """
@@ -83,7 +73,7 @@ def generate_combos_from_dict(
         A dictionary containing all possible combinations
     """
     # Generate combinations
-    combinations = _generate_combos_from_dict(combo_dict, full)
+    combinations = _generate_combos_from_dict(combo_dict)
 
     # Process model kwargs
     for n, _ in enumerate(combinations):
@@ -119,39 +109,33 @@ def generate_experiment_configs(top_config_name: str) -> None:
     with open(arcsf.constants.EXPERIMENT_CONFIG_DIR / f"{top_config_name}.yaml") as f:
         top_config = yaml.safe_load(f)
 
-    # Loop over, construct combo dict
-    combo_dict = {}
-    for key, value in top_config["combinations"].items():
-        combo_dict[key] = _listify(value)
-
-    # Construct same dict with full dataset
-    combo_dict_full = deepcopy(combo_dict)
-    combo_dict_full["data_config"] = [top_config["full_data_config"]]
-
     # Get wandb kwargs
     wandb_kwargs = {}
     if "wandb_kwargs" in top_config.keys():
         wandb_kwargs = {**top_config["wandb_kwargs"]}
 
-    # Get combinations
-    full_combinations = generate_combos_from_dict(combo_dict_full, True, wandb_kwargs)
-    retain_combinations = generate_combos_from_dict(combo_dict, False, wandb_kwargs)
+    # Generate combinations
+    data_configs = top_config["combinations"].pop("data_config")
+    combinations = generate_combos_from_dict(top_config["combinations"], wandb_kwargs)
+    retain_configs = []
+    full_configs = []
+    for full_idx, c in enumerate(combinations):
+        # Model trained on whole dataset
+        fc = deepcopy(c)
+        fc["data_config"] = top_config["full_data_config"]
+        fc["train_type"] = "full"
+        full_configs.append(fc)
 
-    # Add full config path to
-    for n, retain_combo in enumerate(retain_combinations):
-        for m, full_combo in enumerate(full_combinations):
-            if (
-                full_combo["model_config"] == retain_combo["model_config"]
-                and full_combo["seed"] == retain_combo["seed"]
-                and full_combo["hyperparameter_config"]
-                == retain_combo["hyperparameter_config"]
-            ):
-                retain_combinations[n]["full_model_name"] = _make_config_name(
-                    top_config_name, m
-                )
+        # Models trained on different retain splits
+        for dc in data_configs:
+            rc = deepcopy(c)
+            rc["data_config"] = dc
+            rc["full_model_name"] = _make_config_name(top_config_name, full_idx)
+            rc["train_type"] = "retain"
+            retain_configs.append(rc)
 
-    # All combinations to generate yaml files for
-    all_combinations = full_combinations + retain_combinations
+    # Put the configs together
+    all_combinations = full_configs + retain_configs
 
     # Check this is a reasonable number of jobs for an array of training jobs
     if len(all_combinations) > 1001:

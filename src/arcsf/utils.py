@@ -29,7 +29,7 @@ def make_output_dir(experiment_name: str, train_type: str, start_time: str) -> P
 
     Args:
         experiment_name: Name of the experiment.
-        train_type: Type of training (all, retain, or a forget type).
+        train_type: Type of training (full, retain, or a forget type).
         start_time: Start time of the experiment run.
 
     Returns:
@@ -48,7 +48,7 @@ def get_model_path(
 
     Args:
         experiment_name: Name of the experiment.
-        train_type: Type of training (all, retain, or a forget type).
+        train_type: Type of training (full, retain, or a forget type).
         start_time: Start time of the experiment. If None, the latest experiment run
             will be selected.
 

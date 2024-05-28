@@ -159,7 +159,6 @@ def generate_experiment_configs(
             walltime=top_config["bask"]["walltime"],
             node_number=top_config["bask"]["node_number"],
             gpu_number=top_config["bask"]["gpu_number"],
-            cpu_per_gpu=top_config["bask"]["cpu_per_gpu"],
             array_number=len(all_combinations) - 1,
             script_name="scripts/train.py",
             experiment_file=f"{top_config_name}/experiment",

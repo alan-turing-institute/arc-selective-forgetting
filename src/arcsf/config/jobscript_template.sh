@@ -5,7 +5,6 @@
 #SBATCH --time {{ walltime }}
 #SBATCH --nodes {{ node_number }}
 #SBATCH --gpus {{ gpu_number }}
-#SBATCH --cpus-per-gpu {{ cpu_per_gpu }}
 #SBATCH --output ./slurm_logs/{{ job_name }}-%j.out
 #SBATCH --array=0-{{ array_number }}
 

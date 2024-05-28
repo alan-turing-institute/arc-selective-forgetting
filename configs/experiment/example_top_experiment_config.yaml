@@ -21,7 +21,6 @@ bask:
   walltime: '0-5:0:0'
   gpu_number: 1
   node_number: 1
-  cpu_per_gpu: 36
 
 # Wandb kwargs
 wandb_kwargs:

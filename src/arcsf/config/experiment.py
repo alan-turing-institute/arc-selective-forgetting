@@ -196,7 +196,7 @@ def generate_experiment_configs(top_config_name: str) -> None:
             script_name="scripts/train.py",
             experiment_file=f"{top_config_name}/experiment",
         )
-        with open(os.path.join(train_dir, f"{job_name}.sh"), "w") as f:
+        with open(train_dir / f"{job_name}.sh", "w") as f:
             f.write(train_script)
 
 

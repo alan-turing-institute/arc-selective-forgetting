@@ -13,23 +13,8 @@ from arcsf.data.config import DataConfig
 from arcsf.models.config import ModelConfig
 
 
-def _listify(obj: object):
-    """Takes an object. If a list, returns it. If not, returns a list containing
-    the object.
-
-    Args:
-        obj: Object to ensure is a list.
-
-    Returns:
-        Either the original object if a list or a list containing the object.
-    """
-    if isinstance(obj, list):
-        return obj
-    return [obj]
-
-
-def _make_config_name(top_config_name: str, n: int) -> str:
-    return f"{top_config_name}/experiment_{n}"
+def _make_config_name(top_config_name: str, experiment_type: str, n: int) -> str:
+    return f"{top_config_name}/{experiment_type}_{n}"
 
 
 def _generate_combos_from_dict(combo_dict: dict) -> dict:
@@ -116,29 +101,53 @@ def generate_experiment_configs(top_config_name: str) -> None:
 
     # Generate combinations
     data_configs = top_config["combinations"].pop("data_config")
+    forget_combos = top_config["combinations"].pop("forget_config")
     combinations = generate_combos_from_dict(top_config["combinations"], wandb_kwargs)
     retain_configs = []
     full_configs = []
-    for full_idx, c in enumerate(combinations):
-        # Model trained on whole dataset
+    forget_configs = []
+
+    for full_idx, c in enumerate(combinations):  # Loop over seeds, full/retain hparams
+        # Full model config
         fc = deepcopy(c)
         fc["data_config"] = top_config["full_data_config"]
+        fc["model_config"] = top_config["model_config"]
         fc["train_type"] = "full"
+        full_model_name = _make_config_name(top_config_name, "full", full_idx)
+        fc["full_model_name"] = full_model_name
         full_configs.append(fc)
 
-        # Models trained on different retain splits
-        for dc in data_configs:
+        for retain_idx, dc in enumerate(data_configs):  # Loop over forget/retain splits
+            experiment_name = _make_config_name(
+                top_config_name, "experiment", retain_idx
+            )
+            # Retain model config
             rc = deepcopy(c)
             rc["data_config"] = dc
-            rc["full_model_name"] = _make_config_name(top_config_name, full_idx)
+            rc["full_model_name"] = full_model_name
+            rc["model_config"] = top_config["model_config"]
             rc["train_type"] = "retain"
+            rc["experiment_name"] = experiment_name
             retain_configs.append(rc)
 
+            for fgc in forget_combos:  # Loop over forget methods & hyperparameters
+                # Forget model config
+                fg_config = deepcopy(c)
+                fg_config["data_config"] = dc
+                fg_config["full_model_name"] = full_model_name
+                fg_config["model_config"] = top_config["model_config"]
+                fg_config["train_type"] = fgc[0]
+                fg_config["experiment_name"] = experiment_name
+
+                forget_configs.append(fg_config)
+
     # Put the configs together
-    all_combinations = full_configs + retain_configs
+    # all_combinations = full_configs + retain_configs -> now separate full, retain, forget
+
+    # TODO Then generate separate submit scripts for full, retain, forget
 
     # Check this is a reasonable number of jobs for an array of training jobs
-    if len(all_combinations) > 1001:
+    if len(forget_configs) > 1001:
         warnings.warn("Slurm array jobs cannot exceed more than 1001!")
 
     # Write out dicts and optionally bask scripts

@@ -3,14 +3,27 @@ combinations:
   data_config:
     - example_tofu_1
     - example_tofu_2
-  model_config:
-    - [gpt2, shorter]
-    - [gpt2, longer]
+
+  train_config:
+    - shorter
+    - longer
+
+  forget_config:
+    - [ascent, shorter]
+    - [ascent, longer]
+    - [difference, shorter]
+    - [difference, longer]
+    - [idk, shorter]
+    - [idk, longer]
+    - [kl, shorter]
+    - [kl, longer]
+
   seed:
     - 42
     - 43
     - 44
-# TODO: add other configs that define a group of experiments end to end
+
+model_config: gpt2
 
 # Full data config: which dataset to use to build full model to do forgetting on
 full_data_config: example_tofu_full

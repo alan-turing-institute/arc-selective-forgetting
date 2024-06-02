@@ -86,6 +86,12 @@ def mock_path_constants():
         patch("arcsf.constants.EXPERIMENT_CONFIG_DIR", test_exerperiment_config_dir),
         patch("arcsf.constants.MODEL_CONFIG_DIR", test_model_config_dir),
         patch("arcsf.constants.DATA_CONFIG_DIR", test_data_config_dir),
+        patch(
+            "arcsf.config.experiment.EXPERIMENT_CONFIG_DIR",
+            test_exerperiment_config_dir,
+        ),
+        patch("arcsf.config.experiment.MODEL_CONFIG_DIR", test_model_config_dir),
+        patch("arcsf.config.experiment.DATA_CONFIG_DIR", test_data_config_dir),
     ):
         yield
 

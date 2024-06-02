@@ -33,7 +33,8 @@ class KLForgetter(Forgetter):
         """
         super().__init__(*args, **kwargs)
         self.oracle_model = AutoModelForCausalLM.from_pretrained(
-            self.model.config.name_or_path, device_map="auto"
+            self.model.config.name_or_path,
+            device_map="auto" if self.model.device.type != "cpu" else None,
         )
 
     def compute_loss(

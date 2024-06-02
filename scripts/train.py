@@ -5,24 +5,29 @@ import wandb
 
 from arcsf.config.experiment import ExperimentConfig
 from arcsf.constants import EXPERIMENT_CONFIG_DIR
-from arcsf.data.data_module import FinetuneDataset, get_data, qa_formatter_basic
+from arcsf.data.data_module import (
+    FinetuneDataset,
+    QAForgetDataset,
+    QAFormatter,
+    get_data,
+)
 from arcsf.models.model import load_model_and_tokenizer
 from arcsf.models.trainer import load_trainer
 from arcsf.utils import get_datetime_str, make_output_dir, seed_everything
 
 
-def main(experiment_name):
+def main(experiment_path):
     # Step 0: get start time
     start_time = get_datetime_str()
 
     # Step 1: Process configs to dicts
     experiment_config = ExperimentConfig.from_yaml(
-        EXPERIMENT_CONFIG_DIR / f"{experiment_name}.yaml"
+        EXPERIMENT_CONFIG_DIR / f"{experiment_path}.yaml"
     )
 
     # Step 2: make save dirs
     save_dir = make_output_dir(
-        experiment_name, experiment_config.train_type, start_time
+        experiment_config.experiment_name, experiment_config.train_type, start_time
     )
 
     # Step 3: Seed everything
@@ -42,27 +47,44 @@ def main(experiment_name):
     )
 
     # Step 6: Load and prepreprocess data
-    _, dataset = get_data(
+    forget, retain = get_data(
         dataset_name=experiment_config.data_config.dataset_name,
         **experiment_config.data_config.data_kwargs,
         random_seed=experiment_config.seed,
     )
-    dataset = FinetuneDataset(
-        data=dataset,
-        tokenizer=tokenizer,
-        qa_formatter=qa_formatter_basic,
-    )
+
+    # TODO - specify formtter template in model template
+    qa_formatter = QAFormatter("{question} {answer}" + tokenizer.eos_token)
+
+    if experiment_config.train_type in ["full", "retain"]:
+        train_dataset = FinetuneDataset(
+            data=retain,  # if full training retain will contain all the data
+            tokenizer=tokenizer,
+            qa_formatter=qa_formatter,
+        )
+    else:
+        train_dataset = QAForgetDataset(
+            (forget, retain),
+            tokenizer,
+            qa_formatter,
+            "idk" if experiment_config.train_type == "idk" else "normal",
+            random_seed=experiment_config.seed,
+        )
 
     # Step 7: Load trainer
     experiment_config.model_config.trainer_kwargs["output_dir"] = (
         save_dir / "checkpoints"
     )
     trainer = load_trainer(
-        model,
-        tokenizer,
-        train_dataset=dataset,
+        model=model,
+        tokenizer=tokenizer,
+        train_dataset=train_dataset,
         eval_dataset=None,
-        trainer_type="trainer",
+        trainer_type=(
+            "trainer"
+            if experiment_config.train_type in ["full", "retain"]
+            else experiment_config.train_type
+        ),
         trainer_kwargs=experiment_config.model_config.trainer_kwargs,
         use_wandb=experiment_config.use_wandb,
         early_stopping_kwargs=experiment_config.model_config.early_stopping_kwargs,

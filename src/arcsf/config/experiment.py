@@ -2,13 +2,19 @@ import os
 import warnings
 from copy import deepcopy
 from itertools import product
+from pathlib import Path
 
 import wandb
 import yaml
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, Template
 
-import arcsf.constants
 from arcsf.config.config import Config
+from arcsf.constants import (
+    DATA_CONFIG_DIR,
+    EXPERIMENT_CONFIG_DIR,
+    MODEL_CONFIG_DIR,
+    PROJECT_DIR,
+)
 from arcsf.data.config import DataConfig
 from arcsf.models.config import ModelConfig
 
@@ -40,10 +46,7 @@ def _generate_combos_from_dict(combo_dict: dict) -> dict:
     return combinations
 
 
-def generate_combos_from_dict(
-    combo_dict: dict,
-    wandb_kwargs: dict,
-) -> dict:
+def generate_combos_from_dict(combo_dict: dict, wandb_kwargs: dict) -> dict:
     """
     Takes a dictionary containing lists, and produces all combinations of the elements
     of those lists. If any entry is not a list, it is treated as a list of length 1.
@@ -62,12 +65,60 @@ def generate_combos_from_dict(
 
     # Process model kwargs
     for n, _ in enumerate(combinations):
-        combinations[n]["hyperparameter_config"] = combinations[n]["model_config"][1]
-        combinations[n]["model_config"] = combinations[n]["model_config"][0]
         combinations[n] = {**combinations[n], **wandb_kwargs}
 
     # Return
     return combinations
+
+
+def make_config(
+    base_config: dict,
+    data_config: str,
+    model_config: str,
+    train_type: str,
+    full_model_name: str,
+    hyperparameter_config: str,
+    experiment_name: str,
+) -> dict:
+    config = deepcopy(base_config)
+    config["data_config"] = data_config
+    config["full_model_name"] = full_model_name
+    config["model_config"] = model_config
+    config["train_type"] = train_type
+    config["hyperparameter_config"] = hyperparameter_config
+    config["experiment_name"] = experiment_name
+    return config
+
+
+def write_yaml(data, path):
+    with open(path, "w") as f:
+        yaml.dump(data, f)
+
+
+def write_train_script(
+    template: Template,
+    top_config_name: str,
+    job_type: str,
+    bask_config: dict,
+    array_number: int,
+    script_dir: Path,
+):
+    train_script = template.render(
+        job_name=f"{top_config_name}_{job_type}",
+        walltime=bask_config["walltime"],
+        node_number=bask_config["node_number"],
+        gpu_number=bask_config["gpu_number"],
+        array_number=array_number,
+        script_name="scripts/train.py",
+        experiment_file=f"{top_config_name}/{job_type}",
+    )
+    # Create directory for train scripts if it doesn't exist
+    save_dir = script_dir / top_config_name
+    if not save_dir.is_dir():
+        os.makedirs(save_dir)
+
+    with open(save_dir / f"{job_type}.sh", "w") as f:
+        f.write(train_script)
 
 
 def generate_experiment_configs(top_config_name: str) -> None:
@@ -91,7 +142,7 @@ def generate_experiment_configs(top_config_name: str) -> None:
     """
 
     # Read in yaml file
-    with open(arcsf.constants.EXPERIMENT_CONFIG_DIR / f"{top_config_name}.yaml") as f:
+    with open(EXPERIMENT_CONFIG_DIR / f"{top_config_name}.yaml") as f:
         top_config = yaml.safe_load(f)
 
     # Get wandb kwargs
@@ -103,94 +154,86 @@ def generate_experiment_configs(top_config_name: str) -> None:
     data_configs = top_config["combinations"].pop("data_config")
     forget_combos = top_config["combinations"].pop("forget_config")
     combinations = generate_combos_from_dict(top_config["combinations"], wandb_kwargs)
-    retain_configs = []
-    full_configs = []
-    forget_configs = []
+    n_full = 0
+    n_retain = 0
+    n_forget = 0
+
+    outdir = EXPERIMENT_CONFIG_DIR / top_config_name
+    if not outdir.is_dir():
+        os.makedirs(outdir)
 
     for full_idx, c in enumerate(combinations):  # Loop over seeds, full/retain hparams
         # Full model config
-        fc = deepcopy(c)
-        fc["data_config"] = top_config["full_data_config"]
-        fc["model_config"] = top_config["model_config"]
-        fc["train_type"] = "full"
         full_model_name = _make_config_name(top_config_name, "full", full_idx)
-        fc["full_model_name"] = full_model_name
-        full_configs.append(fc)
+        train_hparams = c.pop("train_config")
+        flc = make_config(
+            base_config=c,
+            data_config=top_config["full_data_config"],
+            model_config=top_config["model_config"],
+            train_type="full",
+            full_model_name=full_model_name,
+            hyperparameter_config=train_hparams,
+            experiment_name=full_model_name,
+        )
+        write_yaml(flc, EXPERIMENT_CONFIG_DIR / f"{full_model_name}.yaml")
+        n_full += 1
 
-        for retain_idx, dc in enumerate(data_configs):  # Loop over forget/retain splits
-            experiment_name = _make_config_name(
-                top_config_name, "experiment", retain_idx
-            )
+        for dc in data_configs:  # Loop over forget/retain splits
             # Retain model config
-            rc = deepcopy(c)
-            rc["data_config"] = dc
-            rc["full_model_name"] = full_model_name
-            rc["model_config"] = top_config["model_config"]
-            rc["train_type"] = "retain"
-            rc["experiment_name"] = experiment_name
-            retain_configs.append(rc)
+            experiment_name = _make_config_name(top_config_name, "experiment", n_retain)
+            retain_name = _make_config_name(top_config_name, "retain", n_retain)
+            rtc = make_config(
+                base_config=c,
+                data_config=dc,
+                model_config=top_config["model_config"],
+                train_type="retain",
+                full_model_name=full_model_name,
+                hyperparameter_config=train_hparams,
+                experiment_name=experiment_name,
+            )
+            write_yaml(rtc, EXPERIMENT_CONFIG_DIR / f"{retain_name}.yaml")
+            n_retain += 1
 
             for fgc in forget_combos:  # Loop over forget methods & hyperparameters
                 # Forget model config
-                fg_config = deepcopy(c)
-                fg_config["data_config"] = dc
-                fg_config["full_model_name"] = full_model_name
-                fg_config["model_config"] = top_config["model_config"]
-                fg_config["train_type"] = fgc[0]
-                fg_config["experiment_name"] = experiment_name
-
-                forget_configs.append(fg_config)
-
-    # Put the configs together
-    # all_combinations = full_configs + retain_configs -> now separate full, retain, forget
-
-    # TODO Then generate separate submit scripts for full, retain, forget
+                forget_name = _make_config_name(top_config_name, "forget", n_forget)
+                fgc = make_config(
+                    base_config=c,
+                    data_config=dc,
+                    model_config=top_config["model_config"],
+                    train_type=fgc[0],
+                    full_model_name=full_model_name,
+                    hyperparameter_config=fgc[1],
+                    experiment_name=experiment_name,
+                )
+                write_yaml(fgc, EXPERIMENT_CONFIG_DIR / f"{forget_name}.yaml")
+                n_forget += 1
 
     # Check this is a reasonable number of jobs for an array of training jobs
-    if len(forget_configs) > 1001:
+    if n_forget > 1001:
         warnings.warn("Slurm array jobs cannot exceed more than 1001!")
-
-    # Write out dicts and optionally bask scripts
-    outdir = os.path.join(arcsf.constants.EXPERIMENT_CONFIG_DIR, top_config_name)
-    if not os.path.exists(outdir):
-        os.mkdir(outdir)
-    for n, combo in enumerate(all_combinations):
-        file_name = (
-            f"{arcsf.constants.EXPERIMENT_CONFIG_DIR}/"
-            f"{_make_config_name(top_config_name, n)}.yaml"
-        )
-        with open(file_name, "w") as f:
-            yaml.dump(combo, f)
 
     # Check whether to generate baskerville scripts:
     if top_config["use_bask"]:
-
-        # Create directory for train script for experiment if it doesn't exist
-        train_dir = arcsf.constants.PROJECT_DIR / "train_scripts"
-        if not train_dir.is_dir():
-            os.mkdir(train_dir)
-
         # Get jinja template
         environment = Environment(
-            loader=FileSystemLoader(
-                arcsf.constants.PROJECT_DIR / "src" / "arcsf" / "config"
-            )
+            loader=FileSystemLoader(PROJECT_DIR / "src" / "arcsf" / "config")
         )
         template = environment.get_template("jobscript_template.sh")
+        script_dir = PROJECT_DIR / "train_scripts"
 
-        # Generate and save train script
-        job_name = f"{top_config_name}_train"
-        train_script = template.render(
-            job_name=job_name,
-            walltime=top_config["bask"]["walltime"],
-            node_number=top_config["bask"]["node_number"],
-            gpu_number=top_config["bask"]["gpu_number"],
-            array_number=len(all_combinations) - 1,
-            script_name="scripts/train.py",
-            experiment_file=f"{top_config_name}/experiment",
-        )
-        with open(train_dir / f"{job_name}.sh", "w") as f:
-            f.write(train_script)
+        # Generate and save train scripts
+        for job_type, n_jobs in zip(
+            ["full", "retain", "forget"], [n_full, n_retain, n_forget]
+        ):
+            write_train_script(
+                template=template,
+                top_config_name=top_config_name,
+                job_type=job_type,
+                bask_config=top_config["bask"],
+                array_number=n_jobs - 1,
+                script_dir=script_dir,
+            )
 
 
 class ExperimentConfig(Config):
@@ -223,29 +266,26 @@ class ExperimentConfig(Config):
         super().__init__()
 
         # Load in other configs
-        self.data_config = DataConfig.from_yaml(
-            arcsf.constants.DATA_CONFIG_DIR / f"{data_config}.yaml"
-        )
-        model_dir = arcsf.constants.MODEL_CONFIG_DIR / model_config
+        self.data_config = DataConfig.from_yaml(DATA_CONFIG_DIR / f"{data_config}.yaml")
+        model_dir = MODEL_CONFIG_DIR / model_config
         self.model_config = ModelConfig.from_yaml(
             model_dir / f"{model_config}.yaml",
+            full_model_name,
             model_dir / "hyperparameters" / f"{hyperparameter_config}.yaml",
         )
-        # TODO on another PR: if train_type == "retain", require forget + eval configs
-        # otherwise if train_type == "full", these can be optional
-        # Check kwargs optional for full are present if doing retain tuning
-        if train_type == "retain":
-            if full_model_name is None:
-                raise ValueError(
-                    "If train_type is retain, full_model must be type str and is "
-                    "currently None"
-                )
+        # Check kwargs optional for full are present if doing retain/forget tuning
+        if train_type != "full" and full_model_name is None:
+            raise ValueError(
+                "If train_type is retain or a forget method, full_model must be type "
+                "str and is currently None"
+            )
 
-        # Either "all" (train on full dataset) or "retain" (train on retain split only)
+        # Either "full" (train on full dataset), "retain" (train on retain split only)
+        # or the name of a forget method
         self.train_type = train_type
 
-        # If this is a retain model, this points to the full model against which
-        # the retain model should be compared
+        # If this is a retain or forget model, this points to the full model against
+        # which the retain model should be compared
         self.full_model_name = full_model_name
 
         # Wandb args
@@ -253,7 +293,7 @@ class ExperimentConfig(Config):
         self.wandb_config = wandb_config
 
         # Setup run name
-        self.run_name = f"{model_config}-{data_config}-{seed}"
+        self.run_name = f"{model_config}-{data_config}-{train_type}-{seed}"
 
         # seed
         self.seed = seed

@@ -4,7 +4,7 @@ import pytest
 import torch
 from torch.utils.data import DataLoader
 
-from arcsf.data.data_module import EvalQADataset, get_data, qa_formatter_autoregression
+from arcsf.data.data_module import EvalQADataset, get_data, qa_formatter_blank
 from arcsf.eval.evaluate_model import evaluate_model
 from arcsf.eval.metrics import (
     conditional_probability,
@@ -76,10 +76,10 @@ def test_conditional_probability():
     incorrect_losses[:, 1] = 0
 
     eval_prob = conditional_probability(correct_losses)
-    assert torch.mean(eval_prob["conditional_probs"][0]).item() == pytest.approx(1.0)
+    assert torch.mean(eval_prob[0]).item() == pytest.approx(1.0)
 
     eval_prob = conditional_probability(incorrect_losses)
-    assert torch.mean(eval_prob["conditional_probs"][0]).item() == pytest.approx(0.0)
+    assert torch.mean(eval_prob[0]).item() == pytest.approx(0.0)
 
 
 def test_ks_test():
@@ -158,7 +158,7 @@ def test_eval_end_to_end(dummy_base_model, dummy_tokenizer, dummy_data):
     eval_dataset = EvalQADataset(
         data=retain_data,
         tokenizer=dummy_tokenizer,
-        qa_formatter=qa_formatter_autoregression,
+        qa_formatter=qa_formatter_blank,
         loss_type="standard",
         return_perturbed=True,
         n_perturbed=n_perturbed,

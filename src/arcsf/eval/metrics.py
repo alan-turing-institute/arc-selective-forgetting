@@ -36,7 +36,7 @@ def eval_accuracy(logits: torch.Tensor, labels: torch.Tensor) -> dict[torch.Tens
 
 def conditional_probability(
     token_normalised_losses: torch.Tensor,
-) -> dict[torch.Tensor]:
+) -> torch.Tensor:
     """
     Conditional probabilty defined in section 2.2.2 of the paper. Probabilities
     calculated using:
@@ -49,14 +49,15 @@ def conditional_probability(
     Returns:
         conditional_probs: conditional probabilities in the form of a dictionary
     """
-    probs = torch.exp(-1 * token_normalised_losses)  # shape : n_samples x n_perturbed
+    # shape : n_samples x n_perturbed + 1
+    probs = torch.exp(-1 * token_normalised_losses)
     sum = torch.sum(probs, dim=-1)  # shape : n_samples
     # transpose here ensures that the n_samples dimension is in the right place
-    cond_probs = probs.T / sum  # shape : n_perturbed x n_samples
-    return {"conditional_probs": cond_probs}
+    cond_probs = probs.T / sum  # shape : n_perturbed + 1 x n_samples
+    return cond_probs
 
 
-def eval_rouge_recall(gen_output: str, ground_truth: str) -> dict[float, float]:
+def eval_rouge_recall(gen_output: str, ground_truth: str) -> dict[str, float]:
     """
     Abstraction of the RogueScorer class call, calculates the ROUGE score of the
     generated output. rougeL and rouge1 are outputted but the TOFU codebase only used
@@ -67,7 +68,7 @@ def eval_rouge_recall(gen_output: str, ground_truth: str) -> dict[float, float]:
         ground_truth : ground truth string
 
     Returns:
-        dict[float, float]: scores
+        ROUGE scores
     """
     rouge_scores = scorer.score(ground_truth, gen_output)
     rouge1_recall = rouge_scores["rouge1"].recall
@@ -91,8 +92,8 @@ def truth_ratio(normalised_losses: torch.Tensor) -> torch.Tensor:
     # getting conditional probability of the losses, this does perform a transpose
     # which doesn't affect the output values, but also isn't strictly necessary.
 
-    # cond_probs shape: n_perturbed x n_samples
-    cond_probs = conditional_probability(normalised_losses)["conditional_probs"]
+    # cond_probs shape: n_perturbed + 1 x n_samples
+    cond_probs = conditional_probability(normalised_losses)
     numerator = torch.mean(cond_probs[1:, :], dim=0)  # shape: n_samples
     denominator = cond_probs[0, :]  # shape: n_samples
     return numerator / denominator  # shape: n_samples

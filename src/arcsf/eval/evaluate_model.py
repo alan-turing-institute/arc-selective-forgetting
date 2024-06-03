@@ -8,7 +8,7 @@ import transformers
 import yaml
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
-from arcsf.data.data_module import EvalQADataset, get_data, qa_formatter_autoregression
+from arcsf.data.data_module import EvalQADataset, get_data, qa_formatter_blank
 from arcsf.eval.utils import all_eval, combine_dicts, get_metrics
 from arcsf.utils import get_device
 
@@ -21,7 +21,7 @@ def evaluate_model(
     tokenizer: transformers.AutoTokenizer,
     experiment_config: dict,
     **generate_kwargs: dict,
-) -> dict[float, float, float, float, float]:
+) -> dict[str, float]:
     """
     Evaluates the model against a baseline model, given the model, tokenizer, experiment
     config and the path to the baseline model truth ratios.
@@ -33,7 +33,7 @@ def evaluate_model(
         experiment_config: experiment config (currently a dictionary)
 
     Returns:
-        dictionary : aggregated metrics for evaluation (generated using `get_metrics`)
+        dictionary of aggregated metrics for evaluation (generated using `get_metrics`)
     """
     # get datasets
     forget_data, retain_data = get_data(
@@ -43,20 +43,20 @@ def evaluate_model(
     device = get_device()
 
     # create datasets
-    RetainDataset = EvalQADataset(
+    retain_dataset = EvalQADataset(
         retain_data,
         tokenizer,
-        qa_formatter_autoregression,
+        qa_formatter_blank,
         "standard",
         quantitative_eval=True,
         qualitative_eval=True,
         device=device,
         random_seed=RAND,
     )
-    ForgetDataset = EvalQADataset(
+    forget_dataset = EvalQADataset(
         forget_data,
         tokenizer,
-        qa_formatter_autoregression,
+        qa_formatter_blank,
         "standard",
         quantitative_eval=True,
         qualitative_eval=True,
@@ -67,7 +67,7 @@ def evaluate_model(
     # perform evaluation on models to get the raw values
     retain_values = all_eval(
         model,
-        RetainDataset,
+        retain_dataset,
         1,
         device,
         tokenizer,
@@ -75,7 +75,7 @@ def evaluate_model(
     )
     forget_values = all_eval(
         model,
-        ForgetDataset,
+        forget_dataset,
         1,
         device,
         tokenizer,

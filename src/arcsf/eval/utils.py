@@ -1,3 +1,5 @@
+import warnings
+
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -14,6 +16,18 @@ from arcsf.eval.metrics import eval_rouge_recall, ks_test, truth_ratio
 _loss_function = CrossEntropyLoss(ignore_index=-100, reduction="none")
 
 
+def check_nans(array: np.ndarray | torch.Tensor, name: str = "") -> None:
+    if name != "":
+        name = " " + name
+    message = f"NaNs found in{name} array of shape: {array.shape}"
+    if isinstance(array, np.ndarray):
+        if np.isnan(array).any():
+            warnings.warn(message)
+    elif isinstance(array, torch.Tensor):
+        if torch.isnan(array).any():
+            warnings.warn(message)
+
+
 def get_loss(output_logits: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
     """
     Compute loss along a batch from the evaluation script
@@ -26,16 +40,14 @@ def get_loss(output_logits: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
     Returns:
         _description_
     """
-    output_logits = output_logits[
-        ..., :-1, :
-    ].contiguous()  # shape: batch_size x (sequence_length-1) x vocab_size
-    shifted_labels = labels[
-        ..., 1:
-    ].contiguous()  # shape : batch_size x (sequence_length - 1)
+    # shape: batch_size x (sequence_length-1) x vocab_size
+    output_logits = output_logits[..., :-1, :].contiguous()
+
+    # shape : batch_size x (sequence_length - 1)
+    shifted_labels = labels[..., 1:].contiguous()
     # output_logits.transpose(-1, -2) shape: batch_size x vocab x (sequence_length - 1)
-    loss = _loss_function(output_logits.transpose(-1, -2), shifted_labels).sum(
-        dim=-1
-    )  # loss shape: batch_size
+    # loss shape: batch_size
+    loss = _loss_function(output_logits.transpose(-1, -2), shifted_labels).sum(dim=-1)
     target_len = torch.sum(labels != -100, dim=-1)  # length of tokens in target
     loss_normalised = loss / target_len  # normalised loss shape: batch_size
     return loss_normalised
@@ -54,7 +66,22 @@ def ecdf(x):
     return xs, ys
 
 
-def combine_dicts(forget_dict, retain_dict):
+def combine_dicts(
+    forget_dict: dict[str, np.ndarray | torch.Tensor],
+    retain_dict: dict[str, np.ndarray | torch.Tensor],
+) -> dict[str, torch.Tensor]:
+    """
+    Combines the evaluation dictionaries from both models to return only the values used
+    for the aggregation.
+
+    Args:
+        forget_dict: Evaluation metrics from the forget model
+        retain_dict: Evaluation metrics from the retain model
+
+    Returns:
+        Dictionary containing the retain truth ratios, forget truth ratios, and forget
+        ROUGE scores.
+    """
     return {
         "retain_tr": retain_dict["truth_ratios"],
         "forget_tr": forget_dict["truth_ratios"],
@@ -65,7 +92,7 @@ def combine_dicts(forget_dict, retain_dict):
 def get_metrics(
     base_truth_ratios: torch.Tensor,
     test_values: dict[torch.Tensor],
-) -> dict[float, float, float, float, float]:
+) -> dict[str, float]:
     """
     Retrieves metrics for tracking an evaluation.
 
@@ -91,7 +118,7 @@ def get_metrics(
     transform_retain_tr = torch.clamp((1 - test_values["retain_tr"]), 0)
     retain_tr = torch.mean(transform_retain_tr)
     # calculate other scores
-    rouge_score = torch.mean(test_values["rouge_scores"])
+    rouge_score = torch.mean(torch.tensor(test_values["rouge_scores"]))
     model_utilty = hmean([retain_tr, rouge_score])
 
     result_dict = {
@@ -106,7 +133,7 @@ def get_metrics(
 
 
 def all_eval(
-    model: torch.nn.Module,
+    model: transformers.PreTrainedModel,
     dataset: EvalQADataset,
     batch_size: int,
     device: torch.device,
@@ -130,12 +157,11 @@ def all_eval(
     model = model.to(device)
     n_perturbed = dataset.n_perturbed
     data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
+    dataset_len = len(dataset)
     output_dict = {
-        "all_losses": torch.zeros(
-            (dataset.__len__(), n_perturbed + 1), dtype=torch.float64
-        ),
-        "truth_ratios": torch.zeros(dataset.__len__()),
-        "rougeL_recall": torch.zeros(dataset.__len__()),
+        "all_losses": torch.zeros((dataset_len, n_perturbed + 1), dtype=torch.float64),
+        "truth_ratios": torch.zeros(dataset_len),
+        "rougeL_recall": torch.zeros(dataset_len),
     }
     # loop over batches
     for batch_idx, batch in enumerate(tqdm(data_loader, desc="Batch")):
@@ -182,7 +208,7 @@ def all_eval(
 
 
 def qualitative_eval(
-    model: torch.nn.Module,
+    model: transformers.PreTrainedModel,
     tokenizer: AutoTokenizer,
     dataset: EvalQADataset,
     n_inputs: int,
@@ -231,10 +257,9 @@ def qualitative_eval(
 
 def get_analysis_values(
     model_dir: str,
-) -> dict[np.ndarray, np.ndarray, np.ndarray, torch.Tensor, torch.Tensor]:
+) -> dict[str, np.ndarray | torch.Tensor]:
     """
     Gets the values for analysis given a model directory.
-
     Args:
         model_dir : file path to where model is stored with evaluation output
 
@@ -253,6 +278,8 @@ def get_analysis_values(
         1 - truth_ratio(torch.tensor(vals["retain_losses"])),
         min=0,
     )
+    for key in vals:
+        check_nans(vals[key], key)
     return vals
 
 

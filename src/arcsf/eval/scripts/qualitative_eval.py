@@ -1,9 +1,10 @@
 import argparse
+import random
 
 import yaml
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
-from arcsf.data.data_module import EvalQADataset, get_data, qa_formatter_autoregression
+from arcsf.data.data_module import EvalQADataset, get_data, qa_formatter_blank
 from arcsf.eval.utils import qualitative_eval
 
 if __name__ == "__main__":
@@ -36,11 +37,22 @@ if __name__ == "__main__":
         help="Max number of inputs to sample",
     )
 
+    parser.add_argument(
+        "--random_seed",
+        "-r",
+        default=None,
+        type=int,
+        help="Random seed for script",
+    )
+
     args = parser.parse_args()
     model_dir = args.model_path
 
-    # these are hardcoded for now
-    rand = 42
+    if args.random_seed:
+        rand = args.random_seed
+    else:
+        rand = random.randint(-10000, 10000)
+
     model = GPT2LMHeadModel.from_pretrained(model_dir)
     tokenizer = GPT2Tokenizer.from_pretrained(model_dir)
     model.config.pad_token_id = tokenizer.eos_token_id
@@ -57,7 +69,7 @@ if __name__ == "__main__":
         "forget": forget_data,
     }
 
-    qa_formatter = qa_formatter_autoregression
+    qa_formatter = qa_formatter_blank
     dataset = EvalQADataset(
         splits[args.data_split],
         tokenizer,

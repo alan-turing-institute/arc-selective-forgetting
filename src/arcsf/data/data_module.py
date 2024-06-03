@@ -84,7 +84,7 @@ class QAFormatter:
         return self.template.format(question=question, answer=answer)
 
 
-def qa_formatter_autoregression(qa: tuple[str, str, int]) -> str:
+def qa_formatter_blank(qa: tuple[str, str, int]) -> str:
     """
     Basic QA formatter which accepts a tuple outputs:
 

@@ -1,10 +1,10 @@
+import argparse
 import json
 import os
 
-import matplotlib.pyplot as plt
 import yaml
 
-from arcsf.eval.utils import get_analysis_values, get_metrics, plot_cdf, plot_scatter
+from arcsf.eval.utils import get_analysis_values, get_metrics, plot_cdf
 
 
 def run_analysis(
@@ -12,7 +12,7 @@ def run_analysis(
     test_model_path: str,
     verbose: bool = False,
     plotting: bool = False,
-) -> dict[str, float, float, float, float]:
+) -> dict[str, float]:
     """
     Run analysis on a model from a path comparing against a base model from a designated
     path. It returns aggregated metrics for evaluation.
@@ -67,34 +67,23 @@ def run_analysis(
 
 
 if __name__ == "__main__":
-    base_dir = "temp/20240507-233700-957103"
 
-    all_results = {}
-
-    dirs = os.listdir("temp")
-    for dir in dirs:
-        try:
-            results = run_analysis(base_dir, "temp/" + dir, plotting=True, verbose=True)
-        except FileNotFoundError:
-            continue
-        all_results[results.pop("experiment_name")] = results
-
-    with open("temp/results/all_results.json", "w") as f:
-        json.dump(all_results, f)
-
-    plt.savefig("temp/results/all_models_cdf.pdf")
-    plt.close()
-    finetune = all_results.pop("gpt2_longer_all")
-    plot_scatter(finetune, label="Finetune", marker="s", color="k")
-
-    retain = all_results.pop("gpt2_longer_retain")
-    plot_scatter(retain, label="retain", marker="+", color="k")
-
-    for idx, name in enumerate(list(all_results.keys())):
-        plot_scatter(all_results[name], label=name)
-
-    plt.xlabel("model utility")
-    plt.ylabel("forget quality (log $p$-value)")
-    plt.legend()
-    plt.savefig("temp/results/all_models.pdf")
-    plt.close()
+    parser = argparse.ArgumentParser(
+        description=(
+            "Runs analysis of specific model, returns forget quality and model utility"
+        )
+    )
+    parser.add_argument(
+        "test_model_dir",
+        type=str,
+        help="Relative path to directory containing test model metrics.",
+    )
+    parser.add_argument(
+        "base_model_dir",
+        type=str,
+        help="Relative path to directory containing base model metrics.",
+    )
+    args = parser.parse_args()
+    results = run_analysis(args.base_model_dir, args.test_model_dir)
+    with open(f"{args.test_model_dir}/eval/analysis/metrics.json", "w") as f:
+        json.dump(results, f)

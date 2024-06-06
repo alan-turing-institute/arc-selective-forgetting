@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import random
 
 import numpy as np
 import torch
@@ -12,14 +13,13 @@ from arcsf.data.data_module import EvalQADataset, get_data, qa_formatter_blank
 from arcsf.eval.utils import all_eval, combine_dicts, get_metrics
 from arcsf.utils import get_device
 
-RAND = 42
-
 
 def evaluate_model(
     model: torch.nn.Module,
     base_truth_ratios_path: str,
     tokenizer: transformers.AutoTokenizer,
     experiment_config: dict,
+    random_seed: int,
     **generate_kwargs: dict,
 ) -> dict[str, float]:
     """
@@ -37,7 +37,7 @@ def evaluate_model(
     """
     # get datasets
     forget_data, retain_data = get_data(
-        "tofu", random_seed=RAND, **experiment_config["data_config"]
+        "tofu", random_seed=random_seed, **experiment_config["data_config"]
     )
     # get available device
     device = get_device()
@@ -51,7 +51,7 @@ def evaluate_model(
         quantitative_eval=True,
         qualitative_eval=True,
         device=device,
-        random_seed=RAND,
+        random_seed=random_seed,
     )
     forget_dataset = EvalQADataset(
         forget_data,
@@ -61,7 +61,7 @@ def evaluate_model(
         quantitative_eval=True,
         qualitative_eval=True,
         device=device,
-        random_seed=RAND,
+        random_seed=random_seed,
     )
 
     # perform evaluation on models to get the raw values
@@ -103,19 +103,35 @@ if __name__ == "__main__":
     parser.add_argument(
         "base_vals_path", type=str, help="Relative path to base model truth ratios."
     )
+    parser.add_argument(
+        "--random_seed",
+        "-r",
+        default=None,
+        type=int,
+        help="Random seed for script",
+    )
 
     args = parser.parse_args()
     model_dir = args.model_path
 
     # these are hardcoded for now
-    rand = 42
+    if args.random_seed:
+        rand = args.random_seed
+    else:
+        rand = random.randint(-10000, 10000)
+
     model = GPT2LMHeadModel.from_pretrained(model_dir)
     tokenizer = GPT2Tokenizer.from_pretrained(model_dir)
     model.config.pad_token_id = tokenizer.eos_token_id
     exp_config = yaml.safe_load(open(f"{model_dir}/experiment_config.yaml"))
 
     vals = evaluate_model(
-        model, args.base_vals_path, tokenizer, exp_config, max_new_tokens=50
+        model,
+        args.base_vals_path,
+        tokenizer,
+        exp_config,
+        random_seed=rand,
+        max_new_tokens=50,
     )
     save_dir = f"{model_dir}/eval/analysis/"
     os.makedirs(save_dir, exist_ok=True)

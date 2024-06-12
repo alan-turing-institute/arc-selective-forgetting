@@ -52,8 +52,10 @@ def load_trainer(
         data_collator = ForgetterDataCollator(base_collator=data_collator)
 
     # Setup early stopping callback
-    if trainer_kwargs["save_strategy"] != "no":
-        early_stopping = EarlyStoppingCallback(**early_stopping_kwargs)
+    if early_stopping_kwargs is not None:
+        callbacks = [EarlyStoppingCallback(**early_stopping_kwargs)]
+    else:
+        callbacks = None
 
     # Load training arguments
     training_args = TrainingArguments(
@@ -69,7 +71,7 @@ def load_trainer(
         data_collator=data_collator,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset if eval_dataset is not None else train_dataset,
-        callbacks=[early_stopping] if trainer_kwargs["save_strategy"] != "no" else None,
+        callbacks=callbacks,
     )
 
     # Return

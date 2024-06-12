@@ -254,6 +254,7 @@ class ExperimentConfig(Config):
 
     def __init__(
         self,
+        experiment_name: str,
         data_config: str,
         model_config: str,
         hyperparameter_config: str,

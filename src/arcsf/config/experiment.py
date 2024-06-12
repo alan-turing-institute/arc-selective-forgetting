@@ -265,7 +265,7 @@ class ExperimentConfig(Config):
         full_model_name: str | None = None,
     ) -> None:
         super().__init__()
-
+        self.experiment_name = experiment_name
         # Load in other configs
         self.data_config = DataConfig.from_yaml(DATA_CONFIG_DIR / f"{data_config}.yaml")
         model_dir = MODEL_CONFIG_DIR / model_config

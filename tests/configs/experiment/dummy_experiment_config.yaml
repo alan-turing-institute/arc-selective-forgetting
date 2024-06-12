@@ -1,3 +1,5 @@
+experiment_name: dummy
+
 # Type: retain or full model
 train_type: retain
 

@@ -39,4 +39,4 @@ wandb_kwargs:
     entity: turing-arc
     project: selective-forgetting
     log_model: "false"
-    group: debug-runs
+    group: tofu-test

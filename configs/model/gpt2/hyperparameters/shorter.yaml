@@ -6,7 +6,7 @@ trainer_kwargs: # passed to TrainingArguments
 
   # Core hyperparameters
   learning_rate: 5.e-5
-  num_train_epochs: 10
+  num_train_epochs: 5
 
   # Evaluation
   evaluation_strategy: steps

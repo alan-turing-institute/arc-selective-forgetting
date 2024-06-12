@@ -9,16 +9,15 @@ trainer_kwargs: # passed to TrainingArguments
   num_train_epochs: 5
 
   # Evaluation
-  evaluation_strategy: steps
+  evaluation_strategy: "no"
 
   # Logging
-  logging_strategy: steps
-  logging_steps: 0.5 # can be float or int
+  logging_strategy: epoch
 
   # Early stopping
-  load_best_model_at_end: true
+  load_best_model_at_end: false
   metric_for_best_model: eval_loss
-  save_strategy: steps
+  save_strategy: epoch
   save_total_limit: 1
 
   # Outputs

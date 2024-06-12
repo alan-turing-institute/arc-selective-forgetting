@@ -8,14 +8,14 @@ combinations:
     - longer
 
   forget_config:
-    - [ascent, shorter]
-    - [ascent, longer]
-    - [difference, shorter]
-    - [difference, longer]
-    - [idk, shorter]
-    - [idk, longer]
-    - [kl, shorter]
-    - [kl, longer]
+    - [ascent, shorter_noeval]
+    - [ascent, longer_noeval]
+    - [difference, shorter_noeval]
+    - [difference, longer_noeval]
+    - [idk, shorter_noeval]
+    - [idk, longer_noeval]
+    - [kl, shorter_noeval]
+    - [kl, longer_noeval]
 
   seed:
     - 42

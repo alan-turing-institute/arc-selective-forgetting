@@ -51,14 +51,12 @@ def load_trainer(
     DataCollatorCls = TRAINER_CLS_DICT[trainer_type]["data_collator"]
     data_collator = DataCollatorCls(
         tokenizer,
-        mlm=False,
+        **TRAINER_CLS_DICT[trainer_type]["data_collator_kwargs"],
     )
 
     # Setup early stopping callback
     if trainer_kwargs["save_strategy"] != "no":
-        early_stopping = EarlyStoppingCallback(
-            **early_stopping_kwargs,
-        )
+        early_stopping = EarlyStoppingCallback(**early_stopping_kwargs)
 
     # Get trainer cls
     TrainerCls = TRAINER_CLS_DICT[trainer_type]["trainer_cls"]

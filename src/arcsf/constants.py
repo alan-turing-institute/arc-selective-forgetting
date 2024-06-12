@@ -37,21 +37,26 @@ TRAINER_CLS_DICT = {
     "trainer": {
         "trainer_cls": Trainer,
         "data_collator": DataCollatorForLanguageModeling,
+        "data_collator_kwargs": {"mlm": False},
     },
     "ascent": {
         "trainer_cls": GradientAscentForgetter,
         "data_collator": ForgetterDataCollator,
+        "data_collator_kwargs": {},
     },
     "difference": {
         "trainer_cls": GradientDifferenceForgetter,
         "data_collator": ForgetterDataCollator,
+        "data_collator_kwargs": {},
     },
     "idk": {
         "trainer_cls": IDKForgetter,
         "data_collator": ForgetterDataCollator,
+        "data_collator_kwargs": {},
     },
     "kl": {
         "trainer_cls": KLForgetter,
         "data_collator": ForgetterDataCollator,
+        "data_collator_kwargs": {},
     },
 }

@@ -1,6 +1,7 @@
 from datasets import Dataset
 from peft import PeftModel
 from transformers import (
+    DataCollatorForLanguageModeling,
     EarlyStoppingCallback,
     PreTrainedModel,
     PreTrainedTokenizer,
@@ -9,6 +10,8 @@ from transformers import (
 )
 
 from arcsf.constants import TRAINER_CLS_DICT
+from arcsf.data.data_module import ForgetterDataCollator
+from arcsf.forget.base import Forgetter
 
 
 def load_trainer(
@@ -40,26 +43,24 @@ def load_trainer(
         Trainer: initialised trainer, with class conditional on arguments passed.
     """
 
+    # Get trainer cls
+    TrainerCls = TRAINER_CLS_DICT[trainer_type]
+
+    # Setup data collator
+    data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
+    if issubclass(TrainerCls, Forgetter):
+        data_collator = ForgetterDataCollator(base_collator=data_collator)
+
+    # Setup early stopping callback
+    if trainer_kwargs["save_strategy"] != "no":
+        early_stopping = EarlyStoppingCallback(**early_stopping_kwargs)
+
     # Load training arguments
     training_args = TrainingArguments(
         **trainer_kwargs,
         overwrite_output_dir=True,
         report_to="wandb" if use_wandb else "none",
     )
-
-    # Setup data collator
-    DataCollatorCls = TRAINER_CLS_DICT[trainer_type]["data_collator"]
-    data_collator = DataCollatorCls(
-        tokenizer,
-        **TRAINER_CLS_DICT[trainer_type]["data_collator_kwargs"],
-    )
-
-    # Setup early stopping callback
-    if trainer_kwargs["save_strategy"] != "no":
-        early_stopping = EarlyStoppingCallback(**early_stopping_kwargs)
-
-    # Get trainer cls
-    TrainerCls = TRAINER_CLS_DICT[trainer_type]["trainer_cls"]
 
     # Load trainer
     trainer = TrainerCls(

@@ -271,7 +271,7 @@ class ExperimentConfig(Config):
         model_dir = MODEL_CONFIG_DIR / model_config
         self.model_config = ModelConfig.from_yaml(
             model_dir / f"{model_config}.yaml",
-            full_model_name,
+            full_model_name if train_type not in ["full", "retain"] else None,
             model_dir / "hyperparameters" / f"{hyperparameter_config}.yaml",
         )
         # Check kwargs optional for full are present if doing retain/forget tuning

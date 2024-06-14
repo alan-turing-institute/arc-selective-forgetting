@@ -15,6 +15,14 @@ from arcsf.data.generation.utils import (
 
 # DEFINING THE CONSTANTS
 
+# Currently the constraints/assumptions are:
+#
+# 2 Countries -> 3 Publishers each and 10 Authors each
+# 6 Publishers -> 10 books each
+# 20 authors -> 3 books each
+# 5 Genres -> 4 authors each / 12 books each
+# These values are all hardcoded below, but there is scope to change this of course
+
 author_date_limits = ["01/01/1950", "01/01/2000"]
 publisher_date_limits = ["01/01/1900", "01/01/2010"]
 book_date_limits = ["01/01/1970", "01/01/2010"]
@@ -152,6 +160,7 @@ for key, item in all_items.items():
     graph.add_node(key, size=size_map[type], color=colour_map[type])
 
 graph.add_edges_from(connections)
-net = Network(notebook=True, cdn_resources="in_line")
+net = Network()
 net.from_nx(graph)
-net.save_graph("temp/gen_tofu/entire-graph.html")
+net.repulsion(node_distance=250, central_gravity=0.5)
+net.save_graph("temp/gen_tofu/graph.html")

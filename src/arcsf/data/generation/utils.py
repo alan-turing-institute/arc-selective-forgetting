@@ -1,34 +1,75 @@
 import random
 import time
+from typing import Any, Never
 from uuid import uuid4
 
 
-def find_between(string, start, end):
+def find_between(string: str, start: str, end: str):
+    """
+    Extracts the string between a start and end tag within a string.
+
+    Args:
+        string: input string
+        start: start tag
+        end: end tag
+
+    Returns:
+        extracted string
+    """
     return string.split(start)[1].split(end)[0]
 
 
-def str_time_prop(start, end, time_format, prop):
-    """Get a time at a proportion of a range of two formatted times.
-
+def str_time_prop(start, end, time_format, diff):
+    """
+    Get a time at a proportion of a range of two formatted times.
     start and end should be strings specifying times formatted in the
     given format (strftime-style), giving an interval [start, end].
     prop specifies how a proportion of the interval to be taken after
     start.  The returned time will be in the specified format.
-    """
 
+    Args:
+        start: start date
+        end: end date
+        time_format: format for date string
+        diff: random difference to define the date object
+
+    Returns:
+        random date
+    """
     stime = time.mktime(time.strptime(start, time_format))
     etime = time.mktime(time.strptime(end, time_format))
 
-    ptime = stime + prop * (etime - stime)
+    ptime = stime + diff * (etime - stime)
 
     return time.strftime(time_format, time.localtime(ptime))
 
 
-def random_date(start, end, prop):
-    return str_time_prop(start, end, "%d/%m/%Y", prop)
+def random_date(start: str, end: str, diff: float) -> str:
+    """
+    Selects a random date within a defined range.
+
+    Args:
+        start: start date
+        end: end date
+        diff: random difference
+
+    Returns:
+        date in string format
+    """
+    return str_time_prop(start, end, "%d/%m/%Y", diff)
 
 
-def format_book(book, all_items):
+def format_book(book: dict[str:str], all_items: dict[dict[str:str]]) -> str:
+    """
+    Formats a book item into a string for use in data generation.
+
+    Args:
+        book: book item within the dataset
+        all_items: dictionary containing all items
+
+    Returns:
+        Formatted string of relevant entries for the item.
+    """
     return (
         f"Book:\n"
         f"Name: {book['name']}\n"
@@ -38,7 +79,21 @@ def format_book(book, all_items):
     )
 
 
-def format_author(author, all_items, country_map):
+def format_author(
+    author: dict[str:str], all_items: dict[dict[str:str]], country_map: dict[str:str]
+):
+    """
+    Formats am author item into a string for use in data generation.
+
+    Args:
+        author: author item within the dataset
+        all_items: dictionary containing all items
+        country_map: dictionary mapping country proper noun to adjective
+        (eg. England -> English)
+
+    Returns:
+        Formatted string of relevant entries for the item.
+    """
     return (
         f"Author:\n"
         f"Name: {author['name']}\n"
@@ -48,6 +103,16 @@ def format_author(author, all_items, country_map):
 
 
 def format_publisher(publisher, all_items):
+    """
+    Formats a publisher item into a string for use in data generation.
+
+    Args:
+        publisher: publisher item within the dataset
+        all_items: dictionary containing all items
+
+    Returns:
+        Formatted string of relevant entries for the item.
+    """
     return (
         f"Publisher:\n"
         f"Name: {publisher['name']}\n"
@@ -56,7 +121,16 @@ def format_publisher(publisher, all_items):
     )
 
 
-def get_book_connections(book):
+def get_book_connections(book: dict[str:str]) -> list[tuple[str]]:
+    """
+    Return a list of connections associated with a book item.
+
+    Args:
+        book: book item in the network
+
+    Returns:
+        list of tuples denoting network links
+    """
     return [
         (book["key"], book["author"]),
         (book["key"], book["publisher"]),
@@ -64,21 +138,60 @@ def get_book_connections(book):
     ]
 
 
-def get_author_connections(author):
+def get_author_connections(author: dict[str:str]) -> list[tuple[str]]:
+    """
+    Return a list of connections associated with an author item.
+
+    Args:
+        author: author item in the network
+
+    Returns:
+        list of tuples denoting network links
+    """
     return [(author["key"], author["nationality"])]
 
 
-def get_publisher_connections(publisher):
+def get_publisher_connections(publisher: dict[str:str]) -> list[tuple[str]]:
+    """
+    Return a list of connections associated with a publisher item.
+
+    Args:
+        publisher: publisher item in the network
+
+    Returns:
+        list of tuples denoting network links
+    """
     return [(publisher["key"], publisher["country"])]
 
 
 class Formatter:
+    """
+    Class for formatting and retrieving connections of items in the network.
+    """
 
-    def __init__(self, all_items, country_map):
+    def __init__(
+        self, all_items: dict[str : dict[str:str]], country_map: dict[str:str]
+    ):
+        """
+        Args:
+            all_items: full network dictionary containing all items
+            country_map: mapping rules for countries to associated adjectives
+            (eg. England -> English)
+        """
         self.all_items = all_items
         self.country_map = country_map
 
-    def print_item(self, key):
+    def print_item(self, key: str) -> str:
+        """
+        Formats an item in the dictionary into readable string format for data
+        generation
+
+        Args:
+            key: UUID key denoting the item in the dictionary
+
+        Returns:
+            String formatting the item into a readable format.
+        """
         item = self.all_items[key]
         if item["type"] == "book":
             return format_book(item["data"], self.all_items)
@@ -89,7 +202,17 @@ class Formatter:
         else:
             return f"{item['type'].capitalize()}: {item['data']['name'].capitalize()}"
 
-    def get_connections(self, key):
+    def get_connections(self, key: str) -> list[tuple | Never]:
+        """
+        Returns the connections associated with an item.
+
+        Args:
+            key: UUID key denoting the item in the dictionary
+
+        Returns:
+            List of tuples denoting associated connections with the item. If item is at
+            the top of the hierarchy (eg. Country), empty list is returned.
+        """
         item = self.all_items[key]
         if item["type"] == "book":
             return get_book_connections(item["data"])
@@ -102,27 +225,65 @@ class Formatter:
 
 
 class Sampler:
+    """
+    Class for sampling elements randomly with a predefined number counts on each.
+    """
 
-    def __init__(self, distribution_dict):
+    def __init__(self, distribution_dict: dict[str : list[Any] | int]):
+        """
+        Args:
+            distribution_dict: dictionary denoting the elements in the 'options' key and
+            and the predefined counts per item in the 'distribution' key.
+        """
         self.options = distribution_dict["options"]
         self.indices = range(0, len(self.options))
         self.distribution = distribution_dict["distribution"]
 
     def sample(self):
+        """
+        Randomly samples an item from the options list
+
+        Raises:
+            ValueError: If all elements have been sampled their predifined number of
+            times
+
+        Returns:
+            Randomly selected item from the list of elements
+        """
         if sum(self.distribution) <= 0:
             raise ValueError("Max number of samples exceeded")
         choice = random.choices(self.indices, self.distribution, k=1)[0]
+        # once sampled reduce the number of times it should be sampled
         self.distribution[choice] -= 1
         return self.options[choice]
 
 
 class PublisherSampler:
+    """
+    Class for randomly sampling publishers
+    """
 
-    def __init__(self, country_dist, date_limits):
+    def __init__(
+        self, country_dist: dict[str : list[str], list[int]], date_limits: list[str]
+    ):
+        """
+        Args:
+            country_dist: Country options for the publisher to be based in
+            date_limits: Date limits for the publisher to be founded
+        """
         self.country_sampler = Sampler(country_dist)
         self.date_limits = date_limits
 
-    def sample(self, name):
+    def sample(self, name: str) -> dict[str:str]:
+        """
+        Randomly sample the properties for a predefined author name.
+
+        Args:
+            name: Publisher name
+
+        Returns:
+            profile: dictionary containing the publisher profile
+        """
         profile = {}
         profile["key"] = str(uuid4())
         profile["name"] = name
@@ -132,13 +293,33 @@ class PublisherSampler:
 
 
 class AuthorSampler:
+    """
+    Class for randomly sampling authors
+    """
 
-    def __init__(self, country_dist, genre_dist, date_limits):
+    def __init__(
+        self,
+        country_dist: dict[str : list[str], list[int]],
+        genre_dist: dict[str : list[str], list[int]],
+        date_limits: list[str],
+    ):
+        """
+        Args:
+            country_dist: Nationality options for the author
+            genre_dist: Genre options for the author's books
+            date_limits: Date limits for the author date of birth
+        """
         self.country_sampler = Sampler(country_dist)
         self.genre_sampler = Sampler(genre_dist)
         self.date_limits = date_limits
 
-    def sample(self):
+    def sample(self) -> dict[str:str]:
+        """
+        Randomly sample an author object for the network.
+
+        Returns:
+            profile: dictionary containing the author profile
+        """
         profile = {}
         profile["key"] = str(uuid4())
         profile["name"] = "placeholder"
@@ -149,13 +330,33 @@ class AuthorSampler:
 
 
 class BookSampler:
+    """
+    Class for randomly sampling books
+    """
 
-    def __init__(self, publisher_dist, author_dist, date_limits):
+    def __init__(
+        self,
+        publisher_dist: dict[str : list[str], list[int]],
+        author_dist: dict[str : list[str], list[int]],
+        date_limits: list[str],
+    ):
+        """
+        Args:
+            publisher_dist: Publisher options for the book
+            author_dist: Author options for the book
+            date_limits: General date limits defined for books
+        """
         self.publisher_sampler = Sampler(publisher_dist)
         self.author_sampler = Sampler(author_dist)
         self.date_limits = date_limits
 
-    def sample(self):
+    def sample(self) -> dict[str:str]:
+        """
+        Randomly sample a book object for the network.
+
+        Returns:
+            profile: dictionary containing a book profile
+        """
         author = self.author_sampler.sample()
         publisher = self.publisher_sampler.sample()
         profile = {}
@@ -165,12 +366,17 @@ class BookSampler:
         profile["publisher"] = publisher["key"]
         profile["genre"] = author["genre"]
 
+        # ensuring books are published after publisher founded and after authors are
+        # old enough (ish) to write books, manipulating string was easier than messing
+        # around with the time() objects...
         date_limits = self.date_limits
+        author_year = str(int(author["dob"][-4:]) + 18)
+        author_publish = author["dob"][:-4] + author_year
         lower_limit = time.strftime(
             "%d/%m/%Y",
             max(
                 time.strptime(publisher["founded"], "%d/%m/%Y"),
-                time.strptime(author["dob"], "%d/%m/%Y"),
+                time.strptime(author_publish, "%d/%m/%Y"),
             ),
         )
         date_limits[0] = lower_limit

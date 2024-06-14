@@ -13,6 +13,8 @@ from arcsf.data.generation.utils import (
     PublisherSampler,
 )
 
+# DEFINING THE CONSTANTS
+
 author_date_limits = ["01/01/1950", "01/01/2000"]
 publisher_date_limits = ["01/01/1900", "01/01/2010"]
 book_date_limits = ["01/01/1970", "01/01/2010"]
@@ -50,6 +52,7 @@ author_genre_distribution = {
     "distribution": len(genres) * [4],
 }
 
+# CREATE SAMPLING CLASSES
 
 publisher_sampler = PublisherSampler(
     country_dist=publisher_country_distribution, date_limits=publisher_date_limits
@@ -60,6 +63,7 @@ author_sampler = AuthorSampler(
     date_limits=author_date_limits,
 )
 
+# PERFORM SAMPLING OF AUTHORS + PUBLISHERS
 
 publisher_items = {}
 
@@ -72,6 +76,8 @@ author_items = {}
 for author_index in range(sum(author_country_distribution["distribution"])):
     author_item = author_sampler.sample()
     author_items[author_item["key"]] = author_item
+
+# SAMPLE BOOKS
 
 book_publisher_distribution = {
     "options": list(publisher_items.values()),
@@ -95,6 +101,9 @@ for book_idx in range(sum(book_author_distribution["distribution"])):
     book_item = book_sampler.sample()
     book_items[book_item["key"]] = book_item
 
+
+# COMBINE ALL ITEMS
+
 all_items = (
     {key: {"type": "publisher", "data": item} for key, item in publisher_items.items()}
     | {key: {"type": "author", "data": item} for key, item in author_items.items()}
@@ -103,6 +112,8 @@ all_items = (
     | {key: {"type": "genre", "data": item} for key, item in genre_items.items()}
 )
 
+# CREATE CONNECTION LIST
+
 formatter = Formatter(all_items, country_map)
 
 connections = []
@@ -110,6 +121,8 @@ connections = []
 for key in list(all_items.keys()):
     for connection in formatter.get_connections(key):
         connections.append(connection)
+
+# SAVE ITEMS + CONNECTIONS
 
 os.makedirs("temp/gen_tofu/", exist_ok=True)
 with open("temp/gen_tofu/all_items.json", "w") as item_file:
@@ -120,15 +133,25 @@ with open("temp/gen_tofu/all_connections.csv", "w") as connection_file:
     for connection in connections:
         file_writer.writerow(connection)
 
+
+# GENERATING GRAPH
+
+colour_map = {
+    "country": "red",
+    "genre": "green",
+    "publisher": "orange",
+    "author": "blue",
+    "book": "purple",
+}
+size_map = {"country": 50, "genre": 40, "publisher": 30, "author": 20, "book": 10}
+
 graph = nx.Graph()
 
-graph.add_nodes_from(country_items.keys(), size=50, color="red")
-graph.add_nodes_from(genre_items.keys(), size=40, color="green")
-graph.add_nodes_from(publisher_items.keys(), size=30, color="orange")
-graph.add_nodes_from(author_items.keys(), size=20, color="blue")
-graph.add_nodes_from(book_items.keys(), size=10, color="purple")
-graph.add_edges_from(connections)
+for key, item in all_items.items():
+    type = item["type"]
+    graph.add_node(key, size=size_map[type], color=colour_map[type])
 
+graph.add_edges_from(connections)
 net = Network(notebook=True, cdn_resources="in_line")
 net.from_nx(graph)
 net.save_graph("temp/gen_tofu/entire-graph.html")

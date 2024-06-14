@@ -267,6 +267,11 @@ class ExperimentConfig(Config):
     ) -> None:
         super().__init__()
         self.experiment_name = experiment_name
+        self.config_names = {
+            "data_config": data_config,
+            "model_config": model_config,
+            "hyperparameter_config": hyperparameter_config,
+        }
         # Load in other configs
         self.data_config = DataConfig.from_yaml(DATA_CONFIG_DIR / f"{data_config}.yaml")
         model_dir = MODEL_CONFIG_DIR / model_config
@@ -327,6 +332,8 @@ class ExperimentConfig(Config):
             expect those relating to wandb.
         """
         return {
+            "experiment_name": self.experiment_name,
+            "config_names": self.config_names,
             "train_type": self.train_type,
             "data_config": self.data_config.to_dict(),
             "model_config": self.model_config.to_dict(),

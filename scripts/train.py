@@ -72,7 +72,7 @@ def main(experiment_path):
         )
 
     # Step 7: Load trainer
-    experiment_config.model_config.trainer_kwargs["output_dir"] = (
+    experiment_config.model_config.trainer_kwargs["output_dir"] = str(
         save_dir / "checkpoints"
     )
     trainer = load_trainer(

@@ -2,9 +2,23 @@ import os
 
 from openai import AzureOpenAI
 
+# These are not used, but when I was transferring code over for question generation I
+# tried to make these classes for question generation. I first focussed on building a
+# a network with well defined connections. Once we know what our data needs to look
+# like then we can start generating questions.
+
 
 class BasicQuestionGenerator:
+    """
+    Classes for generating questions given a profile. This worked on the TOFU authors,
+    but needs some adapting for the more complex profile setup.
+    """
+
     def __init__(self, profile):
+        """
+        Args:
+            profile: dict of the profile the question generator is being used for
+        """
         self.profile = profile
         self.subject_map_q = {
             "d.o.b": f"What is {self.profile['Name']}'s date of birth?",
@@ -34,17 +48,41 @@ class BasicQuestionGenerator:
             ),
         }
 
-    def gen_book_list(self, books):
+    def gen_book_list(self, books: list[str]) -> str:
+        """
+        This parses a list of books and returns the list formatted as a string.
+
+        Args:
+            books: list of books
+
+        Returns:
+            all books formatted as a string
+        """
         book_string = books[0]
         for book in books[1:-1]:
             book_string += f", {book}"
         return book_string + f", and {books[-1]}"
 
-    def __call__(self, q_subject):
+    def __call__(self, q_subject: str) -> tuple[str]:
+        """
+        uses the mapping dicts to create a simple question answer pair when given an
+        author and a question subject.
+
+        Args:
+            q_subject: string denoting the subject of a question
+
+        Returns:
+            tuple of a question and its answer
+        """
         return self.subject_map_q[q_subject], self.subject_map_a[q_subject]
 
 
 class QuestionGenerator:
+    """
+    This was some code I had written to get the GPT written questions going, its not
+    really used for anything at the moment.
+    """
+
     def __init__(self, profiles, default_pre_prompt=None):
 
         self.client = AzureOpenAI(
@@ -72,7 +110,7 @@ class QuestionGenerator:
             qas.append(generator(q_subject))
         return qas
 
-    def gen_complex_questions(self, prompt, profile_index):
+    def gen_complex_questions(self, prompt):
         question = self.base_chat
         question.append([{"role": "user", "content": prompt}])
 

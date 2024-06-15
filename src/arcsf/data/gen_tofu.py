@@ -31,11 +31,12 @@ countries = ["Canada", "United Kingdom"]
 country_map = {"Canada": "Canadian", "United Kingdom": "British"}
 genres = ["Sci-Fi", "Crime", "History", "Architecture", "Motivational"]
 
-
+# This allows us to represent these as entities in our graph, and their UUIDs will be
+# used in other items to represent connections.
 country_items = {str(uuid4()): {"name": country} for country in countries}
 genre_items = {str(uuid4()): {"name": genre} for genre in genres}
 
-
+# Since we're only doing a few publishers for now, we can hardcode their names
 publishers = [
     "Albatross Press",
     "Clive & Sons",
@@ -45,16 +46,19 @@ publishers = [
     "Radical Writers",
 ]
 
+# 3 publishers per country
 publisher_country_distribution = {
     "options": list(country_items.keys()),
     "distribution": len(countries) * [3],
 }
 
+# 10 authors per country
 author_country_distribution = {
     "options": list(country_items.keys()),
     "distribution": len(countries) * [10],
 }
 
+# 4 authors per genre
 author_genre_distribution = {
     "options": list(genre_items.keys()),
     "distribution": len(genres) * [4],
@@ -73,25 +77,29 @@ author_sampler = AuthorSampler(
 
 # PERFORM SAMPLING OF AUTHORS + PUBLISHERS
 
+# Create dicts for new items
 publisher_items = {}
+author_items = {}
+book_items = {}
 
 for publisher in publishers:
     pub_item = publisher_sampler.sample(publisher)
     publisher_items[pub_item["key"]] = pub_item
 
-author_items = {}
 
 for author_index in range(sum(author_country_distribution["distribution"])):
     author_item = author_sampler.sample()
     author_items[author_item["key"]] = author_item
 
 # SAMPLE BOOKS
+# These need the publishers and authors generated first so we have UUIDs to sample from
 
+# 10 books per publisher
 book_publisher_distribution = {
     "options": list(publisher_items.values()),
     "distribution": len(publishers) * [10],
 }
-
+# ...also 3 books per author
 book_author_distribution = {
     "options": list(author_items.values()),
     "distribution": len(author_items) * [3],
@@ -103,8 +111,6 @@ book_sampler = BookSampler(
     date_limits=book_date_limits,
 )
 
-book_items = {}
-
 for book_idx in range(sum(book_author_distribution["distribution"])):
     book_item = book_sampler.sample()
     book_items[book_item["key"]] = book_item
@@ -112,6 +118,8 @@ for book_idx in range(sum(book_author_distribution["distribution"])):
 
 # COMBINE ALL ITEMS
 
+# in all_items dict we want a 'type' identifier so we know what each entity is
+# UUID is used as the key in this dictionary
 all_items = (
     {key: {"type": "publisher", "data": item} for key, item in publisher_items.items()}
     | {key: {"type": "author", "data": item} for key, item in author_items.items()}
@@ -127,6 +135,7 @@ formatter = Formatter(all_items, country_map)
 connections = []
 
 for key in list(all_items.keys()):
+    # our formatter class tells us what connections are needed in each entity
     for connection in formatter.get_connections(key):
         connections.append(connection)
 

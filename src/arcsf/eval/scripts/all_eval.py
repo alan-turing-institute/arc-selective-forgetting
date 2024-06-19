@@ -6,7 +6,7 @@ import numpy as np
 import yaml
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
-from arcsf.data.data_module import EvalQADataset, get_data, qa_formatter_blank
+from arcsf.data.data_module import BlankQAFormatter, EvalQADataset, get_data
 from arcsf.eval.utils import all_eval
 from arcsf.utils import get_device
 
@@ -61,7 +61,7 @@ if __name__ == "__main__":
 
     device = get_device()
     print(f"Pytorch device: {device}")
-    qa_formatter = qa_formatter_blank
+    qa_formatter = BlankQAFormatter()
     dataset = EvalQADataset(
         splits[args.data_split],
         tokenizer,

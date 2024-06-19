@@ -45,7 +45,7 @@ def n_questions():
 
 @pytest.fixture
 def qa_formatter():
-    return QAFormatter("Question: {question}\nAnswer: {answer}")
+    return QAFormatter("Question: {question}\nAnswer: {answer}{eos_token}")
 
 
 def _identity(inp, **kw):
@@ -57,7 +57,7 @@ def test_type(data_module):
     assert isinstance(data_module, Dataset)
 
 
-def test_permutation(qa_formatter):
+def test_permutation(qa_formatter, dummy_tokenizer):
     """Checks that retain samples match the order of random permutation."""
     # load data, want both splits in this case, so load new instance
     data = get_data(
@@ -70,16 +70,22 @@ def test_permutation(qa_formatter):
         random_seed=42,
     )
     # create dataset object
-    data_set = QAForgetDataset(data, _identity, qa_formatter, loss_type="standard")
+    data_set = QAForgetDataset(
+        data, dummy_tokenizer, qa_formatter, loss_type="standard"
+    )
     # dataset creates a random permutation of retain indices
     init_perm = data_set.retain_permutation
     # iterate through dataset
     for idx, (_, retain_sample) in enumerate(data_set):
         dataset_sample = data_set.retain_data[idx]
-        reference = qa_formatter(dataset_sample["question"], dataset_sample["answer"])
+        reference = qa_formatter(
+            dataset_sample["question"],
+            dataset_sample["answer"],
+            dummy_tokenizer.eos_token,
+        )
         # check question indices line up and question--answer pair are the same
         assert init_perm[idx] == data_set.retain_data[idx]["question_index"]
-        assert retain_sample == reference
+        assert dummy_tokenizer.decode(retain_sample["input_ids"]) == reference
         # in the interest of time...
         if idx >= 10:
             break
@@ -98,22 +104,22 @@ def test_formatter(qa_formatter):
     )
     test_a = "42"
 
-    test_output = qa_formatter(test_q, test_a)
+    test_output = qa_formatter(test_q, test_a, "<EOS>")
     reference_output = (
         "Question: What is the Answer to the Ultimate Question of Life, The Universe, "
-        "and Everything?\nAnswer: 42"
+        "and Everything?\nAnswer: 42<EOS>"
     )
     assert test_output == reference_output
 
 
-def test_idk_targets(data):
+def test_idk_targets(data, dummy_tokenizer):
     """Check that when using an idk loss, that the targets are correct."""
     # load idk type dataset - don't pass tokenizer or qa_formatter so we can look
     # directly at output.
     idk_set = EvalQADataset(
         data,
         _identity,
-        _identity,
+        dummy_tokenizer,
         loss_type="idk",
         qualitative_eval=True,
         quantitative_eval=False,

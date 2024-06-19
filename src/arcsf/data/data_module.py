@@ -67,37 +67,41 @@ class QAFormatter:
     def __init__(self, template: str):
         """
         Args:
-            template: A string template containing "{question}" and "{answer}".
+            template: A string template containing "{question}", "{answer}", and
+                "{eos_token}"
         """
-        if "{question}" not in template or "{answer}" not in template:
-            raise ValueError("Template must contain '{question}' and '{answer}'")
+        for key in ["{question}", "{answer}", "{eos_token}"]:
+            if key not in template:
+                raise ValueError(
+                    "Template must contain '{question}', '{answer}' and '{eos_token}'."
+                )
         self.template = template
 
-    def __call__(self, question: str, answer: str) -> str:
+    def __call__(self, question: str, answer: str, eos_token: str | None) -> str:
         """
         Formats a question-answer pair using the template.
 
         Args:
             question: Question to format
             answer: Answer to format
+            eos_token: End-of-sequence token to append to the formatted string (set to
+                an empty string if None)
         """
-        return self.template.format(question=question, answer=answer)
+        if eos_token is None:
+            eos_token = ""
+        return self.template.format(
+            question=question, answer=answer, eos_token=eos_token
+        )
 
 
-def qa_formatter_blank(qa: tuple[str, str, int]) -> str:
+class BlankQAFormatter(QAFormatter):
     """
-    Basic QA formatter which accepts a tuple outputs:
-
-    "[input question] [input answer]"
-
-    Args:
-        QA: Tuple of question answer pair
-
-    Returns:
-        full_text: formatted question--answer pair
+    Simple QAFormatter that separates questions and answers with a space and no
+    additional formatting.
     """
-    question, answer = qa[0], qa[1]
-    return f"{question} {answer}"
+
+    def __init__(self):
+        super().__init__("{question} {answer}{eos_token}")
 
 
 class EvalQADataset(torch.utils.data.Dataset):
@@ -199,9 +203,9 @@ class EvalQADataset(torch.utils.data.Dataset):
             formatted : formatted version of the input which can readily be passed to
             model
         """
-        question, _ = qa
+        question, answer = qa
         encoded = self.tokenizer(
-            self.qa_formatter(qa),
+            self.qa_formatter(question, answer, self.tokenizer.eos_token),
             max_length=self.max_length,
             truncation=False,
         )
@@ -316,7 +320,7 @@ class FinetuneDataset(torch.utils.data.Dataset):
         question = self.data[idx]["question"]
         answer = self.data[idx]["answer"]
 
-        inp = self.qa_formatter(question, answer)
+        inp = self.qa_formatter(question, answer, self.tokenizer.eos_token)
 
         return self.tokenizer(inp)
 
@@ -394,8 +398,12 @@ class QAForgetDataset(torch.utils.data.Dataset):
         retain_question = retain_row["question"]
         retain_answer = retain_row["answer"]
 
-        forget = self.qa_formatter(forget_question, forget_answer)
-        retain = self.qa_formatter(retain_question, retain_answer)
+        forget = self.qa_formatter(
+            forget_question, forget_answer, self.tokenizer.eos_token
+        )
+        retain = self.qa_formatter(
+            retain_question, retain_answer, self.tokenizer.eos_token
+        )
 
         return self.tokenizer(forget), self.tokenizer(retain)
 

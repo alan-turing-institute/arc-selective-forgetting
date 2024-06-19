@@ -1,13 +1,12 @@
 import argparse
 import json
 import os
-import random
 
 import numpy as np
 import torch
 import transformers
 import yaml
-from transformers import GPT2LMHeadModel, GPT2Tokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from arcsf.data.data_module import BlankQAFormatter, EvalQADataset, get_data
 from arcsf.eval.utils import all_eval, combine_dicts, get_metrics
@@ -19,7 +18,6 @@ def evaluate_model(
     base_truth_ratios_path: str,
     tokenizer: transformers.AutoTokenizer,
     experiment_config: dict,
-    random_seed: int,
     **generate_kwargs: dict,
 ) -> dict[str, float]:
     """
@@ -35,6 +33,8 @@ def evaluate_model(
     Returns:
         dictionary of aggregated metrics for evaluation (generated using `get_metrics`)
     """
+    random_seed = experiment_config["seed"]
+
     # get datasets
     forget_data, retain_data = get_data(
         "tofu", random_seed=random_seed, **experiment_config["data_config"]
@@ -103,25 +103,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "base_vals_path", type=str, help="Relative path to base model truth ratios."
     )
-    parser.add_argument(
-        "--random_seed",
-        "-r",
-        default=None,
-        type=int,
-        help="Random seed for script",
-    )
 
     args = parser.parse_args()
     model_dir = args.model_path
 
-    # these are hardcoded for now
-    if args.random_seed:
-        rand = args.random_seed
-    else:
-        rand = random.randint(-10000, 10000)
-
-    model = GPT2LMHeadModel.from_pretrained(model_dir)
-    tokenizer = GPT2Tokenizer.from_pretrained(model_dir)
+    model = AutoModelForCausalLM.from_pretrained(model_dir)
+    tokenizer = AutoTokenizer.from_pretrained(model_dir)
     model.config.pad_token_id = tokenizer.eos_token_id
     exp_config = yaml.safe_load(open(f"{model_dir}/experiment_config.yaml"))
 
@@ -130,7 +117,6 @@ if __name__ == "__main__":
         args.base_vals_path,
         tokenizer,
         exp_config,
-        random_seed=rand,
         max_new_tokens=50,
     )
     save_dir = f"{model_dir}/eval/analysis/"

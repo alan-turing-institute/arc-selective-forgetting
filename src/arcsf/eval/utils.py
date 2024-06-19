@@ -162,6 +162,7 @@ def all_eval(
         "all_losses": torch.zeros((dataset_len, n_perturbed + 1), dtype=torch.float64),
         "truth_ratios": torch.zeros(dataset_len),
         "rougeL_recall": torch.zeros(dataset_len),
+        "rouge1_recall": torch.zeros(dataset_len),
     }
     # loop over batches
     for batch_idx, batch in enumerate(tqdm(data_loader, desc="Batch")):
@@ -183,10 +184,14 @@ def all_eval(
                 gen_outputs[0][len(question["input_ids"][0][0]) :],
                 skip_special_tokens=True,
             )
+            rouge_results = eval_rouge_recall(
+                gen_output=generated_text, ground_truth=target_text
+            )
             output_dict["rougeL_recall"][batch_start_index:batch_end_index] = (
-                eval_rouge_recall(gen_output=generated_text, ground_truth=target_text)[
-                    "rougeL_recall"
-                ]
+                rouge_results["rougeL_recall"]
+            )
+            output_dict["rouge1_recall"][batch_start_index:batch_end_index] = (
+                rouge_results["rouge1_recall"]
             )
 
         # get ground truth loss

@@ -1,10 +1,9 @@
 import argparse
 import os
-import random
 
 import numpy as np
 import yaml
-from transformers import GPT2LMHeadModel, GPT2Tokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from arcsf.data.data_module import BlankQAFormatter, EvalQADataset, get_data
 from arcsf.eval.utils import all_eval
@@ -27,32 +26,23 @@ if __name__ == "__main__":
         type=str,
         help="Split of data to evaluate on",
     )
-    parser.add_argument(
-        "--random_seed",
-        "-r",
-        default=None,
-        type=int,
-        help="Random seed for script",
-    )
 
     args = parser.parse_args()
     model_dir = args.model_dir
 
-    if args.random_seed:
-        rand = args.random_seed
-    else:
-        rand = random.randint(-10000, 10000)
-
-    model = GPT2LMHeadModel.from_pretrained(model_dir)
-    tokenizer = GPT2Tokenizer.from_pretrained(model_dir)
+    model = AutoModelForCausalLM.from_pretrained(model_dir)
+    tokenizer = AutoTokenizer.from_pretrained(model_dir)
 
     # experiment_config
 
     model.config.pad_token_id = tokenizer.eos_token_id
 
     experiment_config = yaml.safe_load(open(model_dir + "/experiment_config.yaml"))
+    random_seed = experiment_config["seed"]
     forget_data, retain_data = get_data(
-        "tofu", **experiment_config["data_config"], random_seed=rand
+        experiment_config["data_config"]["dataset_name"],
+        **experiment_config["data_config"]["data_kwargs"],
+        random_seed=random_seed,
     )
     splits = {
         "retain": retain_data,
@@ -71,7 +61,7 @@ if __name__ == "__main__":
         qualitative_eval=True,
         device=get_device(),
         n_perturbed=2,
-        random_seed=rand,
+        random_seed=random_seed,
         padding=False,
     )
 

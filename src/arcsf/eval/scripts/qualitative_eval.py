@@ -40,8 +40,9 @@ if __name__ == "__main__":
 
     experiment_config = yaml.safe_load(open(f"{model_dir}/experiment_config.yaml"))
     random_seed = experiment_config["seed"]
-    exp_name = experiment_config["experiment_name"]
-    print(f"experiment name: {exp_name}")
+    print(f"experiment name: {experiment_config['experiment_name']}")
+    print(f"train type: {experiment_config['train_type']}")
+    print(f"data split: {args.data_split}")
 
     forget_data, retain_data = get_data(
         experiment_config["data_config"]["dataset_name"],

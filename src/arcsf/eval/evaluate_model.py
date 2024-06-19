@@ -9,7 +9,7 @@ import transformers
 import yaml
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
-from arcsf.data.data_module import EvalQADataset, get_data, qa_formatter_blank
+from arcsf.data.data_module import BlankQAFormatter, EvalQADataset, get_data
 from arcsf.eval.utils import all_eval, combine_dicts, get_metrics
 from arcsf.utils import get_device
 
@@ -46,7 +46,7 @@ def evaluate_model(
     retain_dataset = EvalQADataset(
         retain_data,
         tokenizer,
-        qa_formatter_blank,
+        BlankQAFormatter(),
         "standard",
         quantitative_eval=True,
         qualitative_eval=True,
@@ -56,7 +56,7 @@ def evaluate_model(
     forget_dataset = EvalQADataset(
         forget_data,
         tokenizer,
-        qa_formatter_blank,
+        BlankQAFormatter(),
         "standard",
         quantitative_eval=True,
         qualitative_eval=True,

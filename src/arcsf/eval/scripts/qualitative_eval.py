@@ -4,7 +4,7 @@ import random
 import yaml
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
-from arcsf.data.data_module import EvalQADataset, get_data, qa_formatter_blank
+from arcsf.data.data_module import BlankQAFormatter, EvalQADataset, get_data
 from arcsf.eval.utils import qualitative_eval
 
 if __name__ == "__main__":
@@ -69,7 +69,7 @@ if __name__ == "__main__":
         "forget": forget_data,
     }
 
-    qa_formatter = qa_formatter_blank
+    qa_formatter = BlankQAFormatter()
     dataset = EvalQADataset(
         splits[args.data_split],
         tokenizer,

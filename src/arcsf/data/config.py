@@ -36,5 +36,6 @@ class DataConfig(Config):
 
     def to_dict(self) -> dict:
         return {
+            "dataset_name": self.dataset_name,
             "data_kwargs": self.data_kwargs,
         }

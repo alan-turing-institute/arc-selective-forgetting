@@ -36,7 +36,7 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    model_dir = args.directory
+    model_dir = args.model_dir
 
     if args.random_seed:
         rand = args.random_seed

@@ -213,6 +213,7 @@ def test_evaluate_model(dummy_base_model, dummy_tokenizer, dummy_exp_config):
         dummy_tokenizer,
         dummy_exp_config,
         max_new_tokens=10,
+        random_seed=42,
     )
 
     # check we get the correct outputs and that theyre all native float

@@ -1,5 +1,4 @@
 import argparse
-import random
 
 import yaml
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -35,11 +34,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     model_dir = args.model_path
 
-    if args.random_seed:
-        rand = args.random_seed
-    else:
-        rand = random.randint(-10000, 10000)
-
     model = AutoModelForCausalLM.from_pretrained(model_dir)
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
     model.config.pad_token_id = tokenizer.eos_token_id
@@ -74,6 +68,6 @@ if __name__ == "__main__":
         tokenizer,
         dataset,
         n_inputs=args.n_inputs,
-        random_seed=rand,
+        random_seed=random_seed,
         max_new_tokens=50,
     )

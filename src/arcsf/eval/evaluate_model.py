@@ -37,7 +37,9 @@ def evaluate_model(
 
     # get datasets
     forget_data, retain_data = get_data(
-        "tofu", random_seed=random_seed, **experiment_config["data_config"]
+        experiment_config["data_config"]["dataset_name"],
+        **experiment_config["data_config"]["data_kwargs"],
+        random_seed=random_seed,
     )
     # get available device
     device = get_device()

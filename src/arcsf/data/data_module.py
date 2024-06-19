@@ -334,7 +334,7 @@ class QAForgetDataset(torch.utils.data.Dataset):
 
     def __init__(
         self,
-        data: datasets.Dataset,
+        data: tuple[datasets.Dataset, datasets.Dataset],
         tokenizer: AutoTokenizer,
         qa_formatter: QAFormatter,
         loss_type: str,
@@ -345,7 +345,7 @@ class QAForgetDataset(torch.utils.data.Dataset):
         question-answer formatting function.
 
         Args:
-            data: torch Dataset containing data for the dataset
+            data: tuple of forget and retain Datasets
             tokenizer : Used to tokenize the input
             qa_formatter : QAFormatter used to format input before passing it to the
                 model

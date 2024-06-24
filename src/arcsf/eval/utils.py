@@ -173,15 +173,15 @@ def all_eval(
         # don't need gradient
         with torch.no_grad():
             gt_outputs = model(**gt_batch)
-            target_text = tokenizer.decode(answer["input_ids"][0][0])
+            target_text = tokenizer.decode(answer["input_ids"][0][0].to(device))
             gen_outputs = model.generate(
-                question["input_ids"][0],
-                attention_mask=question["attention_mask"][0],
+                question["input_ids"][0].to(device),
+                attention_mask=question["attention_mask"][0].to(device),
                 pad_token_id=tokenizer.eos_token_id,
                 **generate_kwargs,
             )
             generated_text = tokenizer.decode(
-                gen_outputs[0][len(question["input_ids"][0][0]) :],
+                gen_outputs[0][len(question["input_ids"][0][0]) :].to(device),
                 skip_special_tokens=True,
             )
             rouge_results = eval_rouge_recall(
@@ -195,7 +195,7 @@ def all_eval(
             )
 
         # get ground truth loss
-        gt_loss = get_loss(gt_outputs.logits, gt_batch["labels"])
+        gt_loss = get_loss(gt_outputs.logits, gt_batch["labels"].to(device))
         output_dict["all_losses"][batch_start_index:batch_end_index, 0] = gt_loss.cpu()
         # loop over perturbed samples to get their losses
         for perturbed_index in range(1, n_perturbed + 1):

@@ -1,9 +1,10 @@
-from collections.abc import Callable
 from importlib import resources
+from typing import Any, Callable, Dict, List
 
 import torch
 from torch.utils.data import Dataset
 from transformers import AutoTokenizer
+from transformers.data.data_collator import InputDataClass
 
 import arcsf.data
 from arcsf.data.tofu import load_tofu
@@ -57,20 +58,29 @@ def get_data(
     return data
 
 
-def qa_formatter_basic(qa: tuple[str, str]) -> str:
+class QAFormatter:
     """
-    Basic QA formatter which accepts a tuple outputs:
-
-    "Question: [input question]\nAnswer: [input answer]"
-
-    Args:
-        QA: Tuple of question answer pair
-
-    Returns:
-        full_text: formatted question--answer pair
+    Formats question-answer pairs into a single string using a template.
     """
-    question, answer = qa
-    return f"Question: {question}\nAnswer: {answer}"
+
+    def __init__(self, template: str):
+        """
+        Args:
+            template: A string template containing "{question}" and "{answer}".
+        """
+        if "{question}" not in template or "{answer}" not in template:
+            raise ValueError("Template must contain '{question}' and '{answer}'")
+        self.template = template
+
+    def __call__(self, question: str, answer: str) -> str:
+        """
+        Formats a question-answer pair using the template.
+
+        Args:
+            question: Question to format
+            answer: Answer to format
+        """
+        return self.template.format(question=question, answer=answer)
 
 
 class EvalQADataset(Dataset):
@@ -84,7 +94,7 @@ class EvalQADataset(Dataset):
         self,
         data: Dataset,
         tokenizer: AutoTokenizer,
-        qa_formatter: Callable[[tuple[str, str]], str],
+        qa_formatter: QAFormatter,
         loss_type: str,
         random_seed=42,
     ):
@@ -96,7 +106,8 @@ class EvalQADataset(Dataset):
         Args:
             data: torch Dataset containing data for the dataset
             tokenizer : Used to tokenize the input
-            qa_formatter : Function used to format input before passing it to the model
+            qa_formatter : QAFormatter instance used to format input before passing it
+                to the model
             loss_type : type of loss used, currently only one option changes behaviour:
                     "idk" : labels are sampled from 'idk.jsonl'
             random_seed: random seed for sampling the retain and idk samples, if used
@@ -145,7 +156,7 @@ class FinetuneDataset(Dataset):
         self,
         data: Dataset,
         tokenizer: AutoTokenizer,
-        qa_formatter: Callable[[tuple[str, str]], str],
+        qa_formatter: QAFormatter,
     ):
         """
         Dataset which returns a tokenized version of the input given a tokenizer and
@@ -154,7 +165,8 @@ class FinetuneDataset(Dataset):
         Args:
             data: torch Dataset containing data for the dataset
             tokenizer : Used to tokenize the input
-            qa_formatter : Function used to format input before passing it to the model
+            qa_formatter : QAFormatter instance used to format input before passing it
+                to the model
         """
         super().__init__()
         self.tokenizer = tokenizer
@@ -169,7 +181,7 @@ class FinetuneDataset(Dataset):
         question = self.data[idx]["question"]
         answer = self.data[idx]["answer"]
 
-        inp = self.qa_formatter((question, answer))
+        inp = self.qa_formatter(question, answer)
 
         return self.tokenizer(inp)
 
@@ -185,7 +197,7 @@ class QAForgetDataset(Dataset):
         self,
         data: Dataset,
         tokenizer: AutoTokenizer,
-        qa_formatter: Callable[[tuple[str, str]], str],
+        qa_formatter: QAFormatter,
         loss_type: str,
         random_seed: int = 42,
     ):
@@ -196,7 +208,8 @@ class QAForgetDataset(Dataset):
         Args:
             data: torch Dataset containing data for the dataset
             tokenizer : Used to tokenize the input
-            qa_formatter : Function used to format input before passing it to the model
+            qa_formatter : QAFormatter used to format input before passing it to the
+                model
             loss_type : type of loss used, currently only one option changes behaviour:
                     "idk" : labels are sampled from 'idk.jsonl'
             random_seed: random seed for sampling the retain and idk samples, if used
@@ -231,25 +244,55 @@ class QAForgetDataset(Dataset):
         return forget_row["answer"]
 
     def __len__(self):
-        return len(self.data)
+        return len(self.forget_data)
 
     def __getitem__(self, idx):
+        # forget data works as in above examples
+        forget_row = self.forget_data[idx]
+        forget_question = forget_row["question"]
+        forget_answer = self.answer_sampler(forget_row)
+
         # this takes the first item in our retain data permutation using item_index
         retain_row = self.retain_data[self.item_index]
         # then rolls the permutation vector using the item_index to ensure
         # samples aren't reused without first exhausting all retain samples
         self.item_index = (self.item_index + 1) % self.retain_length
-
         retain_question = retain_row["question"]
         retain_answer = retain_row["answer"]
 
-        # forget data works as in above examples
-        forget_row = self.forget_data[idx]
-        forget_question = forget_row["question"]
+        forget = self.qa_formatter(forget_question, forget_answer)
+        retain = self.qa_formatter(retain_question, retain_answer)
 
-        forget_answer = self.answer_sampler(forget_row)
+        return self.tokenizer(forget), self.tokenizer(retain)
 
-        retain = self.qa_formatter((retain_question, retain_answer))
-        forget = self.qa_formatter((forget_question, forget_answer))
 
-        return self.tokenizer(retain), self.tokenizer(forget)
+class ForgetterDataCollator:
+    """
+    Data collator that parses lists of forget and retain inputs as provided by
+    QAForgetDataset.
+    """
+
+    def __init__(self, base_collator: Callable[[List[InputDataClass]], Dict[str, Any]]):
+        """
+        Args:
+            base_collator: An instance of a normal HuggingFace (or custom) data collator
+                which takes a list of model inputs and collates them into a batch.
+        """
+        self.base_collator = base_collator
+
+    def __call__(
+        self, features: List[Dict[str, Any]], **kwargs
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        """
+        Args:
+            features: A list of outputs from QAForgetDataset, containing tuples of
+                forget and retain data.
+            kwargs: Additional arguments to pass to the base collator.
+
+        Returns:
+            Batch of forget and retain inputs.
+        """
+        forget = self.base_collator([sample[0] for sample in features], **kwargs)
+        retain = self.base_collator([sample[1] for sample in features], **kwargs)
+
+        return forget, retain

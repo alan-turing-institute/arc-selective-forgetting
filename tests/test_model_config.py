@@ -2,11 +2,11 @@ import arcsf.constants
 from arcsf.models.config import ModelConfig
 
 
-def test_data_config_from_yaml():
+def test_model_config_from_yaml():
     model_dir = f"{arcsf.constants.MODEL_CONFIG_DIR}/dummy_gpt2"
-    model_path = f"{model_dir}/dummy_gpt2.yaml"
+    config_path = f"{model_dir}/dummy_gpt2.yaml"
     hyperparameters_path = f"{model_dir}/hyperparameters/dummy_hyperparams_config.yaml"
-    model_cfg = ModelConfig.from_yaml(model_path, hyperparameters_path)
+    model_cfg = ModelConfig.from_yaml(config_path, None, hyperparameters_path)
     assert model_cfg.model_id == "gpt2"
     assert model_cfg.model_kwargs["device_map"] == "auto"
     assert model_cfg.add_padding_token

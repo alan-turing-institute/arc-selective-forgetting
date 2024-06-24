@@ -4,9 +4,9 @@ from torch.utils.data import Dataset
 from arcsf.data.data_module import (
     EvalQADataset,
     QAForgetDataset,
+    QAFormatter,
     get_data,
     get_idk_responses,
-    qa_formatter_basic,
 )
 
 
@@ -43,6 +43,11 @@ def n_questions():
     return 9
 
 
+@pytest.fixture
+def qa_formatter():
+    return QAFormatter("Question: {question}\nAnswer: {answer}")
+
+
 def _identity(inp):
     return inp
 
@@ -52,7 +57,7 @@ def test_type(data_module):
     assert isinstance(data_module, Dataset)
 
 
-def test_permutation():
+def test_permutation(qa_formatter):
     """Checks that retain samples match the order of random permutation."""
     # load data, want both splits in this case, so load new instance
     data = get_data(
@@ -65,17 +70,13 @@ def test_permutation():
         random_seed=42,
     )
     # create dataset object
-    data_set = QAForgetDataset(
-        data, _identity, qa_formatter_basic, loss_type="standard"
-    )
+    data_set = QAForgetDataset(data, _identity, qa_formatter, loss_type="standard")
     # dataset creates a random permutation of retain indices
     init_perm = data_set.retain_permutation
     # iterate through dataset
-    for idx, (retain_sample, _) in enumerate(data_set):
+    for idx, (_, retain_sample) in enumerate(data_set):
         dataset_sample = data_set.retain_data[idx]
-        reference = qa_formatter_basic(
-            (dataset_sample["question"], dataset_sample["answer"])
-        )
+        reference = qa_formatter(dataset_sample["question"], dataset_sample["answer"])
         # check question indices line up and question--answer pair are the same
         assert init_perm[idx] == data_set.retain_data[idx]["question_index"]
         assert retain_sample == reference
@@ -89,16 +90,19 @@ def test_size(data_module, n_questions, frac_q_dropped):
     assert data_module.__len__() == int(n_questions * frac_q_dropped)
 
 
-def test_formatter():
+def test_formatter(qa_formatter):
     """Check the basic formatter formats Qs and As correctly."""
-    test_input = (
-        "What is the Answer to the Ultimate Question of Life,\
-            The Universe, and Everything?",
-        "42",
+    test_q = (
+        "What is the Answer to the Ultimate Question of Life, The Universe, and "
+        "Everything?"
     )
-    test_output = qa_formatter_basic(test_input)
-    reference_output = "Question: What is the Answer to the Ultimate Question of Life,\
-            The Universe, and Everything?\nAnswer: 42"
+    test_a = "42"
+
+    test_output = qa_formatter(test_q, test_a)
+    reference_output = (
+        "Question: What is the Answer to the Ultimate Question of Life, The Universe, "
+        "and Everything?\nAnswer: 42"
+    )
     assert test_output == reference_output
 
 

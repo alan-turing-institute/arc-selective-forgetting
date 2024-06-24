@@ -4,7 +4,7 @@ from arcsf.data.config import DataConfig
 from arcsf.models.config import ModelConfig
 
 
-def test_data_config_from_yaml():
+def test_experiment_config_from_yaml():
     path = f"{arcsf.constants.EXPERIMENT_CONFIG_DIR}/dummy_experiment_config.yaml"
     experiment_cfg = ExperimentConfig.from_yaml(path)
     assert isinstance(experiment_cfg.data_config, DataConfig)
@@ -18,4 +18,4 @@ def test_data_config_from_yaml():
         "log_model": "false",
         "group": "test",
     }
-    assert experiment_cfg.run_name == "dummy_gpt2-dummy_data_config-42"
+    assert experiment_cfg.run_name == "dummy_gpt2-dummy_data_config-retain-42"

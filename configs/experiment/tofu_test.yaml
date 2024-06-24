@@ -1,19 +1,29 @@
 # Combinations to build runs over
 combinations:
   data_config:
-    - example_tofu_1
-    - example_tofu_2
-  model_config:
-    - [gpt2, shorter]
-    - [gpt2, longer]
+    - tofu_20_20
+
+  train_config:
+    - shorter
+    - longer
+
+  forget_config:
+    - [ascent, shorter_noeval]
+    - [ascent, longer_noeval]
+    - [difference, shorter_noeval]
+    - [difference, longer_noeval]
+    - [idk, shorter_noeval]
+    - [idk, longer_noeval]
+    - [kl, shorter_noeval]
+    - [kl, longer_noeval]
+
   seed:
     - 42
-    - 43
-    - 44
-# TODO: add other configs that define a group of experiments end to end
+
+model_config: gpt2
 
 # Full data config: which dataset to use to build full model to do forgetting on
-full_data_config: example_tofu_full
+full_data_config: tofu_full
 
 # Baskerville kwargs
 use_bask: true
@@ -29,4 +39,4 @@ wandb_kwargs:
     entity: turing-arc
     project: selective-forgetting
     log_model: "false"
-    group: debug-runs
+    group: tofu-test

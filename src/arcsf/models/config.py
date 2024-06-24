@@ -53,25 +53,29 @@ class ModelConfig(Config):
         self.output_dir = trainer_kwargs["output_dir"]
 
     @classmethod
-    def from_yaml(cls, model_path: str, hyperparameter_path: str) -> "Config":
+    def from_yaml(
+        cls, config_path: str, model_path: str | None, hyperparameter_path: str
+    ) -> "Config":
         """Create a ModelConfig from model and hyperparameter yaml files.
 
         Args:
-            model_path: Path to yaml file from which model kwargs can be read.
+            model_config: Path to yaml file from which model kwargs can be read.
+            model_path: HuggingFace model ID or local path to model (if None defaults
+                to model_id in model_config)
             hyperparameter_path: Path to yaml file from which hyperparameters can be
                                  read.
 
         Returns:
             ModelConfig object.
         """
-        with open(model_path, "r") as f:
+        with open(config_path, "r") as f:
             model_config = yaml.safe_load(f)
         with open(hyperparameter_path, "r") as f:
             hyperparameter_config = yaml.safe_load(f)
-        return cls.from_dict(model_config, hyperparameter_config)
+        return cls.from_dict(model_config, model_path, hyperparameter_config)
 
     @classmethod
-    def from_dict(cls, model_dict, hyperparameter_dict) -> "ModelConfig":
+    def from_dict(cls, model_dict, model_path, hyperparameter_dict) -> "ModelConfig":
         """Create a ModelConfig from model and hyperparameter config dicts.
 
         Args:
@@ -82,7 +86,7 @@ class ModelConfig(Config):
             ModelConfig object.
         """
         return cls(
-            model_id=model_dict["model_id"],
+            model_id=model_path or model_dict["model_id"],
             model_kwargs=model_dict["model_kwargs"],
             trainer_kwargs=hyperparameter_dict["trainer_kwargs"],
             early_stopping_kwargs=hyperparameter_dict.get(

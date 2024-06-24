@@ -6,22 +6,19 @@ trainer_kwargs: # passed to TrainingArguments
 
   # Core hyperparameters
   learning_rate: 5.e-5
-  num_train_epochs: 25
+  num_train_epochs: 5
 
   # Evaluation
-  evaluation_strategy: epoch
+  evaluation_strategy: "no"
 
   # Logging
   logging_strategy: epoch
 
   # Early stopping
-  load_best_model_at_end: true
+  load_best_model_at_end: false
   metric_for_best_model: eval_loss
   save_strategy: epoch
   save_total_limit: 1
 
   # Outputs
   output_dir: output
-# Early stopping kwargs (only needed if save strategy is not null)
-early_stopping_kwargs:
-  early_stopping_patience: 2

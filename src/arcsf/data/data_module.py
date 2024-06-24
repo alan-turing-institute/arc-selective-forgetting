@@ -145,6 +145,7 @@ class EvalQADataset(torch.utils.data.Dataset):
         self.tokenizer = tokenizer
         self.qa_formatter = qa_formatter
         self.rand_gen = torch.Generator().manual_seed(random_seed)
+        self.random_seed = random_seed
         self.loss_type = loss_type
         self.data = data
         self.device = device
@@ -257,7 +258,7 @@ class EvalQADataset(torch.utils.data.Dataset):
             perturbed_options = self.data.filter(
                 lambda sample: sample["author_index"] == author_n
                 and sample["question_index"] != question_n
-            ).shuffle(seed=self.rand_gen.seed())
+            ).shuffle(seed=self.random_seed)
 
         perturbed_options = perturbed_options[: self.n_perturbed]["answer"]
 

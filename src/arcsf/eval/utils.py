@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AutoTokenizer
 
-from arcsf.data.data_module import EvalQADataset
+from arcsf.data.data_module import EvalQADataset, EvaluationCollateFunction
 from arcsf.eval.metrics import eval_rouge_recall, ks_test, truth_ratio
 
 _loss_function = CrossEntropyLoss(ignore_index=-100, reduction="none")
@@ -156,7 +156,15 @@ def all_eval(
     # move model to device create dataloader, initialise all_losses tensor
     model = model.to(device)
     n_perturbed = dataset.n_perturbed
-    data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
+    data_loader = DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        collate_fn=EvaluationCollateFunction(
+            padding_value=tokenizer.eos_token_id, batch_first=True
+        ),
+    )
+    tokenizer.padding_side = "left"
     dataset_len = len(dataset)
     output_dict = {
         "all_losses": torch.zeros((dataset_len, n_perturbed + 1), dtype=torch.float64),
@@ -166,46 +174,53 @@ def all_eval(
     }
     # loop over batches
     for batch_idx, batch in enumerate(tqdm(data_loader, desc="Batch")):
-        logit_batch, (question, answer) = batch
-        gt_batch = logit_batch[0]
+        batch, (questions, answers) = batch
+        gt_batch = batch[0]
+        pt_batches = batch[1:]
         batch_start_index = batch_idx * batch_size
-        batch_end_index = batch_idx * batch_size + len(gt_batch["input_ids"])
+        batch_end_index = batch_idx * batch_size + batch_size
         # don't need gradient
         with torch.no_grad():
             gt_outputs = model(**gt_batch)
             gen_outputs = model.generate(
-                question["input_ids"][0].to(device),
-                attention_mask=question["attention_mask"][0].to(device),
+                **questions,
                 pad_token_id=tokenizer.eos_token_id,
                 **generate_kwargs,
             )
 
-        target_text = tokenizer.decode(answer["input_ids"][0][0].to(device))
-        generated_text = tokenizer.decode(
-            gen_outputs[0][len(question["input_ids"][0][0]) :].to(device),
-            skip_special_tokens=True,
-        )
-        rouge_results = eval_rouge_recall(
-            gen_output=generated_text, ground_truth=target_text
-        )
-        output_dict["rougeL_recall"][batch_start_index:batch_end_index] = rouge_results[
-            "rougeL_recall"
+        target_answers = [
+            tokenizer.decode(answer, skip_special_tokens=True)
+            for answer in answers["input_ids"]
         ]
-        output_dict["rouge1_recall"][batch_start_index:batch_end_index] = rouge_results[
-            "rouge1_recall"
+        generated_answers = [
+            tokenizer.decode(output, skip_special_tokens=True) for output in gen_outputs
         ]
+
+        for rouge_idx, (generated_text, target_text) in enumerate(
+            zip(target_answers, generated_answers)
+        ):
+            rouge_result = eval_rouge_recall(
+                gen_output=generated_text, ground_truth=target_text
+            )
+
+            output_dict["rougeL_recall"][batch_start_index + rouge_idx] = rouge_result[
+                "rougeL_recall"
+            ]
+            output_dict["rouge1_recall"][batch_start_index + rouge_idx] = rouge_result[
+                "rouge1_recall"
+            ]
 
         # get ground truth loss
         gt_loss = get_loss(gt_outputs.logits, gt_batch["labels"].to(device))
         output_dict["all_losses"][batch_start_index:batch_end_index, 0] = gt_loss.cpu()
         # loop over perturbed samples to get their losses
-        for perturbed_index in range(1, n_perturbed + 1):
-            p_batch = logit_batch[perturbed_index]
+        for perturbed_index in range(n_perturbed):
+            pt_batch = pt_batches[perturbed_index]
             with torch.no_grad():
-                p_output = model(**p_batch)
+                p_output = model(**pt_batch)
             output_dict["all_losses"][
-                batch_start_index:batch_end_index, perturbed_index
-            ] = get_loss(p_output.logits, p_batch["labels"]).cpu()
+                batch_start_index:batch_end_index, perturbed_index + 1
+            ] = get_loss(p_output.logits, pt_batch["labels"]).cpu()
 
     # calculate truth_ratio and return them along with losses
     output_dict["truth_ratios"] = truth_ratio(output_dict["all_losses"])

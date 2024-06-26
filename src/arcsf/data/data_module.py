@@ -1,8 +1,10 @@
+import copy
 from importlib import resources
 from typing import Any, Callable, Dict, List
 
 import datasets
 import torch
+from torch.nn.utils.rnn import pad_sequence
 from transformers import AutoTokenizer
 from transformers.data.data_collator import InputDataClass
 
@@ -104,8 +106,66 @@ class BlankQAFormatter(QAFormatter):
         super().__init__("{question} {answer}{eos_token}")
 
 
-def eval_collate_fn():
-    assert NotImplementedError
+class EvaluationCollateFunction:
+    def __init__(self, padding_value, batch_first=True):
+        if isinstance(padding_value, int):
+            self.padding_value = padding_value
+        else:
+            raise ValueError("padding_value must be an integer")
+
+        self.batch_first = batch_first
+
+    def __call__(self, batch):
+        logit_inputs = [inp for (inp, _) in batch]
+        qa_pairs = [question_answer_pair for (_, question_answer_pair) in batch]
+        n_perturbed = len(logit_inputs[0])
+        batch_input = [
+            {
+                "input_ids": pad_sequence(
+                    [inp[idx]["input_ids"] for inp in logit_inputs],
+                    batch_first=self.batch_first,
+                    padding_value=self.padding_value,
+                ),
+                "labels": pad_sequence(
+                    [inp[idx]["labels"] for inp in logit_inputs],
+                    batch_first=self.batch_first,
+                    padding_value=self.padding_value,
+                ),
+                "attention_mask": pad_sequence(
+                    [inp[idx]["attention_mask"] for inp in logit_inputs],
+                    batch_first=self.batch_first,
+                    padding_value=0,
+                ),
+            }
+            for idx in range(n_perturbed)
+        ]
+        questions = {
+            "input_ids": pad_sequence(
+                [question["input_ids"][0] for (question, _) in qa_pairs],
+                batch_first=self.batch_first,
+                padding_value=self.padding_value,
+            ),
+            "attention_mask": pad_sequence(
+                [question["attention_mask"][0] for (question, _) in qa_pairs],
+                batch_first=self.batch_first,
+                padding_value=0,
+            ),
+        }
+
+        answers = {
+            "input_ids": pad_sequence(
+                [answer["input_ids"][0] for (_, answer) in qa_pairs],
+                batch_first=self.batch_first,
+                padding_value=self.padding_value,
+            ),
+            "attention_mask": pad_sequence(
+                [answer["attention_mask"][0] for (_, answer) in qa_pairs],
+                batch_first=self.batch_first,
+                padding_value=self.padding_value,
+            ),
+        }
+
+        return batch_input, (questions, answers)
 
 
 class EvalQADataset(torch.utils.data.Dataset):
@@ -125,7 +185,6 @@ class EvalQADataset(torch.utils.data.Dataset):
         qualitative_eval: bool = False,
         device: torch.device = torch.device("cpu"),
         random_seed: int = 42,
-        padding: bool = True,
         **kwargs,
     ):
         """
@@ -153,7 +212,6 @@ class EvalQADataset(torch.utils.data.Dataset):
         self.loss_type = loss_type
         self.data = data
         self.device = device
-        self.padding_flag = int(padding)
 
         if "n_perturbed" in kwargs.keys():
             self.n_perturbed = kwargs["n_perturbed"]
@@ -193,13 +251,11 @@ class EvalQADataset(torch.utils.data.Dataset):
         )
         return (encoded_inp, encoded_tar)
 
-    def batch_formatter(
+    def model_formatter(
         self,
-        qa: tuple[str, str, int],
-        padding_flag: int = 1,
-    ) -> dict[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Formats the question-answer pair with padding and appropriately masked labels
-            allowing for batch computation.
+        qa: tuple[str, str],
+    ) -> dict[str : torch.Tensor]:
+        """Formats the question-answer pair in appropriate format for batch computation.
 
         Args:
             qa : Tuple containing a question--answer pair
@@ -215,29 +271,14 @@ class EvalQADataset(torch.utils.data.Dataset):
             truncation=False,
         )
         num_question_tokens = len(self.tokenizer.tokenize(question))
-        pad_length = self.max_length - len(encoded.input_ids)
-        padded = (
-            encoded["input_ids"]
-            + padding_flag * [self.tokenizer.eos_token_id] * pad_length
-        )
-        pad_attention_mask = encoded["attention_mask"] + padding_flag * [0] * pad_length
-        label = encoded.input_ids
-        if len(encoded.input_ids) == self.max_length:
-            label = encoded.input_ids
-        else:
-            label = (
-                encoded["input_ids"]
-                + padding_flag * [self.tokenizer.eos_token_id]
-                + padding_flag * [-100] * (pad_length - 1)
-            )
-
+        label = copy.copy(encoded["input_ids"])
         # change label to -100 for question tokens
         for i in range(num_question_tokens):
             label[i] = -100
         return {
-            "input_ids": torch.tensor(padded).to(self.device),
+            "input_ids": torch.tensor(encoded["input_ids"]).to(self.device),
             "labels": torch.tensor(label).to(self.device),
-            "attention_mask": torch.tensor(pad_attention_mask).to(self.device),
+            "attention_mask": torch.tensor(encoded["attention_mask"]).to(self.device),
         }
 
     def get_perturbed(
@@ -267,10 +308,9 @@ class EvalQADataset(torch.utils.data.Dataset):
         perturbed_options = perturbed_options[: self.n_perturbed]["answer"]
 
         formatted = [
-            self.batch_formatter((inp, perturbed), padding_flag=self.padding_flag)
-            for perturbed in perturbed_options
+            self.model_formatter((inp, perturbed)) for perturbed in perturbed_options
         ]
-        return [self.batch_formatter(qa, padding_flag=self.padding_flag)] + formatted
+        return [self.model_formatter(qa)] + formatted
 
     def eval_script_formatter(self, qa, idx):
         (formatted_question, formatted_answer) = self.qualitative_formatter(qa, idx)

@@ -104,6 +104,10 @@ class BlankQAFormatter(QAFormatter):
         super().__init__("{question} {answer}{eos_token}")
 
 
+def eval_collate_fn():
+    assert NotImplementedError
+
+
 class EvalQADataset(torch.utils.data.Dataset):
     """
     Question answer format dataset, __getitem__ returns a tokenized question--answer

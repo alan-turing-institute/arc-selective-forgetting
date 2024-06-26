@@ -173,26 +173,27 @@ def all_eval(
         # don't need gradient
         with torch.no_grad():
             gt_outputs = model(**gt_batch)
-            target_text = tokenizer.decode(answer["input_ids"][0][0].to(device))
             gen_outputs = model.generate(
                 question["input_ids"][0].to(device),
                 attention_mask=question["attention_mask"][0].to(device),
                 pad_token_id=tokenizer.eos_token_id,
                 **generate_kwargs,
             )
-            generated_text = tokenizer.decode(
-                gen_outputs[0][len(question["input_ids"][0][0]) :].to(device),
-                skip_special_tokens=True,
-            )
-            rouge_results = eval_rouge_recall(
-                gen_output=generated_text, ground_truth=target_text
-            )
-            output_dict["rougeL_recall"][batch_start_index:batch_end_index] = (
-                rouge_results["rougeL_recall"]
-            )
-            output_dict["rouge1_recall"][batch_start_index:batch_end_index] = (
-                rouge_results["rouge1_recall"]
-            )
+
+        target_text = tokenizer.decode(answer["input_ids"][0][0].to(device))
+        generated_text = tokenizer.decode(
+            gen_outputs[0][len(question["input_ids"][0][0]) :].to(device),
+            skip_special_tokens=True,
+        )
+        rouge_results = eval_rouge_recall(
+            gen_output=generated_text, ground_truth=target_text
+        )
+        output_dict["rougeL_recall"][batch_start_index:batch_end_index] = rouge_results[
+            "rougeL_recall"
+        ]
+        output_dict["rouge1_recall"][batch_start_index:batch_end_index] = rouge_results[
+            "rouge1_recall"
+        ]
 
         # get ground truth loss
         gt_loss = get_loss(gt_outputs.logits, gt_batch["labels"].to(device))

@@ -4,7 +4,12 @@ import pytest
 import torch
 from torch.utils.data import DataLoader
 
-from arcsf.data.data_module import EvalQADataset, get_data, qa_formatter_blank
+from arcsf.data.data_module import (
+    BlankQAFormatter,
+    EvalQADataset,
+    EvaluationCollateFunction,
+    get_data,
+)
 from arcsf.eval.evaluate_model import evaluate_model
 from arcsf.eval.metrics import (
     conditional_probability,
@@ -32,12 +37,16 @@ def dummy_data():
 def dummy_exp_config():
     return {
         "data_config": {
-            "forget_random": False,
-            "forgotten_author_fraction": 1 / 3,
-            "forgotten_fact_fraction": 1 / 3,
-            "granularity": "author",
-            "stratified": True,
-        }
+            "dataset_name": "tofu",
+            "data_kwargs": {
+                "forget_random": False,
+                "forgotten_author_fraction": 1 / 3,
+                "forgotten_fact_fraction": 1 / 3,
+                "granularity": "author",
+                "stratified": True,
+            },
+        },
+        "seed": 42,
     }
 
 
@@ -158,14 +167,21 @@ def test_eval_end_to_end(dummy_base_model, dummy_tokenizer, dummy_data):
     eval_dataset = EvalQADataset(
         data=retain_data,
         tokenizer=dummy_tokenizer,
-        qa_formatter=qa_formatter_blank,
+        qa_formatter=BlankQAFormatter(),
         loss_type="standard",
-        return_perturbed=True,
+        quantitative_eval=True,
+        qualitative_eval=True,
         n_perturbed=n_perturbed,
     )
-    dataloader = DataLoader(eval_dataset, batch_size=batch_size)
+    dataloader = DataLoader(
+        eval_dataset,
+        batch_size=batch_size,
+        collate_fn=EvaluationCollateFunction(
+            padding_value=dummy_tokenizer.eos_token_id
+        ),
+    )
 
-    formatted_inputs = next(iter(dataloader))
+    formatted_inputs, _ = next(iter(dataloader))
 
     all_losses = torch.zeros((batch_size, n_perturbed + 1))
 
@@ -213,7 +229,6 @@ def test_evaluate_model(dummy_base_model, dummy_tokenizer, dummy_exp_config):
         dummy_tokenizer,
         dummy_exp_config,
         max_new_tokens=10,
-        random_seed=42,
     )
 
     # check we get the correct outputs and that theyre all native float

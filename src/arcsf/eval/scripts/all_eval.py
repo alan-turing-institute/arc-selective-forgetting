@@ -17,7 +17,7 @@ if __name__ == "__main__":
             " targets. It currently saves the truth ratio and input-wise losses."
         )
     )
-    batch_size = 1
+    batch_size = 4
     parser.add_argument("model_dir", type=str, help="Relative path to model directory.")
     parser.add_argument(
         "--data_split",
@@ -33,9 +33,7 @@ if __name__ == "__main__":
     model = AutoModelForCausalLM.from_pretrained(model_dir)
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
 
-    # experiment_config
-
-    model.config.pad_token_id = tokenizer.eos_token_id
+    model.config.pad_token_id = tokenizer.pad_token_id
 
     experiment_config = yaml.safe_load(open(model_dir + "/experiment_config.yaml"))
     random_seed = experiment_config["seed"]

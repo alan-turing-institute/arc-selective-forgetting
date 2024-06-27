@@ -160,7 +160,9 @@ def all_eval(
         dataset,
         batch_size=batch_size,
         shuffle=False,
-        collate_fn=EvaluationCollateFunction(padding_value=tokenizer.eos_token_id),
+        collate_fn=EvaluationCollateFunction(
+            padding_value=tokenizer.pad_token_id, padding_side="left"
+        ),
     )
     dataset_len = len(dataset)
     output_dict = {
@@ -181,7 +183,7 @@ def all_eval(
             gt_outputs = model(**gt_batch)
             gen_outputs = model.generate(
                 **questions,
-                pad_token_id=tokenizer.eos_token_id,
+                pad_token_id=tokenizer.pad_token_id,
                 **generate_kwargs,
             )
 

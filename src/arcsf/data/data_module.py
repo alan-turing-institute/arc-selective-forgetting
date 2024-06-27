@@ -129,7 +129,7 @@ class EvaluationCollateFunction:
                 "labels": pad_sequence(
                     [inp[idx]["labels"] for inp in logit_inputs],
                     batch_first=self.batch_first,
-                    padding_value=self.padding_value,
+                    padding_value=-100,
                 ),
                 "attention_mask": pad_sequence(
                     [inp[idx]["attention_mask"] for inp in logit_inputs],

@@ -424,11 +424,16 @@ class ForgetterDataCollator:
 
 
 class EvaluationCollateFunction:
-    def __init__(self, padding_value, batch_first=True):
+    def __init__(self, padding_value, padding_side="right", batch_first=True):
         if isinstance(padding_value, int):
             self.padding_value = padding_value
         else:
             raise ValueError("padding_value must be an integer")
+
+        if padding_side == "left":
+            self.reverse = lambda x: torch.flip(x, [-1])
+        else:
+            self.reverse = lambda x: x
 
         self.batch_first = batch_first
 
@@ -438,36 +443,73 @@ class EvaluationCollateFunction:
         n_perturbed = len(logit_inputs[0])
         batch_input = [
             {
-                "input_ids": pad_sequence(
-                    [inp[idx]["input_ids"] for inp in logit_inputs],
-                    batch_first=self.batch_first,
-                    padding_value=self.padding_value,
+                "input_ids": self.reverse(
+                    pad_sequence(
+                        [self.reverse(inp[idx]["input_ids"]) for inp in logit_inputs],
+                        batch_first=self.batch_first,
+                        padding_value=self.padding_value,
+                    )
                 ),
-                "labels": pad_sequence(
-                    [inp[idx]["labels"] for inp in logit_inputs],
-                    batch_first=self.batch_first,
-                    padding_value=-100,
+                "labels": self.reverse(
+                    pad_sequence(
+                        [self.reverse(inp[idx]["labels"]) for inp in logit_inputs],
+                        batch_first=self.batch_first,
+                        padding_value=-100,
+                    )
                 ),
-                "attention_mask": pad_sequence(
-                    [inp[idx]["attention_mask"] for inp in logit_inputs],
-                    batch_first=self.batch_first,
-                    padding_value=0,
+                "attention_mask": self.reverse(
+                    pad_sequence(
+                        [
+                            self.reverse(inp[idx]["attention_mask"])
+                            for inp in logit_inputs
+                        ],
+                        batch_first=self.batch_first,
+                        padding_value=0,
+                    )
                 ),
             }
             for idx in range(n_perturbed)
         ]
-        questions = self.padding_data_collator()
+        questions = {
+            "input_ids": self.reverse(
+                pad_sequence(
+                    [
+                        self.reverse(question["input_ids"][0])
+                        for (question, _) in qa_pairs
+                    ],
+                    batch_first=self.batch_first,
+                    padding_value=self.padding_value,
+                )
+            ),
+            "attention_mask": self.reverse(
+                pad_sequence(
+                    [
+                        self.reverse(question["attention_mask"][0])
+                        for (question, _) in qa_pairs
+                    ],
+                    batch_first=self.batch_first,
+                    padding_value=0,
+                )
+            ),
+        }
 
         answers = {
-            "input_ids": pad_sequence(
-                [answer["input_ids"][0] for (_, answer) in qa_pairs],
-                batch_first=self.batch_first,
-                padding_value=self.padding_value,
+            "input_ids": self.reverse(
+                pad_sequence(
+                    [self.reverse(answer["input_ids"][0]) for (_, answer) in qa_pairs],
+                    batch_first=self.batch_first,
+                    padding_value=self.padding_value,
+                )
             ),
-            "attention_mask": pad_sequence(
-                [answer["attention_mask"][0] for (_, answer) in qa_pairs],
-                batch_first=self.batch_first,
-                padding_value=self.padding_value,
+            "attention_mask": self.reverse(
+                pad_sequence(
+                    [
+                        self.reverse(answer["attention_mask"][0])
+                        for (_, answer) in qa_pairs
+                    ],
+                    batch_first=self.batch_first,
+                    padding_value=0,
+                )
             ),
         }
 

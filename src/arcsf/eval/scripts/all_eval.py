@@ -17,7 +17,7 @@ if __name__ == "__main__":
             " targets. It currently saves the truth ratio and input-wise losses."
         )
     )
-    batch_size = 5
+    batch_size = 10
     parser.add_argument("model_dir", type=str, help="Relative path to model directory.")
     parser.add_argument(
         "--data_split",

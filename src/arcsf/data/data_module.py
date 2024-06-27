@@ -424,7 +424,7 @@ class ForgetterDataCollator:
 
 
 class EvaluationCollateFunction:
-    def __init__(self, padding_value, padding_side="right", batch_first=True):
+    def __init__(self, padding_value, padding_side="left", batch_first=True):
         if isinstance(padding_value, int):
             self.padding_value = padding_value
         else:

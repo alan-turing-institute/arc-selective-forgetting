@@ -8,6 +8,57 @@ from openai import AzureOpenAI
 # like then we can start generating questions.
 
 
+def date_qa_generator(entity):
+    entity_type = entity["type"]
+    entity_data = entity["type"]
+    if entity_type == "publisher":
+        question = f"When was {entity_data['name'].capitalise()} founded?"
+        answer = (
+            f"{entity_data['name'].capitalise()} was founded on"
+            f" {entity_data['founded']}."
+        )
+        return (question, answer)
+    elif entity_type == "author":
+        question = f"When was {entity_data['name'].capitalise()} born?"
+        answer = (
+            f"{entity_data['name'].capitalise()}'s date of birth is"
+            f" {entity_data['dob']}."
+        )
+        return (question, answer)
+    elif entity_type == "book":
+        question = f"When was {entity_data['name'].capitalise()} published?"
+        answer = (
+            f"{entity_data['name'].capitalise()} was published on"
+            f" {entity_data['published']}."
+        )
+        return (question, answer)
+    else:
+        return None
+
+
+def relationship_qa_generator(main_entity, relationship_entity):
+    main_type = main_entity["type"]
+    relation_type = relationship_entity["type"]
+    return (main_type, relation_type)
+
+
+class NetworkQuestionGenerator:
+    def __init__(self, all_profiles):
+        self.all_profiles = all_profiles
+
+    def sample_basic_question(self, key: str) -> tuple[str]:
+        profile = self.all_profiles[key]
+        # generating simple question
+        qa_pair = date_qa_generator(profile)
+        return qa_pair
+
+    def sample_relationship_question(self, keys: tuple[str, str]):
+        main_profile = self.all_profiles[keys[0]]
+        relationship_profile = self.all_profiles[keys[1]]
+        qa_pair = relationship_qa_generator(main_profile, relationship_profile)
+        return qa_pair
+
+
 class BasicQuestionGenerator:
     """
     Classes for generating questions given a profile. This worked on the TOFU authors,

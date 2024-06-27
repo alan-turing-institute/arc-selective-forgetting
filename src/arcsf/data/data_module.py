@@ -5,7 +5,7 @@ from typing import Any, Callable, Dict, List
 import datasets
 import torch
 from torch.nn.utils.rnn import pad_sequence
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, DataCollatorWithPadding
 from transformers.data.data_collator import InputDataClass
 
 import arcsf.data
@@ -104,68 +104,6 @@ class BlankQAFormatter(QAFormatter):
 
     def __init__(self):
         super().__init__("{question} {answer}{eos_token}")
-
-
-class EvaluationCollateFunction:
-    def __init__(self, padding_value, batch_first=True):
-        if isinstance(padding_value, int):
-            self.padding_value = padding_value
-        else:
-            raise ValueError("padding_value must be an integer")
-
-        self.batch_first = batch_first
-
-    def __call__(self, batch):
-        logit_inputs = [inp for (inp, _) in batch]
-        qa_pairs = [question_answer_pair for (_, question_answer_pair) in batch]
-        n_perturbed = len(logit_inputs[0])
-        batch_input = [
-            {
-                "input_ids": pad_sequence(
-                    [inp[idx]["input_ids"] for inp in logit_inputs],
-                    batch_first=self.batch_first,
-                    padding_value=self.padding_value,
-                ),
-                "labels": pad_sequence(
-                    [inp[idx]["labels"] for inp in logit_inputs],
-                    batch_first=self.batch_first,
-                    padding_value=-100,
-                ),
-                "attention_mask": pad_sequence(
-                    [inp[idx]["attention_mask"] for inp in logit_inputs],
-                    batch_first=self.batch_first,
-                    padding_value=0,
-                ),
-            }
-            for idx in range(n_perturbed)
-        ]
-        questions = {
-            "input_ids": pad_sequence(
-                [question["input_ids"][0] for (question, _) in qa_pairs],
-                batch_first=self.batch_first,
-                padding_value=self.padding_value,
-            ),
-            "attention_mask": pad_sequence(
-                [question["attention_mask"][0] for (question, _) in qa_pairs],
-                batch_first=self.batch_first,
-                padding_value=0,
-            ),
-        }
-
-        answers = {
-            "input_ids": pad_sequence(
-                [answer["input_ids"][0] for (_, answer) in qa_pairs],
-                batch_first=self.batch_first,
-                padding_value=self.padding_value,
-            ),
-            "attention_mask": pad_sequence(
-                [answer["attention_mask"][0] for (_, answer) in qa_pairs],
-                batch_first=self.batch_first,
-                padding_value=self.padding_value,
-            ),
-        }
-
-        return batch_input, (questions, answers)
 
 
 class EvalQADataset(torch.utils.data.Dataset):
@@ -483,3 +421,77 @@ class ForgetterDataCollator:
         retain = self.base_collator([sample[1] for sample in features], **kwargs)
 
         return forget, retain
+
+
+class EvaluationCollateFunction:
+    def __init__(self, padding_value, batch_first=True):
+        if isinstance(padding_value, int):
+            self.padding_value = padding_value
+        else:
+            raise ValueError("padding_value must be an integer")
+
+        self.batch_first = batch_first
+
+    def __call__(self, batch):
+        logit_inputs = [inp for (inp, _) in batch]
+        qa_pairs = [question_answer_pair for (_, question_answer_pair) in batch]
+        n_perturbed = len(logit_inputs[0])
+        batch_input = [
+            {
+                "input_ids": pad_sequence(
+                    [inp[idx]["input_ids"] for inp in logit_inputs],
+                    batch_first=self.batch_first,
+                    padding_value=self.padding_value,
+                ),
+                "labels": pad_sequence(
+                    [inp[idx]["labels"] for inp in logit_inputs],
+                    batch_first=self.batch_first,
+                    padding_value=-100,
+                ),
+                "attention_mask": pad_sequence(
+                    [inp[idx]["attention_mask"] for inp in logit_inputs],
+                    batch_first=self.batch_first,
+                    padding_value=0,
+                ),
+            }
+            for idx in range(n_perturbed)
+        ]
+        questions = self.padding_data_collator()
+
+        answers = {
+            "input_ids": pad_sequence(
+                [answer["input_ids"][0] for (_, answer) in qa_pairs],
+                batch_first=self.batch_first,
+                padding_value=self.padding_value,
+            ),
+            "attention_mask": pad_sequence(
+                [answer["attention_mask"][0] for (_, answer) in qa_pairs],
+                batch_first=self.batch_first,
+                padding_value=self.padding_value,
+            ),
+        }
+
+        return batch_input, (questions, answers)
+
+
+# in progress refactor #
+
+
+class EvaluateCollateFunction:
+    def __init__(self, tokenizer):
+        self.padding_data_collator = DataCollatorWithPadding(
+            tokenizer=tokenizer, padding=True
+        )
+
+    def __call__(self, batch):
+        logit_inputs = [inp for (inp, _) in batch]
+        qa_pairs = [question_answer_pair for (_, question_answer_pair) in batch]
+        n_perturbed = len(logit_inputs[0])
+        batch_input = [
+            self.padding_data_collator([inp[idx] for inp in logit_inputs])
+            for idx in range(n_perturbed)
+        ]
+        questions = self.padding_data_collator([question for (question, _) in qa_pairs])
+        answers = self.padding_data_collator([answer for (_, answer) in qa_pairs])
+
+        return batch_input, (questions, answers)

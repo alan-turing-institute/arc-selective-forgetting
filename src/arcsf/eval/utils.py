@@ -160,11 +160,8 @@ def all_eval(
         dataset,
         batch_size=batch_size,
         shuffle=False,
-        collate_fn=EvaluationCollateFunction(
-            padding_value=tokenizer.eos_token_id, batch_first=True
-        ),
+        collate_fn=EvaluationCollateFunction(padding_value=tokenizer.eos_token_id),
     )
-    tokenizer.padding_side = "left"
     dataset_len = len(dataset)
     output_dict = {
         "all_losses": torch.zeros((dataset_len, n_perturbed + 1), dtype=torch.float64),

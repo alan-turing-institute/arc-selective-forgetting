@@ -10,25 +10,25 @@ from openai import AzureOpenAI
 
 def date_qa_generator(entity):
     entity_type = entity["type"]
-    entity_data = entity["type"]
+    entity_data = entity["data"]
     if entity_type == "publisher":
-        question = f"When was {entity_data['name'].capitalise()} founded?"
+        question = f"When was {entity_data['name'].capitalize()} founded?"
         answer = (
-            f"{entity_data['name'].capitalise()} was founded on"
+            f"{entity_data['name'].capitalize()} was founded on"
             f" {entity_data['founded']}."
         )
         return (question, answer)
     elif entity_type == "author":
-        question = f"When was {entity_data['name'].capitalise()} born?"
+        question = f"When was {entity_data['name'].capitalize()} born?"
         answer = (
-            f"{entity_data['name'].capitalise()}'s date of birth is"
+            f"{entity_data['name'].capitalize()}'s date of birth is"
             f" {entity_data['dob']}."
         )
         return (question, answer)
     elif entity_type == "book":
-        question = f"When was {entity_data['name'].capitalise()} published?"
+        question = f"When was {entity_data['name'].capitalize()} published?"
         answer = (
-            f"{entity_data['name'].capitalise()} was published on"
+            f"{entity_data['name'].capitalize()} was published on"
             f" {entity_data['published']}."
         )
         return (question, answer)
@@ -38,8 +38,62 @@ def date_qa_generator(entity):
 
 def relationship_qa_generator(main_entity, relationship_entity):
     main_type = main_entity["type"]
+    main_entity_data = main_entity["data"]
     relation_type = relationship_entity["type"]
-    return (main_type, relation_type)
+    relation_entity_data = relationship_entity["data"]
+    if main_type == "publisher":
+        if relation_type == "country":
+            question = (
+                f"In what country is the publisher"
+                f" {main_entity_data['name'].capitalize()} based?"
+            )
+            answer = (
+                f"{main_entity_data['name'].capitalize()} is based in "
+                f" {relation_entity_data['name']}."
+            )
+        return (question, answer)
+
+    elif main_type == "author":
+        if relation_type == "country":
+            question = (
+                f"Where was the author,"
+                f" {main_entity_data['name'].capitalize()}, born?"
+            )
+            answer = (
+                f"{main_entity_data['name'].capitalize()} was born in "
+                f" {relation_entity_data['name']}."
+            )
+        return (question, answer)
+
+    elif main_type == "book":
+        if relation_type == "author":
+            question = (
+                f"Who wrote the book," f" {main_entity_data['name'].capitalize()}?"
+            )
+            answer = (
+                f"{main_entity_data['name'].capitalize()} was written by"
+                f" {relation_entity_data['name']}."
+            )
+        elif relation_type == "publisher":
+            question = (
+                f"Which publisher published the book,"
+                f" {main_entity_data['name'].capitalize()}?"
+            )
+            answer = (
+                f"{main_entity_data['name'].capitalize()} was published by"
+                f" {relation_entity_data['name']}."
+            )
+        elif relation_type == "genre":
+            question = (
+                f"What genre is the book," f" {main_entity_data['name'].capitalize()}?"
+            )
+            answer = (
+                f"{main_entity_data['name'].capitalize()} falls under the genre of"
+                f" {relation_entity_data['name']} books."
+            )
+        return (question, answer)
+    else:
+        return None
 
 
 class NetworkQuestionGenerator:

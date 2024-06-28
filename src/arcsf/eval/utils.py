@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AutoTokenizer
 
-from arcsf.data.data_module import EvalQADataset, EvaluationCollateFunction
+from arcsf.data.data_module import EvalQADataset, EvaluateDataCollator
 from arcsf.eval.metrics import eval_rouge_recall, ks_test, truth_ratio
 
 _loss_function = CrossEntropyLoss(ignore_index=-100, reduction="none")
@@ -160,7 +160,7 @@ def all_eval(
         dataset,
         batch_size=batch_size,
         shuffle=False,
-        collate_fn=EvaluationCollateFunction(
+        collate_fn=EvaluateDataCollator(
             padding_value=tokenizer.pad_token_id, padding_side="left"
         ),
     )

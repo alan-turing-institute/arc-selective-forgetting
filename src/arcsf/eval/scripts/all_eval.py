@@ -10,14 +10,13 @@ from arcsf.eval.utils import all_eval
 from arcsf.utils import get_device
 
 if __name__ == "__main__":
-    # currently this is our random seed
     parser = argparse.ArgumentParser(
         description=(
             "Runs quantitative evaluation, comparing output logits of model against"
             " targets. It currently saves the truth ratio and input-wise losses."
         )
     )
-    batch_size = 10
+    batch_size = 5
     parser.add_argument("model_dir", type=str, help="Relative path to model directory.")
     parser.add_argument(
         "--data_split",
@@ -32,7 +31,7 @@ if __name__ == "__main__":
 
     model = AutoModelForCausalLM.from_pretrained(model_dir)
     tokenizer = AutoTokenizer.from_pretrained(
-        model_dir, padding_side="left", padding=True
+        model_dir, padding_side="right", padding=True
     )
 
     model.config.pad_token_id = tokenizer.pad_token_id

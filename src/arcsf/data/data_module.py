@@ -5,7 +5,7 @@ from typing import Any, Callable, Dict, List
 import datasets
 import torch
 from torch.nn.utils.rnn import pad_sequence
-from transformers import AutoTokenizer, DataCollatorWithPadding
+from transformers import AutoTokenizer
 from transformers.data.data_collator import InputDataClass
 
 import arcsf.data
@@ -423,8 +423,8 @@ class ForgetterDataCollator:
         return forget, retain
 
 
-class EvaluationCollateFunction:
-    def __init__(self, padding_value, padding_side="left", batch_first=True):
+class EvaluateDataCollator:
+    def __init__(self, padding_value, padding_side="left"):
         if isinstance(padding_value, int):
             self.padding_value = padding_value
         else:
@@ -435,105 +435,102 @@ class EvaluationCollateFunction:
         else:
             self.reverse = lambda x: x
 
-        self.batch_first = batch_first
-
-    def __call__(self, batch):
-        logit_inputs = [inp for (inp, _) in batch]
-        qa_pairs = [question_answer_pair for (_, question_answer_pair) in batch]
-        n_perturbed = len(logit_inputs[0])
-        batch_input = [
-            {
-                "input_ids": self.reverse(
-                    pad_sequence(
-                        [self.reverse(inp[idx]["input_ids"]) for inp in logit_inputs],
-                        batch_first=self.batch_first,
-                        padding_value=self.padding_value,
-                    )
-                ),
-                "labels": self.reverse(
-                    pad_sequence(
-                        [self.reverse(inp[idx]["labels"]) for inp in logit_inputs],
-                        batch_first=self.batch_first,
-                        padding_value=-100,
-                    )
-                ),
-                "attention_mask": self.reverse(
-                    pad_sequence(
-                        [
-                            self.reverse(inp[idx]["attention_mask"])
-                            for inp in logit_inputs
-                        ],
-                        batch_first=self.batch_first,
-                        padding_value=0,
-                    )
-                ),
-            }
-            for idx in range(n_perturbed)
-        ]
-        questions = {
-            "input_ids": self.reverse(
-                pad_sequence(
-                    [
-                        self.reverse(question["input_ids"][0])
-                        for (question, _) in qa_pairs
-                    ],
-                    batch_first=self.batch_first,
-                    padding_value=self.padding_value,
-                )
-            ),
-            "attention_mask": self.reverse(
-                pad_sequence(
-                    [
-                        self.reverse(question["attention_mask"][0])
-                        for (question, _) in qa_pairs
-                    ],
-                    batch_first=self.batch_first,
-                    padding_value=0,
-                )
-            ),
+        self.pad_value_dict = {
+            "input_ids": padding_value,
+            "labels": -100,
+            "attention_mask": 0,
         }
 
-        answers = {
-            "input_ids": self.reverse(
-                pad_sequence(
-                    [self.reverse(answer["input_ids"][0]) for (_, answer) in qa_pairs],
-                    batch_first=self.batch_first,
-                    padding_value=self.padding_value,
-                )
-            ),
-            "attention_mask": self.reverse(
-                pad_sequence(
-                    [
-                        self.reverse(answer["attention_mask"][0])
-                        for (_, answer) in qa_pairs
-                    ],
-                    batch_first=self.batch_first,
-                    padding_value=0,
-                )
-            ),
-        }
+    def pad_from_list(
+        self, input_list: list[torch.Tensor], pad_value: int
+    ) -> torch.Tensor:
+        """
+        Pads and stacks a list of unpadded, tokenized, tensors given a
+        value to pad with.
 
-        return batch_input, (questions, answers)
+        Args:
+            input_list: list of unpadded, tokenized input tensors
+            pad_value: value to pad tensors with
 
-
-# in progress refactor #
-
-
-class EvaluateCollateFunction:
-    def __init__(self, tokenizer):
-        self.padding_data_collator = DataCollatorWithPadding(
-            tokenizer=tokenizer, padding=True
+        Returns:
+            single tensor stacking all tensors along the first dimension
+        """
+        return self.reverse(
+            pad_sequence(input_list, batch_first=True, padding_value=pad_value)
         )
 
-    def __call__(self, batch):
+    def pad_to_output_dict(
+        self,
+        input_items: list[
+            list[dict[str : torch.Tensor]] | tuple[dict[str : torch.Tensor]]
+        ],
+        keys: list[str],
+        item_index: int,
+    ) -> dict[str : torch.Tensor]:
+        """
+        Creates a dictionary of stacked and padded tensors to be passed to the model.
+        For each key in the dictionary this function creates a list of tensors from the
+        input and passes them to `pad_from_list()`. `self.pad_value_dict` is used to map
+        dictionary keys to padding values.
+
+        Args:
+            input_items: list of lists/tuples containing dictionaries from an
+            EvalQADataset dataset's `__getitem__` method.
+            keys: list of keys that need to be in the ouput dictionary. Containing the
+            stacked tensors which are then passed to the model (These keys need to be
+            in the dicionaries contained in the `input_items` argument).
+            item_index: The index in the `input_items` constituent lists/tuples which
+            need to be stacked (in our use case this refers to the perturbed index, or
+            questions/answers).
+
+        Returns:
+            A dictionary of stacked and padded inputs for the model .__call__() and
+            .generate() methods.
+        """
+        output_dict = {}
+        for key in keys:
+            output_dict[key] = self.pad_from_list(
+                [
+                    self.reverse(torch.squeeze(inp[item_index][key], dim=0))
+                    for inp in input_items
+                ],
+                self.pad_value_dict[key],
+            )
+        return output_dict
+
+    def __call__(
+        self,
+        batch: list[
+            tuple[list[list[dict[str : torch.Tensor]]], tuple[dict[str : torch.Tensor]]]
+        ],
+    ) -> tuple[dict[str : torch.Tensor], tuple[dict[str : torch.Tensor]]]:
+        """
+        Returns a stacked and padded tuple of batches for the model.
+
+        Args:
+            batch: a batch from the `EvalQADataset` __getitem__ method, containing a
+            tuple of lists of input dictionaries for clean and perturbed samples and
+            target question--answer pairs.
+
+        Returns:
+            batch_input: An input dictionary for a model.__call__() method, with keys
+            'input_ids', 'labels', and 'attention_mask', denoting associated tensors.
+            (questions, answers): A tuple of dictionaries for a model.generate() method
+            along with the target output, it contains the keys 'input_ids' and
+            'attention_mask', denoting associated tensors.
+        """
         logit_inputs = [inp for (inp, _) in batch]
-        qa_pairs = [question_answer_pair for (_, question_answer_pair) in batch]
+        qa_pairs = [qa_pair for (_, qa_pair) in batch]
         n_perturbed = len(logit_inputs[0])
-        batch_input = [
-            self.padding_data_collator([inp[idx] for inp in logit_inputs])
-            for idx in range(n_perturbed)
-        ]
-        questions = self.padding_data_collator([question for (question, _) in qa_pairs])
-        answers = self.padding_data_collator([answer for (_, answer) in qa_pairs])
+        batch_input = [None] * n_perturbed
+        for input_idx in range(n_perturbed):
+            batch_input[input_idx] = self.pad_to_output_dict(
+                logit_inputs, ["input_ids", "labels", "attention_mask"], input_idx
+            )
+        questions = self.pad_to_output_dict(
+            qa_pairs, ["input_ids", "attention_mask"], 0
+        )
+
+        answers = self.pad_to_output_dict(qa_pairs, ["input_ids", "attention_mask"], 1)
 
         return batch_input, (questions, answers)

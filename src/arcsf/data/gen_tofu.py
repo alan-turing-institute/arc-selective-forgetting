@@ -4,8 +4,10 @@ import os
 from uuid import uuid4
 
 import networkx as nx
+from datasets import Dataset
 from pyvis.network import Network
 
+from arcsf.data.generation.questions import NetworkQuestionGenerator
 from arcsf.data.generation.utils import (
     AuthorSampler,
     BookSampler,
@@ -139,7 +141,27 @@ for key in list(all_items.keys()):
     for connection in formatter.get_connections(key):
         connections.append(connection)
 
-# SAVE ITEMS + CONNECTIONS
+# GENERATE QUESTIONS
+
+questions = []
+
+qa_generator = NetworkQuestionGenerator(all_items)
+# first generate basic entity questions
+for key in list(all_items.keys()):
+    qa = qa_generator.sample_basic_question(key)
+    if qa:
+        row = {"question": qa[0], "answer": qa[1], "keys": [key]}
+    questions.append(row)
+
+# now generate relationship questions
+for keys in connections:
+    qa = qa_generator.sample_relationship_question(keys)
+    if qa:
+        row = {"question": qa[0], "answer": qa[1], "keys": list(keys)}
+    questions.append(row)
+
+
+# SAVE ITEMS + CONNECTIONS + QUESTIONS
 
 os.makedirs("temp/gen_tofu/", exist_ok=True)
 with open("temp/gen_tofu/all_items.json", "w") as item_file:
@@ -149,6 +171,10 @@ with open("temp/gen_tofu/all_connections.csv", "w") as connection_file:
     file_writer = csv.writer(connection_file)
     for connection in connections:
         file_writer.writerow(connection)
+
+os.makedirs("temp/gen_tofu/", exist_ok=True)
+with open("temp/gen_tofu/questions.json", "w") as item_file:
+    json.dump(questions, item_file, indent=2)
 
 
 # GENERATING GRAPH
@@ -173,3 +199,16 @@ net = Network()
 net.from_nx(graph)
 net.repulsion(node_distance=250, central_gravity=0.5)
 net.save_graph("temp/gen_tofu/graph.html")
+
+# GENERATING DATSET
+
+
+def question_yielder():
+    yield from questions
+
+
+dataset = Dataset.from_generator(question_yielder)
+dataset.save_to_disk("temp/gen_tofu/dataset/")
+
+# GENERATING SOME SPLITS
+raise NotImplementedError

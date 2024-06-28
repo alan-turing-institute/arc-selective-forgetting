@@ -312,6 +312,8 @@ class AuthorSampler:
         self.country_sampler = Sampler(country_dist)
         self.genre_sampler = Sampler(genre_dist)
         self.date_limits = date_limits
+        # this is used to create unique names for each entity
+        self.sample_counts = 0
 
     def sample(self) -> dict[str:str]:
         """
@@ -322,10 +324,11 @@ class AuthorSampler:
         """
         profile = {}
         profile["key"] = str(uuid4())
-        profile["name"] = "placeholder"
+        profile["name"] = f"author_{self.sample_counts}"
         profile["dob"] = random_date(*self.date_limits, random.random())
         profile["nationality"] = self.country_sampler.sample()
         profile["genre"] = self.genre_sampler.sample()
+        self.sample_counts += 1
         return profile
 
 
@@ -349,6 +352,8 @@ class BookSampler:
         self.publisher_sampler = Sampler(publisher_dist)
         self.author_sampler = Sampler(author_dist)
         self.date_limits = date_limits
+        # this is used to create unique names for each entity
+        self.sample_counts = 0
 
     def sample(self) -> dict[str:str]:
         """
@@ -361,7 +366,7 @@ class BookSampler:
         publisher = self.publisher_sampler.sample()
         profile = {}
         profile["key"] = str(uuid4())
-        profile["name"] = "placeholder"
+        profile["name"] = f"book_{self.sample_counts}"
         profile["author"] = author["key"]
         profile["publisher"] = publisher["key"]
         profile["genre"] = author["genre"]
@@ -381,5 +386,6 @@ class BookSampler:
         )
         date_limits[0] = lower_limit
         profile["published"] = random_date(*date_limits, random.random())
+        self.sample_counts += 1
 
         return profile

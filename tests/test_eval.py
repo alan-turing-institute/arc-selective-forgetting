@@ -239,7 +239,8 @@ def test_evaluate_model(dummy_base_model, dummy_tokenizer, dummy_exp_config):
 
 
 def test_data_collator(dummy_base_model, dummy_tokenizer, dummy_data):
-    """End-to-end test to ensure the evaluation pipeline works as intended.
+    """End-to-end test to ensure the data collator works as intended when interacting
+    with the model.
 
     Args:
         dummy_base_model : model for tests
@@ -263,14 +264,14 @@ def test_data_collator(dummy_base_model, dummy_tokenizer, dummy_data):
     ls_dataloader = DataLoader(
         eval_dataset,
         batch_size=batch_size,
-        # right padding can be used since generation not performed
+        # left padding collator
         collate_fn=EvaluateDataCollator(tokenizer=dummy_tokenizer, padding_side="left"),
     )
 
     rs_dataloader = DataLoader(
         eval_dataset,
         batch_size=batch_size,
-        # right padding can be used since generation not performed
+        # right padding collator
         collate_fn=EvaluateDataCollator(
             tokenizer=dummy_tokenizer, padding_side="right"
         ),
@@ -289,6 +290,8 @@ def test_data_collator(dummy_base_model, dummy_tokenizer, dummy_data):
         **rs_gt_batch,
     )
 
+    # use the attention mask to find the relevant token positions and check they are
+    # close to one another
     assert torch.sum(
         left_padded_output.logits[ls_gt_batch["attention_mask"] != 0].detach()
         - right_padded_output.logits[rs_gt_batch["attention_mask"] != 0].detach()
@@ -297,4 +300,5 @@ def test_data_collator(dummy_base_model, dummy_tokenizer, dummy_data):
     ls_loss = get_loss(left_padded_output.logits, ls_gt_batch["labels"])
     rs_loss = get_loss(right_padded_output.logits, rs_gt_batch["labels"])
 
+    # ensure the losses are very close to one another as to not influence results
     assert torch.sum(ls_loss.detach() - rs_loss.detach()).numpy() == pytest.approx(0)

@@ -526,6 +526,9 @@ class EvaluateDataCollator:
                 ],
                 self.pad_value_dict[key],
             )
+        # position_ids ensures left sided padding produces the same results as right
+        # sided padding. To preserve model behaviour should be passed the model, either
+        # explicitly or in the unpacked form: `**model_inputs`.
         output_dict["position_ids"] = output_dict["attention_mask"].cumsum(dim=1)
         return output_dict
 

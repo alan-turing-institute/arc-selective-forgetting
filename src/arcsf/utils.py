@@ -1,10 +1,16 @@
 import os
 import random
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
 import numpy as np
 import torch
+from datasets import (
+    are_progress_bars_disabled,
+    disable_progress_bars,
+    enable_progress_bars,
+)
 
 from arcsf.constants import EXPERIMENT_OUTPUT_DIR
 
@@ -84,3 +90,33 @@ def get_datetime_str() -> str:
         20240528-105332-123456 (yearmonthday-hourminutesseconds-milliseconds).
     """
     return datetime.strftime(datetime.now(), "%Y%m%d-%H%M%S-%f")
+
+
+def get_device() -> torch.device:
+    """Gets the best available device for pytorch to use.
+    (According to: gpu -> mps -> cpu) Currently only works for one GPU.
+
+    Returns:
+        torch.device: available torch device
+    """
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    elif torch.backends.mps.is_available():
+        return torch.device("mps")
+    else:
+        return torch.device("cpu")
+
+
+@contextmanager
+def hf_progress_bars_disabled():
+    """
+    Context manager to disable progress bar in huggingface datasets functions
+    when they are not desired.
+    """
+    re_enable = not are_progress_bars_disabled()
+    disable_progress_bars()
+    try:
+        yield
+    finally:
+        if re_enable:
+            enable_progress_bars()

@@ -2,6 +2,15 @@
 .DS_Store
 wandb/
 
+# Editor
+.vscode/
+
+# For models
+temp*
+
+# For eval
+**.sh
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

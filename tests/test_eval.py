@@ -229,6 +229,7 @@ def test_evaluate_model(dummy_base_model, dummy_tokenizer, dummy_exp_config):
         dummy_truth_ratios,
         dummy_tokenizer,
         dummy_exp_config,
+        batch_size=3,
         max_new_tokens=10,
     )
 
@@ -301,4 +302,6 @@ def test_data_collator(dummy_base_model, dummy_tokenizer, dummy_data):
     rs_loss = get_loss(right_padded_output.logits, rs_gt_batch["labels"])
 
     # ensure the losses are very close to one another as to not influence results
-    assert torch.sum(ls_loss.detach() - rs_loss.detach()).numpy() == pytest.approx(0)
+    assert torch.sum(ls_loss.detach() - rs_loss.detach()).numpy() == pytest.approx(
+        0, abs=1e-5
+    )

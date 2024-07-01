@@ -389,3 +389,37 @@ class BookSampler:
         self.sample_counts += 1
 
         return profile
+
+
+class KeyChecker:
+    """
+    On call checks a dataset rows' keys against another list of target keys, returns
+    true if a pair of keys match, otherwise returns False (This bool is flipped if
+    find_forget is set as False).
+    """
+
+    def __init__(self, forget_keys: list[int], find_forget: bool):
+        """
+        Args:
+            forget_keys: Keys that have been assigned to the forget set
+            find_forget: Whether the output should be denoting forget or retain set.
+
+        Raises:
+            ValueError: If find_forget is assigned a non-bool value, a ValueError is
+            outputted.
+        """
+        self.forget_keys = forget_keys
+        if find_forget:
+            self.output = lambda x: x
+        elif not find_forget:
+            self.output = lambda x: not x
+        else:
+            raise ValueError("find_forget must be set to True or False")
+
+    def __call__(self, item: dict[str : str | list[int]]) -> bool:
+        keys = item["keys"]
+        flag = False
+        for key in keys:
+            if key in self.forget_keys:
+                flag = True
+        return self.output(flag)

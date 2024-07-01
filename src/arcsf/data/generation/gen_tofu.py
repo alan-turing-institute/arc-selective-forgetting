@@ -1,10 +1,12 @@
 import csv
 import json
+import math
 import os
+import random
 from uuid import uuid4
 
 import networkx as nx
-from datasets import Dataset
+from datasets import Dataset, DatasetDict
 from pyvis.network import Network
 
 from arcsf.data.generation.questions import NetworkQuestionGenerator
@@ -12,6 +14,7 @@ from arcsf.data.generation.utils import (
     AuthorSampler,
     BookSampler,
     Formatter,
+    KeyChecker,
     PublisherSampler,
 )
 
@@ -202,13 +205,58 @@ net.save_graph("temp/gen_tofu/graph.html")
 
 # GENERATING DATSET
 
+entity_list = []
+for key, item in all_items.items():
+    entity_list.append({"key": key, "type": item["type"], "data": item["data"]})
+
 
 def question_yielder():
     yield from questions
 
 
-dataset = Dataset.from_generator(question_yielder)
-dataset.save_to_disk("temp/gen_tofu/dataset/")
+def entity_yielder():
+    yield from entity_list
 
-# GENERATING SOME SPLITS
-raise NotImplementedError
+
+question_dataset = Dataset.from_generator(question_yielder)
+entity_dataset = Dataset.from_generator(entity_yielder)
+full_dataset = DatasetDict(
+    {"question_data": question_dataset, "entity_data": entity_dataset}
+)
+full_dataset.save_to_disk("temp/gen_tofu/dataset/")
+
+# GENERATING SOME SPLITS (FROM THE DATASET OBJECT)
+
+authors = full_dataset["entity_data"].filter(lambda row: row["type"] == "author")["key"]
+publishers = full_dataset["entity_data"].filter(lambda row: row["type"] == "publisher")[
+    "key"
+]
+books = full_dataset["entity_data"].filter(lambda row: row["type"] == "book")["key"]
+
+author_forget = random.sample(authors, k=math.floor(len(authors) * 0.2))
+publisher_forget = random.sample(publishers, k=1)
+book_forget = random.sample(books, k=math.floor(len(books) * 0.3))
+
+author_forget_split = question_dataset.filter(
+    KeyChecker(author_forget, find_forget=True)
+)
+author_retain_split = question_dataset.filter(
+    KeyChecker(author_forget, find_forget=False)
+)
+print(author_forget_split)
+print(author_retain_split)
+
+book_forget_split = question_dataset.filter(KeyChecker(book_forget, find_forget=True))
+book_retain_split = question_dataset.filter(KeyChecker(book_forget, find_forget=False))
+print(book_forget_split)
+print(book_retain_split)
+
+publisher_forget_split = question_dataset.filter(
+    KeyChecker(publisher_forget, find_forget=True)
+)
+
+publisher_retain_split = question_dataset.filter(
+    KeyChecker(publisher_forget, find_forget=False)
+)
+print(publisher_forget_split)
+print(publisher_retain_split)

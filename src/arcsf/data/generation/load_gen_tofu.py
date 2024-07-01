@@ -13,6 +13,19 @@ def load_gen_tofu(
     forget_fraction: float,
     random_seed: int,
 ) -> tuple[Dataset, Dataset]:
+    """
+    Basic load function for the generated dataset.
+
+    Args:
+        granularity: What level of granularity to perform forgetting. Currently takes
+        "publisher", "author", or "book".
+        forget_fraction: Fraction of data to be removed.
+        random_seed: seed for random elements.
+
+    Returns:
+        tuple of datasets, the first index containing the forget_set, and the second the
+        retain set.
+    """
 
     full_dataset = load_dataset(TOFU_PATH)
     question_dataset = full_dataset["question_data"]

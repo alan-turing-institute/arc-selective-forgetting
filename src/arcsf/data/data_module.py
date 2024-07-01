@@ -446,14 +446,17 @@ class EvaluateDataCollator:
         if tokenizer.pad_token_id:
             padding_value = tokenizer.pad_token_id
 
-        elif tokenizer.eos_token_id:
-            padding_value = tokenizer.eos_token_id
+        elif tokenizer.eos_token_id and tokenizer.bos_token_id:
+            if padding_side == "right":
+                padding_value = tokenizer.eos_token_id
+            elif padding_side == "left":
+                padding_value = tokenizer.bos_token_id
 
         else:
             raise ValueError(
                 (
                     "Tokenizer should have attributes pad_token_id or"
-                    " eos_token_id to use for padding value."
+                    " eos_token_id/bos_token_id to use for padding value."
                 )
             )
 
@@ -462,7 +465,7 @@ class EvaluateDataCollator:
             "labels": -100,
             "attention_mask": 0,
         }
-
+        self.padding_side = padding_side
         if padding_side == "left":
             self.reverse = lambda x: torch.flip(x, [-1])
         else:
@@ -523,6 +526,7 @@ class EvaluateDataCollator:
                 ],
                 self.pad_value_dict[key],
             )
+        output_dict["position_ids"] = output_dict["attention_mask"].cumsum(dim=1)
         return output_dict
 
     def __call__(

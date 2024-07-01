@@ -236,3 +236,65 @@ def test_evaluate_model(dummy_base_model, dummy_tokenizer, dummy_exp_config):
     assert list(test_eval.keys()) == metric_keys
     for key in metric_keys:
         assert isinstance(test_eval[key], float)
+
+
+def test_data_collator(dummy_base_model, dummy_tokenizer, dummy_data):
+    """End-to-end test to ensure the evaluation pipeline works as intended.
+
+    Args:
+        dummy_base_model : model for tests
+        dummy_tokenizer : tokenizer for the dummy model
+        dummy_data : dummy data for tests
+    """
+    batch_size = 3
+    n_perturbed = 1
+
+    _, retain_data = dummy_data
+
+    eval_dataset = EvalQADataset(
+        data=retain_data,
+        tokenizer=dummy_tokenizer,
+        qa_formatter=BlankQAFormatter(),
+        loss_type="standard",
+        quantitative_eval=True,
+        qualitative_eval=True,
+        n_perturbed=n_perturbed,
+    )
+    ls_dataloader = DataLoader(
+        eval_dataset,
+        batch_size=batch_size,
+        # right padding can be used since generation not performed
+        collate_fn=EvaluateDataCollator(tokenizer=dummy_tokenizer, padding_side="left"),
+    )
+
+    rs_dataloader = DataLoader(
+        eval_dataset,
+        batch_size=batch_size,
+        # right padding can be used since generation not performed
+        collate_fn=EvaluateDataCollator(
+            tokenizer=dummy_tokenizer, padding_side="right"
+        ),
+    )
+
+    left_padded_inputs, _ = next(iter(ls_dataloader))
+    right_padded_inputs, _ = next(iter(rs_dataloader))
+
+    ls_gt_batch = left_padded_inputs[0]
+    rs_gt_batch = right_padded_inputs[0]
+
+    left_padded_output = dummy_base_model(
+        **ls_gt_batch,
+    )
+    right_padded_output = dummy_base_model(
+        **rs_gt_batch,
+    )
+
+    assert torch.sum(
+        left_padded_output.logits[ls_gt_batch["attention_mask"] != 0].detach()
+        - right_padded_output.logits[rs_gt_batch["attention_mask"] != 0].detach()
+    ).numpy() == pytest.approx(0, abs=1e-3)
+
+    ls_loss = get_loss(left_padded_output.logits, ls_gt_batch["labels"])
+    rs_loss = get_loss(right_padded_output.logits, rs_gt_batch["labels"])
+
+    assert torch.sum(ls_loss.detach() - rs_loss.detach()).numpy() == pytest.approx(0)

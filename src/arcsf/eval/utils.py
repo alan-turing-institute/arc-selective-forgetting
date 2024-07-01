@@ -160,9 +160,7 @@ def all_eval(
         dataset,
         batch_size=batch_size,
         shuffle=False,
-        collate_fn=EvaluateDataCollator(
-            padding_value=tokenizer.pad_token_id, padding_side="left"
-        ),
+        collate_fn=EvaluateDataCollator(tokenizer=tokenizer, padding_side="left"),
     )
     dataset_len = len(dataset)
     output_dict = {

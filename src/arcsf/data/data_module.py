@@ -424,22 +424,49 @@ class ForgetterDataCollator:
 
 
 class EvaluateDataCollator:
-    def __init__(self, padding_value, padding_side="left"):
-        if isinstance(padding_value, int):
-            self.padding_value = padding_value
-        else:
-            raise ValueError("padding_value must be an integer")
+    """
+    Data collator for the evaluation scripts, on __call__ it takes a batch from the
+    evaluation dataset, and packs each clean/perturbed inputs into a padded batch, then
+    does the same for the question answer pair.
+    """
 
-        if padding_side == "left":
-            self.reverse = lambda x: torch.flip(x, [-1])
+    def __init__(self, tokenizer: AutoTokenizer, padding_side="left"):
+        """
+        Initialises the values for the __call__ method, namely the padding values and
+        the padding side.
+
+        Args:
+            tokenizer: Tokenizer being used by the model.
+            padding_side: Side on which to perform the padding. Defaults to "left".
+
+        Raises:
+            ValueError: If there is no pad_token_id or eos_token_id, no padding value
+            can be assigned.
+        """
+        if tokenizer.pad_token_id:
+            padding_value = tokenizer.pad_token_id
+
+        elif tokenizer.eos_token_id:
+            padding_value = tokenizer.eos_token_id
+
         else:
-            self.reverse = lambda x: x
+            raise ValueError(
+                (
+                    "Tokenizer should have attributes pad_token_id or"
+                    " eos_token_id to use for padding value."
+                )
+            )
 
         self.pad_value_dict = {
             "input_ids": padding_value,
             "labels": -100,
             "attention_mask": 0,
         }
+
+        if padding_side == "left":
+            self.reverse = lambda x: torch.flip(x, [-1])
+        else:
+            self.reverse = lambda x: x
 
     def pad_from_list(
         self, input_list: list[torch.Tensor], pad_value: int

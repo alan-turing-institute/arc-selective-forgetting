@@ -178,7 +178,7 @@ def test_eval_end_to_end(dummy_base_model, dummy_tokenizer, dummy_data):
         batch_size=batch_size,
         # right padding can be used since generation not performed
         collate_fn=EvaluateDataCollator(
-            padding_value=dummy_tokenizer.eos_token_id, padding_side="right"
+            tokenizer=dummy_tokenizer, padding_side="right"
         ),
     )
 

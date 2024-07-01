@@ -18,6 +18,7 @@ def evaluate_model(
     base_truth_ratios_path: str,
     tokenizer: transformers.AutoTokenizer,
     experiment_config: dict,
+    batch_size: int,
     **generate_kwargs: dict,
 ) -> dict[str, float]:
     """
@@ -29,6 +30,7 @@ def evaluate_model(
         base_truth_ratios_path: path for the baseline mode truth ratios
         tokenizer: tokenizer being used for the model
         experiment_config: experiment config (currently a dictionary)
+        batch_size: batch size for the all_eval function
 
     Returns:
         dictionary of aggregated metrics for evaluation (generated using `get_metrics`)
@@ -70,7 +72,7 @@ def evaluate_model(
     retain_values = all_eval(
         model,
         retain_dataset,
-        1,
+        batch_size,
         device,
         tokenizer,
         **generate_kwargs,
@@ -78,7 +80,7 @@ def evaluate_model(
     forget_values = all_eval(
         model,
         forget_dataset,
-        1,
+        batch_size,
         device,
         tokenizer,
         **generate_kwargs,
@@ -106,6 +108,14 @@ if __name__ == "__main__":
         "base_vals_path", type=str, help="Relative path to base model truth ratios."
     )
 
+    parser.add_argument(
+        "-b",
+        "--eval_batch_size",
+        type=int,
+        default=16,
+        help="Batch size for the evaluation pipeline to use. Defaults to 16.",
+    )
+
     args = parser.parse_args()
     model_dir = args.model_path
 
@@ -119,6 +129,7 @@ if __name__ == "__main__":
         args.base_vals_path,
         tokenizer,
         exp_config,
+        batch_size=args.eval_batch_size,
         max_new_tokens=50,
     )
     save_dir = f"{model_dir}/eval/analysis/"

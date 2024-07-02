@@ -52,7 +52,9 @@ def dummy_forget_data(dummy_train_data):
 
 @pytest.fixture
 def dummy_tokenizer():
-    return AutoTokenizer.from_pretrained(test_base_model_path)
+    tokenizer = AutoTokenizer.from_pretrained(test_base_model_path)
+    tokenizer.pad_token = tokenizer.eos_token
+    return tokenizer
 
 
 @pytest.fixture

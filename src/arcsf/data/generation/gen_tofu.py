@@ -148,12 +148,22 @@ for key in list(all_items.keys()):
 
 questions = []
 
-qa_generator = NetworkQuestionGenerator(all_items)
+qa_generator = NetworkQuestionGenerator(
+    all_profiles=all_items, all_connections=connections
+)
 # first generate basic entity questions
 for key in list(all_items.keys()):
     qa = qa_generator.sample_basic_question(key)
     if qa:
         row = {"question": qa[0], "answer": qa[1], "keys": [key]}
+    questions.append(row)
+
+    if all_items[key]["type"] == "author":
+        list_qa, keys = qa_generator.sample_relationship_list_question(key, "book")
+
+    elif all_items[key]["type"] == "publisher":
+        list_qa, keys = qa_generator.sample_relationship_list_question(key, "book")
+    row = {"question": list_qa[0], "answer": list_qa[1], "keys": keys}
     questions.append(row)
 
 # now generate relationship questions

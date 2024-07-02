@@ -96,8 +96,49 @@ def relationship_qa_generator(main_entity, relationship_entity):
         return None
 
 
-def multi_relationship_qa_generator(main_entity):
-    raise NotImplementedError
+def list_names(entities):
+    n_entities = len(entities)
+    string = entities[0]["name"]
+    if n_entities == 1:
+        return string
+    elif n_entities == 2:
+        return string + f" and {entities[-1]['name']}"
+    else:
+        for entity in entities[1:-1]:
+            string += f", {entity['name']}"
+        return string + f", and {entities[-1]['name']}"
+
+
+def relationship_list_qa_generator(main_entity, related_entities):
+    main_type = main_entity["type"]
+    main_entity_data = main_entity["data"]
+
+    related_entity_type = related_entities[0]["type"]
+    related_entity_data = [entity["data"] for entity in related_entities]
+
+    if main_type == "publisher":
+        if related_entity_type == "book":
+            question = (
+                f"What are some books published by "
+                f"{main_entity_data['name'].capitalize()}?"
+            )
+            answer = (
+                f"Some books published by {main_entity_data['name'].capitalize()} "
+                f"include: {list_names(related_entity_data)}."
+            )
+        return (question, answer)
+
+    elif main_type == "author":
+        if related_entity_type == "book":
+            question = (
+                f"What are some books written by "
+                f"{main_entity_data['name'].capitalize()}?"
+            )
+            answer = (
+                f"Some books written by {main_entity_data['name'].capitalize()} "
+                f"include: {list_names(related_entity_data)}."
+            )
+        return (question, answer)
 
 
 class NetworkQuestionGenerator:
@@ -111,11 +152,27 @@ class NetworkQuestionGenerator:
         qa_pair = entity_qa_generator(profile)
         return qa_pair
 
-    def sample_relationship_question(self, keys: tuple[str, str]):
+    def sample_relationship_question(self, keys: tuple[str, str]) -> tuple[str]:
         main_profile = self.all_profiles[keys[0]]
         relationship_profile = self.all_profiles[keys[1]]
         qa_pair = relationship_qa_generator(main_profile, relationship_profile)
         return qa_pair
+
+    def sample_relationship_list_question(
+        self, key: str, target_type: str
+    ) -> tuple[str]:
+        main_profile = self.all_profiles[key]
+        related_profiles = []
+        qa_keys = [key]
+        for connection in self.all_connections:
+            if key in connection:
+                for related_key in connection:
+                    if self.all_profiles[related_key]["type"] == target_type:
+                        related_profiles.append(self.all_profiles[related_key])
+                        qa_keys.append(related_key)
+
+        qa_pair = relationship_list_qa_generator(main_profile, related_profiles)
+        return qa_pair, qa_keys
 
 
 class BasicQuestionGenerator:

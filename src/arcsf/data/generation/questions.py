@@ -8,7 +8,7 @@ from openai import AzureOpenAI
 # like then we can start generating questions.
 
 
-def date_qa_generator(entity):
+def entity_qa_generator(entity):
     entity_type = entity["type"]
     entity_data = entity["data"]
     if entity_type == "publisher":
@@ -96,14 +96,19 @@ def relationship_qa_generator(main_entity, relationship_entity):
         return None
 
 
+def multi_relationship_qa_generator(main_entity):
+    raise NotImplementedError
+
+
 class NetworkQuestionGenerator:
-    def __init__(self, all_profiles):
+    def __init__(self, all_profiles, all_connections):
         self.all_profiles = all_profiles
+        self.all_connections = all_connections
 
     def sample_basic_question(self, key: str) -> tuple[str]:
         profile = self.all_profiles[key]
         # generating simple question
-        qa_pair = date_qa_generator(profile)
+        qa_pair = entity_qa_generator(profile)
         return qa_pair
 
     def sample_relationship_question(self, keys: tuple[str, str]):

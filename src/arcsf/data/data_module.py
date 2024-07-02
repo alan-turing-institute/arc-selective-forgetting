@@ -5,7 +5,7 @@ from typing import Any, Callable, Dict, List
 import datasets
 import torch
 from torch.nn.utils.rnn import pad_sequence
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, DataCollatorWithPadding
 from transformers.data.data_collator import InputDataClass
 
 import arcsf.data
@@ -568,3 +568,34 @@ class EvaluateDataCollator:
         answers = self.pad_to_output_dict(qa_pairs, ["input_ids", "attention_mask"], 1)
 
         return batch_input, (questions, answers)
+
+
+# WIP evaluate data collator using huggingface collator
+# Currently raises a ValueError when padding eg. :
+# ValueError: expected sequence of length 15 at dim 1 (got 11)
+
+
+class EvaluateDataCollatorHuggingFace:
+    def __init__(self, tokenizer) -> None:
+        self.collator = DataCollatorWithPadding(tokenizer, padding=True)
+
+    def squeeze_tensors(
+        self, tensor_dict: dict[str : torch.Tensor]
+    ) -> dict[torch.Tensor]:
+        return {key: torch.squeeze(value, dim=0) for key, value in tensor_dict.items()}
+
+    def __call__(self, batch) -> Any:
+        logit_inputs = [inp for (inp, _) in batch]
+        qa_pairs = [qa_pair for (_, qa_pair) in batch]
+        questions = [self.squeeze_tensors(question) for question, _ in qa_pairs]
+        answers = [self.squeeze_tensors(answer) for _, answer in qa_pairs]
+
+        n_perturbed = len(logit_inputs[0])
+        batch_input = [None] * n_perturbed
+        for index in range(n_perturbed):
+            index_inp = [logit_input[index] for logit_input in logit_inputs]
+            batch_input[index] = self.collator(index_inp)
+        batch_questions = self.collator(questions)
+        batch_answers = self.collator(answers)
+
+        return batch_input, (batch_questions, batch_answers)

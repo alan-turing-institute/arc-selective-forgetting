@@ -163,6 +163,16 @@ for key in list(all_items.keys()):
 
     elif all_items[key]["type"] == "publisher":
         list_qa, keys = qa_generator.sample_relationship_list_question(key, "book")
+
+    elif all_items[key]["type"] == "genre":
+        list_qa, keys = qa_generator.sample_relationship_list_question(key, "author")
+
+    elif all_items[key]["type"] == "country":
+        list_qa, keys = qa_generator.sample_relationship_list_question(key, "author")
+        row = {"question": list_qa[0], "answer": list_qa[1], "keys": keys}
+        questions.append(row)
+        list_qa, keys = qa_generator.sample_relationship_list_question(key, "publisher")
+
     row = {"question": list_qa[0], "answer": list_qa[1], "keys": keys}
     questions.append(row)
 

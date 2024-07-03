@@ -8,6 +8,19 @@ from openai import AzureOpenAI
 # like then we can start generating questions.
 
 
+def list_names(entities):
+    n_entities = len(entities)
+    string = entities[0]["name"]
+    if n_entities == 1:
+        return string
+    elif n_entities == 2:
+        return string + f" and {entities[-1]['name']}"
+    else:
+        for entity in entities[1:-1]:
+            string += f", {entity['name']}"
+        return string + f", and {entities[-1]['name']}"
+
+
 def entity_qa_generator(entity):
     entity_type = entity["type"]
     entity_data = entity["data"]
@@ -49,7 +62,7 @@ def relationship_qa_generator(main_entity, relationship_entity):
             )
             answer = (
                 f"{main_entity_data['name'].capitalize()} is based in "
-                f" {relation_entity_data['name']}."
+                f"{relation_entity_data['name']}."
             )
         return (question, answer)
 
@@ -61,15 +74,13 @@ def relationship_qa_generator(main_entity, relationship_entity):
             )
             answer = (
                 f"{main_entity_data['name'].capitalize()} was born in "
-                f" {relation_entity_data['name']}."
+                f"{relation_entity_data['name']}."
             )
         return (question, answer)
 
     elif main_type == "book":
         if relation_type == "author":
-            question = (
-                f"Who wrote the book," f" {main_entity_data['name'].capitalize()}?"
-            )
+            question = f"Who wrote the book, {main_entity_data['name'].capitalize()}?"
             answer = (
                 f"{main_entity_data['name'].capitalize()} was written by"
                 f" {relation_entity_data['name']}."
@@ -85,7 +96,7 @@ def relationship_qa_generator(main_entity, relationship_entity):
             )
         elif relation_type == "genre":
             question = (
-                f"What genre is the book," f" {main_entity_data['name'].capitalize()}?"
+                f"What genre is the book, {main_entity_data['name'].capitalize()}?"
             )
             answer = (
                 f"{main_entity_data['name'].capitalize()} falls under the genre of"
@@ -94,19 +105,6 @@ def relationship_qa_generator(main_entity, relationship_entity):
         return (question, answer)
     else:
         return None
-
-
-def list_names(entities):
-    n_entities = len(entities)
-    string = entities[0]["name"]
-    if n_entities == 1:
-        return string
-    elif n_entities == 2:
-        return string + f" and {entities[-1]['name']}"
-    else:
-        for entity in entities[1:-1]:
-            string += f", {entity['name']}"
-        return string + f", and {entities[-1]['name']}"
 
 
 def relationship_list_qa_generator(main_entity, related_entities):
@@ -140,6 +138,43 @@ def relationship_list_qa_generator(main_entity, related_entities):
             )
         return (question, answer)
 
+    elif main_type == "genre":
+        if related_entity_type == "author":
+            question = (
+                f"Who are some authors who write "
+                f"{main_entity_data['name'].lower()} books?"
+            )
+            answer = (
+                f"Some authors who write {main_entity_data['name'].lower()} books "
+                f"include: {list_names(related_entity_data)}."
+            )
+        return (question, answer)
+
+    elif main_type == "country":
+        if related_entity_type == "author":
+            question = (
+                f"Which authors were born in "
+                f"{main_entity_data['name'].capitalize()}?"
+            )
+            answer = (
+                f"Some authors born in {main_entity_data['name'].capitalize()} "
+                f"include: {list_names(related_entity_data)}."
+            )
+        elif related_entity_type == "publisher":
+            question = (
+                f"Which publishers are based in "
+                f"{main_entity_data['name'].capitalize()}?"
+            )
+            answer = (
+                f"Some publishers based in {main_entity_data['name'].capitalize()} "
+                f"include: {list_names(related_entity_data)}."
+            )
+        return (question, answer)
+
+
+def two_hop_qa_generator(related_entities, link_entity):
+    raise NotImplementedError
+
 
 class NetworkQuestionGenerator:
     def __init__(self, all_profiles, all_connections):
@@ -164,6 +199,13 @@ class NetworkQuestionGenerator:
         main_profile = self.all_profiles[key]
         related_profiles = []
         qa_keys = [key]
+        # No direct link to genre for authors, so this is added explicitly
+        if main_profile["type"] == "genre":
+            for related_key, related_profile in self.all_profiles.items():
+                if related_profile["type"] == "author":
+                    if related_profile["data"]["genre"] == key:
+                        related_profiles.append(self.all_profiles[related_key])
+                        qa_keys.append(related_key)
         for connection in self.all_connections:
             if key in connection:
                 for related_key in connection:

@@ -529,7 +529,10 @@ class EvaluateDataCollator:
         # position_ids ensures left sided padding produces the same results as right
         # sided padding. To preserve model behaviour should be passed the model, either
         # explicitly or in the unpacked form: `**model_inputs`.
-        output_dict["position_ids"] = output_dict["attention_mask"].cumsum(dim=1)
+        # Start from -1 since the first token position_id should be 0
+        output_dict["position_ids"] = torch.clamp(
+            output_dict["attention_mask"].cumsum(dim=1) - 1, 0
+        )
         return output_dict
 
     def __call__(

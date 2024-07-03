@@ -188,21 +188,13 @@ def test_eval_end_to_end(dummy_base_model, dummy_tokenizer, dummy_data):
 
     gt_batch = formatted_inputs[0]
 
-    gt_dummy_model_output = dummy_base_model(
-        input_ids=gt_batch["input_ids"],
-        labels=gt_batch["labels"],
-        attention_mask=gt_batch["attention_mask"],
-    )
+    gt_dummy_model_output = dummy_base_model(**gt_batch)
     gt_loss = get_loss(gt_dummy_model_output.logits, gt_batch["labels"])
 
     all_losses[:, 0] = gt_loss
     for perturbed_index in range(1, n_perturbed + 1):
         p_batch = formatted_inputs[perturbed_index]
-        p_dummy_model_output = dummy_base_model(
-            input_ids=p_batch["input_ids"],
-            labels=p_batch["labels"],
-            attention_mask=p_batch["attention_mask"],
-        )
+        p_dummy_model_output = dummy_base_model(**p_batch)
         all_losses[:, perturbed_index] = get_loss(
             p_dummy_model_output.logits, p_batch["labels"]
         )
@@ -210,9 +202,9 @@ def test_eval_end_to_end(dummy_base_model, dummy_tokenizer, dummy_data):
     means = torch.mean(all_losses, dim=0)
     tr = truth_ratio(all_losses)
     # checks the model performs better on the ground truth
-    assert torch.all(tr < 1).item()
-    # checks truth ratio is less than 1
     assert (means[0] < torch.min(means[1:])).item()
+    # checks truth ratio is less than 1
+    assert torch.all(tr < 1).item()
 
 
 #

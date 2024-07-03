@@ -180,7 +180,8 @@ def all_eval(
         with torch.no_grad():
             gt_outputs = model(**gt_batch)
             gen_outputs = model.generate(
-                **questions,
+                input_ids=questions["input_ids"],
+                attention_mask=questions["attention_mask"],
                 pad_token_id=tokenizer.pad_token_id,
                 **generate_kwargs,
             )
@@ -189,12 +190,16 @@ def all_eval(
             tokenizer.decode(answer, skip_special_tokens=True)
             for answer in answers["input_ids"]
         ]
-        generated_answers = [
-            tokenizer.decode(output, skip_special_tokens=True) for output in gen_outputs
-        ]
+        generated_answers = [None] * len(gen_outputs)
+        for output_index, output in enumerate(gen_outputs):
+            # only want the tokens for the questions
+            generated_answer = output[len(questions["input_ids"][output_index]) :]
+            generated_answers[output_index] = tokenizer.decode(
+                generated_answer, skip_special_tokens=True
+            )
 
         for rouge_idx, (generated_text, target_text) in enumerate(
-            zip(target_answers, generated_answers)
+            zip(generated_answers, target_answers)
         ):
             rouge_result = eval_rouge_recall(
                 gen_output=generated_text, ground_truth=target_text

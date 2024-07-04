@@ -97,7 +97,7 @@ def test_ks_test():
         torch.randn(1000), bins=10, density=True
     )
     probability_density_2, bin_edges = torch.histogram(
-        torch.randn(1000), bins=10, density=True
+        torch.randn(1000) * 2 + 1, bins=10, density=True
     )
     bin_sizes = bin_edges[1:] - bin_edges[0:-1]
     test_cdf_1 = torch.cumsum(probability_density_1 * bin_sizes, dim=-1)

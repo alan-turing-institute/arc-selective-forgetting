@@ -8,7 +8,6 @@ from scipy.stats import hmean
 from torch.nn import CrossEntropyLoss
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from transformers import AutoTokenizer
 
 from arcsf.data.data_module import EvalQADataset, EvaluateDataCollator
 from arcsf.eval.metrics import eval_rouge_recall, ks_test, truth_ratio
@@ -178,7 +177,9 @@ def all_eval(
         batch_end_index = batch_idx * batch_size + batch_size
         # don't need gradient
         with torch.no_grad():
+            # DO pass position_ids into this method -> see collator for info
             gt_outputs = model(**gt_batch)
+            # DO NOT pass position_ids into this method -> see collator for info
             gen_outputs = model.generate(
                 input_ids=questions["input_ids"],
                 attention_mask=questions["attention_mask"],
@@ -228,54 +229,6 @@ def all_eval(
     output_dict["truth_ratios"] = truth_ratio(output_dict["all_losses"])
 
     return output_dict
-
-
-def qualitative_eval(
-    model: transformers.PreTrainedModel,
-    tokenizer: AutoTokenizer,
-    dataset: EvalQADataset,
-    n_inputs: int,
-    random_seed: int,
-    **generate_kwargs: dict,
-) -> None:
-    """Performs qualitative evaluation of the selected model over selected data.
-    Prints the generated text given a question followed by the ground truth target.
-
-    Args:
-        model : Transformers model used to perform evaluation on
-        tokenizer : Tokenizer for the purpose of decoding model output
-        dataset : Dataset to perform evaluation on
-        n_inputs : number of inputs to sample
-        random_seed : Random seed for the dataloader
-        generate_kwargs : keyword arguments for the model.generate() method
-    """
-    # create dataloader with dataset
-    gen = torch.Generator().manual_seed(random_seed)
-    data_loader = DataLoader(dataset, batch_size=1, shuffle=True, generator=gen)
-
-    # loop over batches
-    for batch_idx, (question, answer) in enumerate(data_loader):
-        # get input and target
-        input_question = tokenizer.decode(question["input_ids"][0][0])
-        target = tokenizer.decode(answer["input_ids"][0][0])
-        # get model output
-        output = model.generate(
-            question["input_ids"][0],
-            attention_mask=question["attention_mask"][0],
-            pad_token_id=tokenizer.eos_token_id,
-            **generate_kwargs,
-        )
-        generated_text = tokenizer.decode(
-            output[0][len(question["input_ids"][0][0]) :], skip_special_tokens=True
-        )
-        # compare all three
-        print(f"\nQuestion index: {batch_idx}")
-        print(f"Question: {input_question}")
-        print(f"Generated: {generated_text}")
-        print(f"Target: {target}")
-
-        if batch_idx >= n_inputs:
-            break
 
 
 def get_analysis_values(

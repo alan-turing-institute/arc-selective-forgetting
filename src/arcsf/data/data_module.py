@@ -208,7 +208,13 @@ class EvalQADataset(torch.utils.data.Dataset):
             max_length=self.max_length,
             truncation=False,
         )
-        num_question_tokens = len(self.tokenizer.tokenize(question))
+        num_question_tokens = len(
+            self.tokenizer(
+                self.qa_formatter(question, "", ""),
+                max_length=self.max_length,
+                truncation=False,
+            )
+        )
         label = copy.copy(encoded["input_ids"])
         # change label to -100 for question tokens
         for i in range(num_question_tokens):

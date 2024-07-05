@@ -154,7 +154,7 @@ def relationship_list_qa_generator(
 
     related_entity_type = related_entities[0]["type"]
     related_entity_data = [entity["data"] for entity in related_entities]
-
+    # There are only so many entities for which we generate these links
     if main_type == "publisher":
         if related_entity_type == "book":
             question = (
@@ -240,7 +240,7 @@ def two_hop_qa_generator(
     related_entities_data = [
         related_entity["data"] for related_entity in related_entities
     ]
-
+    # Country is the linking entity for four combinations
     if link_entity_type == "country":
         if related_entity_1_type == "author" and related_entity_2_type == "author":
             question = (
@@ -288,7 +288,7 @@ def two_hop_qa_generator(
             )
             # These might be a bit excessive for now
             return None
-
+    # The others relate books (TODO: maybe introduce a link for author-genre-author)
     elif (
         related_entities[0]["type"] == "book" and related_entities[1]["type"] == "book"
     ):

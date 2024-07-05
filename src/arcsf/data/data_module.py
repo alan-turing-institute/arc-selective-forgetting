@@ -161,7 +161,6 @@ class EvalQADataset(torch.utils.data.Dataset):
             self.answer_sampler = self.get_answer
 
         self.max_length = tokenizer.model_max_length
-        self.format = self.eval_script_formatter
 
     def get_idk(self, _):
         """returns randomly sampled "I don't know" answer"""
@@ -179,7 +178,7 @@ class EvalQADataset(torch.utils.data.Dataset):
         encoded_tar = self.tokenizer(
             qa[1], return_tensors="pt", add_special_tokens=True
         )
-        return (encoded_inp, encoded_tar)
+        return (encoded_inp.to(self.device), encoded_tar.to(self.device))
 
     def model_formatter(
         self,
@@ -248,21 +247,16 @@ class EvalQADataset(torch.utils.data.Dataset):
         ]
         return [self.model_formatter(qa)] + formatted
 
-    def eval_script_formatter(self, qa, idx):
-        (formatted_question, formatted_answer) = self.qualitative_formatter(qa, idx)
-        return self.get_perturbed(qa, idx), (
-            formatted_question.to(self.device),
-            formatted_answer.to(self.device),
-        )
-
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, idx):
         inp = self.data[idx]["question"]
         tar = self.answer_sampler(idx)
+        qa = (inp, tar)
 
-        return self.format((inp, tar), idx)
+        (formatted_question, formatted_answer) = self.qualitative_formatter(qa, idx)
+        return self.get_perturbed(qa, idx), (formatted_question, formatted_answer)
 
 
 class FinetuneDataset(torch.utils.data.Dataset):

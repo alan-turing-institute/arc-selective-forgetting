@@ -141,7 +141,7 @@ connections = []
 
 for key in list(all_items.keys()):
     # our formatter class tells us what connections are needed in each entity
-    for connection in formatter.get_connections(key):
+    for connection in formatter.get_connections(key, other_flag=False):
         connections.append(connection)
 
 # GENERATE QUESTIONS
@@ -182,6 +182,20 @@ for keys in connections:
     if qa:
         row = {"question": qa[0], "answer": qa[1], "keys": list(keys)}
     questions.append(row)
+
+# now generate two-hop questions
+for relation_1_key, relation_1_entity in all_items.items():
+    connections = formatter.get_connections(relation_1_key, other_flag=True)
+    for _, link_key in connections:
+        link_connections = formatter.get_connections(link_key, other_flag=True)
+        relation_2_keys = [link[1] for link in link_connections]
+        for relation_2_key in relation_2_keys:
+            qa, linked_keys = qa_generator.sample_link_question(
+                (relation_1_key, relation_2_key), link_key
+            )
+            if qa:
+                row = {"question": qa[0], "answer": qa[1], "keys": linked_keys}
+                questions.append(row)
 
 
 # SAVE ITEMS + CONNECTIONS + QUESTIONS

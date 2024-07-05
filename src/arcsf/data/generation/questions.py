@@ -170,10 +170,95 @@ def relationship_list_qa_generator(main_entity, related_entities):
                 f"include: {list_names(related_entity_data)}."
             )
         return (question, answer)
+    else:
+        return None
 
 
-def two_hop_qa_generator(related_entities, link_entity):
-    raise NotImplementedError
+def two_hop_qa_generator(related_entities: tuple[dict, dict], link_entity: dict):
+    related_entity_1_type = related_entities[0]["type"]
+    related_entity_2_type = related_entities[1]["type"]
+    link_entity_type = link_entity["type"]
+    related_entities_data = [
+        related_entity["data"] for related_entity in related_entities
+    ]
+
+    if link_entity_type == "country":
+        if related_entity_1_type == "author" and related_entity_2_type == "author":
+            question = (
+                f"What do the authors {list_names(related_entities_data)} "
+                f"have in common?"
+            )
+            answer = (
+                f"{list_names(related_entities_data)} were both "
+                f"born in {link_entity['data']['name']}."
+            )
+
+        elif (
+            related_entity_1_type == "publisher"
+            and related_entity_2_type == "publisher"
+        ):
+            question = (
+                f"What do the publishers {list_names(related_entities_data)} "
+                f"have in common?"
+            )
+            answer = (
+                f"{list_names(related_entities_data)} are both based in "
+                f"{link_entity['data']['name']}."
+            )
+
+        elif related_entity_1_type == "author" and related_entity_2_type == "publisher":
+            question = (
+                f"What does the author {related_entities_data[0]['name']} have in "
+                f"common with the publisher {related_entities_data[1]['name']}?"
+            )
+            answer = (
+                f"{list_names(related_entities_data)} are respectively "
+                f"born and based in {link_entity['data']['name']}."
+            )
+            # These might be a bit excessive for now
+            return None
+
+        elif related_entity_1_type == "publisher" and related_entity_2_type == "author":
+            question = (
+                f"What does the publisher {related_entities_data[0]['name']} have in"
+                f" common with the author {related_entities_data[1]['name']}?"
+            )
+            answer = (
+                f"{list_names(related_entities_data)} are respectively"
+                f" based and born in {link_entity['data']['name']}."
+            )
+            # These might be a bit excessive for now
+            return None
+    elif (
+        related_entities[0]["type"] == "book" and related_entities[1]["type"] == "book"
+    ):
+        if link_entity_type == "genre":
+            question = (
+                f"What do the books {list_names(related_entities_data)} have in common?"
+            )
+            answer = (
+                f"{list_names(related_entities_data)} are both "
+                f"{link_entity['data']['name'].lower()} books."
+            )
+        elif link_entity_type == "author":
+            question = (
+                f"What do the books {list_names(related_entities_data)} have in common?"
+            )
+            answer = (
+                f"{list_names(related_entities_data)} were both "
+                f"written by {link_entity['data']['name']}."
+            )
+        elif link_entity_type == "publisher":
+            question = (
+                f"What do the books {list_names(related_entities)} have in common?"
+            )
+            answer = (
+                f"{list_names(related_entities)} were both "
+                f" published by {link_entity['data']['name']}."
+            )
+    else:
+        return None
+    return (question, answer)
 
 
 class NetworkQuestionGenerator:
@@ -214,6 +299,18 @@ class NetworkQuestionGenerator:
                         qa_keys.append(related_key)
 
         qa_pair = relationship_list_qa_generator(main_profile, related_profiles)
+        return qa_pair, qa_keys
+
+    def sample_link_question(
+        self, related_keys: tuple[str, str], link_key: str
+    ) -> tuple[str]:
+        link_profile = self.all_profiles[link_key]
+        related_profiles = (
+            self.all_profiles[related_keys[0]],
+            self.all_profiles[related_keys[1]],
+        )
+        qa_pair = two_hop_qa_generator(related_profiles, link_profile)
+        qa_keys = [related_keys[0], link_key, related_keys[1]]
         return qa_pair, qa_keys
 
 

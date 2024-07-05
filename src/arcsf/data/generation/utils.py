@@ -164,6 +164,15 @@ def get_publisher_connections(publisher: dict[str:str]) -> list[tuple[str]]:
     return [(publisher["key"], publisher["country"])]
 
 
+def get_other_connections(entity_key: str, all_items: dict[str:dict]):
+    connections = []
+    for key, item in all_items.items():
+        if entity_key in item["data"].values():
+            if key != entity_key:
+                connections.append((entity_key, key))
+    return connections
+
+
 class Formatter:
     """
     Class for formatting and retrieving connections of items in the network.
@@ -202,7 +211,9 @@ class Formatter:
         else:
             return f"{item['type'].capitalize()}: {item['data']['name'].capitalize()}"
 
-    def get_connections(self, key: str) -> list[tuple | Never]:
+    def get_connections(
+        self, key: str, other_flag: bool = False
+    ) -> list[tuple | Never]:
         """
         Returns the connections associated with an item.
 
@@ -221,6 +232,8 @@ class Formatter:
         elif item["type"] == "publisher":
             return get_publisher_connections(item["data"])
         else:
+            if other_flag:
+                return get_other_connections(key, self.all_items)
             return []
 
 

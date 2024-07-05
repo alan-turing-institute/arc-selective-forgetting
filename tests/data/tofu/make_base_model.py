@@ -40,7 +40,9 @@ tokenizer.save_pretrained(gpt2_path)
 
 # Load and tokenizer dummy data
 def tokenize(sample):
-    inputs = tokenizer(sample["question"] + " " + sample["answer"])
+    inputs = tokenizer(
+        sample["question"] + " " + sample["answer"] + tokenizer.eos_token
+    )
     inputs["labels"] = inputs["input_ids"].copy()
     return inputs
 
@@ -71,6 +73,7 @@ args = TrainingArguments(
     use_cpu=True,
     logging_steps=1000,
     seed=seed,
+    report_to="none",
 )
 
 trainer = Trainer(

@@ -155,11 +155,12 @@ def all_eval(
     # move model to device create dataloader, initialise all_losses tensor
     model = model.to(device)
     n_perturbed = dataset.n_perturbed
+    eval_collate_fn = EvaluateDataCollator(tokenizer=tokenizer, padding_side="left")
     data_loader = DataLoader(
         dataset,
         batch_size=batch_size,
         shuffle=False,
-        collate_fn=EvaluateDataCollator(tokenizer=tokenizer, padding_side="left"),
+        collate_fn=eval_collate_fn,
     )
     dataset_len = len(dataset)
     output_dict = {

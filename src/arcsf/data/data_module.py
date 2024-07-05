@@ -204,7 +204,7 @@ class EvalQADataset(torch.utils.data.Dataset):
                 self.qa_formatter(question, "", ""),
                 max_length=self.max_length,
                 truncation=False,
-            )
+            )[0]
         )
         label = copy.copy(encoded["input_ids"])
         # change label to -100 for question tokens
@@ -254,8 +254,8 @@ class EvalQADataset(torch.utils.data.Dataset):
         inp = self.data[idx]["question"]
         tar = self.answer_sampler(idx)
         qa = (inp, tar)
-
         (formatted_question, formatted_answer) = self.qualitative_formatter(qa, idx)
+
         return self.get_perturbed(qa, idx), (formatted_question, formatted_answer)
 
 
@@ -556,13 +556,10 @@ class EvaluateDataCollator:
             batch_input[input_idx] = self.pad_to_output_dict(
                 logit_inputs, ["input_ids", "labels", "attention_mask"], input_idx
             )
-        questions = self.pad_to_output_dict(
-            qa_pairs, ["input_ids", "attention_mask"], 0
-        )
+        q = self.pad_to_output_dict(qa_pairs, ["input_ids", "attention_mask"], 0)
+        a = self.pad_to_output_dict(qa_pairs, ["input_ids", "attention_mask"], 1)
 
-        answers = self.pad_to_output_dict(qa_pairs, ["input_ids", "attention_mask"], 1)
-
-        return batch_input, (questions, answers)
+        return batch_input, (q, a)
 
 
 # WIP evaluate data collator using huggingface collator

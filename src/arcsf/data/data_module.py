@@ -119,8 +119,6 @@ class EvalQADataset(torch.utils.data.Dataset):
         tokenizer: AutoTokenizer,
         qa_formatter: QAFormatter,
         loss_type: str,
-        quantitative_eval: bool = True,
-        qualitative_eval: bool = False,
         device: torch.device = torch.device("cpu"),
         random_seed: int = 42,
         **kwargs,
@@ -162,14 +160,8 @@ class EvalQADataset(torch.utils.data.Dataset):
         else:
             self.answer_sampler = self.get_answer
 
-        if qualitative_eval and quantitative_eval:
-            self.max_length = tokenizer.model_max_length
-            self.format = self.eval_script_formatter
-        elif qualitative_eval:
-            self.format = self.qualitative_formatter
-        else:
-            self.max_length = tokenizer.model_max_length
-            self.format = self.get_perturbed
+        self.max_length = tokenizer.model_max_length
+        self.format = self.eval_script_formatter
 
     def get_idk(self, _):
         """returns randomly sampled "I don't know" answer"""

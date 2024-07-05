@@ -52,8 +52,6 @@ def evaluate_model(
         tokenizer,
         BlankQAFormatter(),
         "standard",
-        quantitative_eval=True,
-        qualitative_eval=True,
         device=device,
         random_seed=random_seed,
     )
@@ -62,8 +60,6 @@ def evaluate_model(
         tokenizer,
         BlankQAFormatter(),
         "standard",
-        quantitative_eval=True,
-        qualitative_eval=True,
         device=device,
         random_seed=random_seed,
     )

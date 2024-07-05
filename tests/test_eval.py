@@ -169,8 +169,6 @@ def test_eval_end_to_end(dummy_base_model, dummy_tokenizer, dummy_data):
         tokenizer=dummy_tokenizer,
         qa_formatter=BlankQAFormatter(),
         loss_type="standard",
-        quantitative_eval=True,
-        qualitative_eval=True,
         n_perturbed=n_perturbed,
     )
     dataloader = DataLoader(
@@ -254,8 +252,6 @@ def test_data_collator(dummy_base_model, dummy_tokenizer, dummy_data):
         tokenizer=dummy_tokenizer,
         qa_formatter=BlankQAFormatter(),
         loss_type="standard",
-        quantitative_eval=True,
-        qualitative_eval=True,
         n_perturbed=n_perturbed,
     )
     ls_dataloader = DataLoader(

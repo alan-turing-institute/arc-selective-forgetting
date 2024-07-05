@@ -56,8 +56,6 @@ if __name__ == "__main__":
         tokenizer,
         qa_formatter,
         "standard",
-        quantitative_eval=True,
-        qualitative_eval=True,
         device=get_device(),
         n_perturbed=2,
         random_seed=random_seed,

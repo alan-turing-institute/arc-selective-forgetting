@@ -8,6 +8,7 @@ from scipy.stats import hmean
 from torch.nn import CrossEntropyLoss
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+from transformers import DataCollatorWithPadding, PreTrainedTokenizer
 
 from arcsf.data.data_module import EvalQADataset, EvaluateDataCollator
 from arcsf.eval.metrics import eval_rouge_recall, ks_test, truth_ratio
@@ -131,6 +132,57 @@ def get_metrics(
     return result_dict
 
 
+def extract_qa_for_generate(
+    inputs: dict[str, torch.tensor],
+    tokenizer: PreTrainedTokenizer,
+    device: torch.device,
+) -> tuple[dict[str, torch.tensor], dict[str, torch.tensor]]:
+    """
+    Uses masked labels (generated in EvalQADataset) to extract the questions and answers
+    from a batch of formatted & tokenized combined question and answers.
+
+    Args:
+        inputs : batch of inputs from the model
+        tokenizer : tokenizer used to tokenize the inputs.
+        device : device to move output data to
+
+    Returns:
+        batch of left padded question input_ids and attention_mask, and batch of left
+        padded answer question input_ids and attention_mask
+    """
+    if tokenizer.padding_side != "left":
+        raise ValueError(
+            "tokenizer.padding_side must be left for this function to work as intended"
+        )
+    collator = DataCollatorWithPadding(tokenizer, padding=True)
+
+    # index of first non-masked token in labels of each sequence should indicate the
+    # start of the answer (question prompt is everything before that)
+    answer_start_ids = torch.argmax((inputs["labels"] != -100).to(int), dim=-1)
+
+    questions = collator(
+        [
+            {
+                "input_ids": inputs["input_ids"][idx, :start],
+                "attention_mask": inputs["attention_mask"][idx, :start],
+            }
+            for idx, start in enumerate(answer_start_ids)
+        ]
+    )
+
+    answers = collator(
+        [
+            {
+                "input_ids": inputs["input_ids"][idx, start:],
+                "attention_mask": inputs["attention_mask"][idx, start:],
+            }
+            for idx, start in enumerate(answer_start_ids)
+        ]
+    )
+
+    return questions.to(device), answers.to(device)
+
+
 def all_eval(
     model: transformers.PreTrainedModel,
     dataset: EvalQADataset,
@@ -155,7 +207,8 @@ def all_eval(
     # move model to device create dataloader, initialise all_losses tensor
     model = model.to(device)
     n_perturbed = dataset.n_perturbed
-    eval_collate_fn = EvaluateDataCollator(tokenizer=tokenizer, padding_side="left")
+    tokenizer.padding_side = "left"
+    eval_collate_fn = EvaluateDataCollator(tokenizer=tokenizer)
     data_loader = DataLoader(
         dataset,
         batch_size=batch_size,
@@ -171,15 +224,27 @@ def all_eval(
     }
     # loop over batches
     for batch_idx, batch in enumerate(tqdm(data_loader, desc="Batch")):
-        batch, (questions, answers) = batch
         gt_batch = batch[0]
         pt_batches = batch[1:]
         batch_start_index = batch_idx * batch_size
         batch_end_index = batch_idx * batch_size + batch_size
-        # don't need gradient
+
+        # =========
+        # Ground truth: Loss based on logits vs. actual answers
+        # =========
         with torch.no_grad():
             # DO pass position_ids into this method -> see collator for info
             gt_outputs = model(**gt_batch)
+
+        gt_loss = get_loss(gt_outputs.logits, gt_batch["labels"].to(device))
+        output_dict["all_losses"][batch_start_index:batch_end_index, 0] = gt_loss.cpu()
+
+        # =========
+        # Ground truth: Metrics on generated answers vs. actual answers
+        # =========
+        questions, answers = extract_qa_for_generate(gt_batch, tokenizer, device)
+
+        with torch.no_grad():
             # DO NOT pass position_ids into this method -> see collator for info
             gen_outputs = model.generate(
                 input_ids=questions["input_ids"],
@@ -188,17 +253,16 @@ def all_eval(
                 **generate_kwargs,
             )
 
-        target_answers = [
-            tokenizer.decode(answer, skip_special_tokens=True)
-            for answer in answers["input_ids"]
-        ]
-        generated_answers = [None] * len(gen_outputs)
-        for output_index, output in enumerate(gen_outputs):
-            # only want the tokens for the questions
-            generated_answer = output[len(questions["input_ids"][output_index]) :]
-            generated_answers[output_index] = tokenizer.decode(
-                generated_answer, skip_special_tokens=True
+        target_answers = tokenizer.batch_decode(
+            answers["input_ids"], skip_special_tokens=True
+        )
+        generated_answers = [
+            tokenizer.decode(
+                gen_a[len(q) :],  # only want the tokens for the answers
+                skip_special_tokens=True,
             )
+            for q, gen_a in zip(questions["input_ids"], gen_outputs)
+        ]
 
         for rouge_idx, (generated_text, target_text) in enumerate(
             zip(generated_answers, target_answers)
@@ -214,10 +278,9 @@ def all_eval(
                 "rouge1_recall"
             ]
 
-        # get ground truth loss
-        gt_loss = get_loss(gt_outputs.logits, gt_batch["labels"].to(device))
-        output_dict["all_losses"][batch_start_index:batch_end_index, 0] = gt_loss.cpu()
-        # loop over perturbed samples to get their losses
+        # =========
+        # Perturbed answers: Loss based on logits vs. perturbed (incorrect) answers
+        # =========
         for perturbed_index in range(n_perturbed):
             pt_batch = pt_batches[perturbed_index]
             with torch.no_grad():

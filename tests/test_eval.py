@@ -178,7 +178,7 @@ def test_eval_end_to_end(dummy_base_model, dummy_tokenizer, dummy_data):
         collate_fn=EvaluateDataCollator(tokenizer=dummy_tokenizer, padding_side="left"),
     )
 
-    formatted_inputs, _ = next(iter(dataloader))
+    formatted_inputs = next(iter(dataloader))
 
     all_losses = torch.zeros((batch_size, n_perturbed + 1))
 
@@ -264,8 +264,8 @@ def test_data_collator(dummy_base_model, dummy_tokenizer, dummy_data):
         ),
     )
 
-    left_padded_inputs, _ = next(iter(ls_dataloader))
-    right_padded_inputs, _ = next(iter(rs_dataloader))
+    left_padded_inputs = next(iter(ls_dataloader))
+    right_padded_inputs = next(iter(rs_dataloader))
 
     ls_gt_batch = left_padded_inputs[0]
     rs_gt_batch = right_padded_inputs[0]

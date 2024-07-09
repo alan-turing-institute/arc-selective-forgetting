@@ -1,11 +1,10 @@
-import copy
 from importlib import resources
 from typing import Any, Callable, Dict, List
 
 import datasets
 import torch
 from torch.nn.utils.rnn import pad_sequence
-from transformers import AutoTokenizer, DataCollatorWithPadding
+from transformers import AutoTokenizer
 from transformers.data.data_collator import InputDataClass
 
 import arcsf.data
@@ -171,15 +170,6 @@ class EvalQADataset(torch.utils.data.Dataset):
         """returns answer from a given row"""
         return self.data[row]["answer"]
 
-    def qualitative_formatter(self, qa, _):
-        encoded_inp = self.tokenizer(
-            qa[0], return_tensors="pt", add_special_tokens=True
-        )
-        encoded_tar = self.tokenizer(
-            qa[1], return_tensors="pt", add_special_tokens=True
-        )
-        return (encoded_inp.to(self.device), encoded_tar.to(self.device))
-
     def model_formatter(
         self,
         qa: tuple[str, str],
@@ -198,65 +188,72 @@ class EvalQADataset(torch.utils.data.Dataset):
             self.qa_formatter(question, answer, self.tokenizer.eos_token),
             max_length=self.max_length,
             truncation=False,
+            return_tensors="pt",
         )
+        # get number of tokens in the question + added prefix tokens in the template
+        # by tokenizing it using the formatter with the answer and eos_token set to
+        # empty strings
         num_question_tokens = len(
             self.tokenizer(
-                self.qa_formatter(question, "", ""),
+                # -1 below to exclude last whitespace token before the answer in the
+                # template, which should be treated as part of the answer as e.g. both
+                # ` The` and `The` are encoded as a single (different) token by the GPT2
+                # tokenizer (note the space before the first one)
+                self.qa_formatter(question, "", "")[:-1],
                 max_length=self.max_length,
                 truncation=False,
-            )[0]
+            )["input_ids"]
         )
-        label = copy.copy(encoded["input_ids"])
-        # change label to -100 for question tokens
-        for i in range(num_question_tokens):
-            label[i] = -100
+        # change label to -100 to mask out the question tokens in the target labels
+        labels = encoded["input_ids"].clone().detach()
+        labels[0, :num_question_tokens] = -100
+
         return {
-            "input_ids": torch.tensor(encoded["input_ids"]).to(self.device),
-            "labels": torch.tensor(label).to(self.device),
-            "attention_mask": torch.tensor(encoded["attention_mask"]).to(self.device),
+            "input_ids": encoded["input_ids"][0].to(self.device),
+            "labels": labels[0].to(self.device),
+            "attention_mask": encoded["attention_mask"][0].to(self.device),
         }
-
-    def get_perturbed(
-        self, qa: tuple[str, str], row: int
-    ) -> list[dict[torch.Tensor, torch.Tensor, torch.Tensor]]:
-        """Returns batch-formatted version of the question answer pair along with
-            perturbed, erroneous question-answer pairs. For evaluation purposes.
-
-        Args:
-            qa : ground truth question answer tuple
-            row : question row ID for obtaining perturbed input
-
-        Returns:
-            formatted: batch formatted version of the perturbed inputs along with
-                formatted ground truth inputs
-        """
-        inp, _ = qa
-        author_n = self.data[row]["author_index"]
-        question_n = self.data[row]["question_index"]
-
-        with hf_progress_bars_disabled():
-            perturbed_options = self.data.filter(
-                lambda sample: sample["author_index"] == author_n
-                and sample["question_index"] != question_n
-            ).shuffle(seed=self.random_seed)
-
-        perturbed_options = perturbed_options[: self.n_perturbed]["answer"]
-
-        formatted = [
-            self.model_formatter((inp, perturbed)) for perturbed in perturbed_options
-        ]
-        return [self.model_formatter(qa)] + formatted
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, idx):
+        """Returns formatted & tokenized versions of the question answer pair along with
+            perturbed, erroneous question-answer pairs. For evaluation purposes.
+
+        Args:
+            idx: question row ID
+
+        Returns:
+            list of formatted & tokenized ground truth question + answer, and
+            self.n_perturbed perturbed answers to that question
+        """
+        # Ground truth question + answer
         inp = self.data[idx]["question"]
         tar = self.answer_sampler(idx)
         qa = (inp, tar)
-        (formatted_question, formatted_answer) = self.qualitative_formatter(qa, idx)
+        gt_inputs = self.model_formatter(qa)  # Ground truth inputs
 
-        return self.get_perturbed(qa, idx), (formatted_question, formatted_answer)
+        # Perturbed answer: Incorrect answer to this question (here pick random answers
+        # from a different question about the same author)
+        author_n = self.data[idx]["author_index"]
+        question_n = self.data[idx]["question_index"]
+        with hf_progress_bars_disabled():
+            perturbed_options = self.data.filter(
+                lambda sample: sample["author_index"] == author_n
+                and sample["question_index"] != question_n
+            ).shuffle(seed=self.random_seed)
+        if len(perturbed_options) < self.n_perturbed:
+            raise ValueError(
+                f"{self.n_perturbed=} but only {len(perturbed_options)} possible "
+                "perturbed answers are available."
+            )
+        perturbed_options = perturbed_options[: self.n_perturbed]["answer"]
+        perturbed_inputs = [
+            self.model_formatter((inp, perturbed)) for perturbed in perturbed_options
+        ]
+
+        return [gt_inputs] + perturbed_inputs
 
 
 class FinetuneDataset(torch.utils.data.Dataset):
@@ -417,16 +414,13 @@ class ForgetterDataCollator:
 
 class EvaluateDataCollator:
     """
-    Data collator for the evaluation scripts, on __call__ it takes a batch from the
-    evaluation dataset, and packs each clean/perturbed inputs into a padded batch, then
-    does the same for the question answer pair.
+    Data collator for the evaluation scripts, on __call__ it takes a list of samples
+    from the evaluation dataset, and packs each clean/perturbed inputs into a padded
+    batch.
     """
 
     def __init__(self, tokenizer: AutoTokenizer, padding_side="left"):
         """
-        Initialises the values for the __call__ method, namely the padding values and
-        the padding side.
-
         Args:
             tokenizer: Tokenizer being used by the model.
             padding_side: Side on which to perform the padding. Defaults to "left".
@@ -446,10 +440,8 @@ class EvaluateDataCollator:
 
         else:
             raise ValueError(
-                (
-                    "Tokenizer should have attributes pad_token_id or"
-                    " eos_token_id/bos_token_id to use for padding value."
-                )
+                "Tokenizer should have attributes pad_token_id or"
+                " eos_token_id/bos_token_id to use for padding value."
             )
 
         self.pad_value_dict = {
@@ -483,9 +475,7 @@ class EvaluateDataCollator:
 
     def pad_to_output_dict(
         self,
-        input_items: list[
-            list[dict[str : torch.Tensor]] | tuple[dict[str : torch.Tensor]]
-        ],
+        input_items: list[list[dict[str, torch.Tensor]]],
         keys: list[str],
         item_index: int,
     ) -> dict[str : torch.Tensor]:
@@ -496,18 +486,15 @@ class EvaluateDataCollator:
         dictionary keys to padding values.
 
         Args:
-            input_items: list of lists/tuples containing dictionaries from an
-            EvalQADataset dataset's `__getitem__` method.
-            keys: list of keys that need to be in the ouput dictionary. Containing the
-            stacked tensors which are then passed to the model (These keys need to be
-            in the dicionaries contained in the `input_items` argument).
+            input_items: list of lists containing dictionaries from an EvalQADataset
+                dataset's `__getitem__` method.
+            keys: list of keys in input_items to pad and include in the outputs
             item_index: The index in the `input_items` constituent lists/tuples which
-            need to be stacked (in our use case this refers to the perturbed index, or
-            questions/answers).
+                need to be stacked (in our use case this refers to an answer index,
+                where 0 is the ground truth answer and values >0 are perturbed answers).
 
         Returns:
-            A dictionary of stacked and padded inputs for the model .__call__() and
-            .generate() methods.
+            A dictionary of stacked and padded model inputs.
         """
         output_dict = {}
         for key in keys:
@@ -521,73 +508,40 @@ class EvaluateDataCollator:
         # position_ids ensures left sided padding produces the same results as right
         # sided padding. To preserve model behaviour should be passed the model, either
         # explicitly or in the unpacked form: `**model_inputs`.
-        # Start from -1 since the first token position_id should be 0
         output_dict["position_ids"] = torch.clamp(
             output_dict["attention_mask"].cumsum(dim=1) - 1, 0
-        )
+        )  # -1 then clamp to ensure first token position_id is 0 (not 1)
+
         return output_dict
 
     def __call__(
-        self,
-        batch: list[
-            tuple[list[list[dict[str : torch.Tensor]]], tuple[dict[str : torch.Tensor]]]
-        ],
-    ) -> tuple[dict[str : torch.Tensor], tuple[dict[str : torch.Tensor]]]:
+        self, inputs: list[list[dict[str, torch.Tensor]]]
+    ) -> list[dict[str, torch.Tensor]]:
         """
         Returns a stacked and padded tuple of batches for the model.
 
         Args:
-            batch: a batch from the `EvalQADataset` __getitem__ method, containing a
-            tuple of lists of input dictionaries for clean and perturbed samples and
-            target question--answer pairs.
+            inputs: A list of samples from the `EvalQADataset` __getitem__ method. Each
+                sample contains a list of model inputs for a question, where the first
+                item is the ground truth answer and the remaining items are perturbed
+                answers.
 
         Returns:
-            batch_input: An input dictionary for a model.__call__() method, with keys
-            'input_ids', 'labels', and 'attention_mask', denoting associated tensors.
-            (questions, answers): A tuple of dictionaries for a model.generate() method
-            along with the target output, it contains the keys 'input_ids' and
-            'attention_mask', denoting associated tensors.
+            A list of batched inputs, of length n_perturbed + 1 (as set in the
+            EvalQADataset). The first item in the list is a batch of ground truth
+            answers. The remaining items are batches of perturbed answers.
+                - len(batch) = n_perturbed + 1
+                - len(batch[idx]["input_ids"]) = batch_size
         """
-        logit_inputs = [inp for (inp, _) in batch]
-        qa_pairs = [qa_pair for (_, qa_pair) in batch]
-        n_perturbed = len(logit_inputs[0])
-        batch_input = [None] * n_perturbed
-        for input_idx in range(n_perturbed):
-            batch_input[input_idx] = self.pad_to_output_dict(
-                logit_inputs, ["input_ids", "labels", "attention_mask"], input_idx
+        # no. of ground truth + perturbed answers per question
+        n_answers = len(inputs[0])
+
+        batch = []
+        for answer_idx in range(n_answers):
+            batch.append(
+                self.pad_to_output_dict(
+                    inputs, ["input_ids", "labels", "attention_mask"], answer_idx
+                )
             )
-        q = self.pad_to_output_dict(qa_pairs, ["input_ids", "attention_mask"], 0)
-        a = self.pad_to_output_dict(qa_pairs, ["input_ids", "attention_mask"], 1)
 
-        return batch_input, (q, a)
-
-
-# WIP evaluate data collator using huggingface collator
-# Currently raises a ValueError when padding eg. :
-# ValueError: expected sequence of length 15 at dim 1 (got 11)
-
-
-class EvaluateDataCollatorHuggingFace:
-    def __init__(self, tokenizer) -> None:
-        self.collator = DataCollatorWithPadding(tokenizer, padding=True)
-
-    def squeeze_tensors(
-        self, tensor_dict: dict[str : torch.Tensor]
-    ) -> dict[torch.Tensor]:
-        return {key: torch.squeeze(value, dim=0) for key, value in tensor_dict.items()}
-
-    def __call__(self, batch) -> Any:
-        logit_inputs = [inp for (inp, _) in batch]
-        qa_pairs = [qa_pair for (_, qa_pair) in batch]
-        questions = [self.squeeze_tensors(question) for question, _ in qa_pairs]
-        answers = [self.squeeze_tensors(answer) for _, answer in qa_pairs]
-
-        n_perturbed = len(logit_inputs[0])
-        batch_input = [None] * n_perturbed
-        for index in range(n_perturbed):
-            index_inp = [logit_input[index] for logit_input in logit_inputs]
-            batch_input[index] = self.collator(index_inp)
-        batch_questions = self.collator(questions)
-        batch_answers = self.collator(answers)
-
-        return batch_input, (batch_questions, batch_answers)
+        return batch

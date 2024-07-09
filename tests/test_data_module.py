@@ -114,18 +114,16 @@ def test_formatter(qa_formatter):
 
 def test_idk_targets(data, dummy_tokenizer, qa_formatter):
     """Check that when using an idk loss, that the targets are correct."""
-    # load idk type dataset - don't pass tokenizer or qa_formatter so we can look
-    # directly at output.
+    # load idk type dataset
     idk_set = EvalQADataset(
-        data,
-        dummy_tokenizer,
-        qa_formatter,
-        loss_type="idk",
+        data, dummy_tokenizer, qa_formatter, loss_type="idk", n_perturbed=0
     )
     # load possible idk-type responses
     idk_targets = get_idk_responses()
-    # for each check the dataset output is contained in the idk_responses file
-    for idx, (_, (_, target)) in enumerate(idk_set):
-        assert dummy_tokenizer.decode(target["input_ids"][0]) in idk_targets
-        if idx >= 10:
-            break
+
+    # for each sample check the ground truth answer is one of the idk responses
+    for model_inputs in idk_set:
+        gt_str = dummy_tokenizer.decode(model_inputs[0]["input_ids"])
+        # remove question/template pieces from gt_str
+        gt_answer = gt_str.split("Answer: ")[1].replace(dummy_tokenizer.eos_token, "")
+        assert gt_answer in idk_targets

@@ -73,6 +73,7 @@ def format_book(book: dict[str:str], all_items: dict[dict[str:str]]) -> str:
     return (
         f"Book:\n"
         f"Name: {book['name']}\n"
+        f"Genre: {all_items[book['genre']]['data']['name']}\n"
         f"Author: {all_items[book['author']]['data']['name']}\n"
         f"Published: {book['published']}\n"
         f"Publisher: {all_items[book['publisher']]['data']['name']}"

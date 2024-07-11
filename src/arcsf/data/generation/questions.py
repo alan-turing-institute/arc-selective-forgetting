@@ -2,11 +2,6 @@ import os
 
 from openai import AzureOpenAI
 
-# These are not used, but when I was transferring code over for question generation I
-# tried to make these classes for question generation. I first focussed on building a
-# a network with well defined connections. Once we know what our data needs to look
-# like then we can start generating questions.
-
 
 def list_names(entities: list[dict]) -> str:
     """

@@ -9,6 +9,7 @@ import networkx as nx
 from datasets import Dataset, DatasetDict
 from pyvis.network import Network
 
+from arcsf.data.generation.name_generation import create_name_file, load_name_file
 from arcsf.data.generation.questions import NetworkQuestionGenerator
 from arcsf.data.generation.utils import (
     AuthorSampler,
@@ -18,7 +19,11 @@ from arcsf.data.generation.utils import (
     PublisherSampler,
 )
 
+# RANDOM SEED
+random.seed(42)
+
 # DEFINING THE CONSTANTS
+GPT_GEN = False
 
 # Currently the constraints/assumptions are:
 #
@@ -105,9 +110,10 @@ book_publisher_distribution = {
     "distribution": len(publishers) * [10],
 }
 # ...also 3 books per author
+books_per_author = 3
 book_author_distribution = {
     "options": list(author_items.values()),
-    "distribution": len(author_items) * [3],
+    "distribution": len(author_items) * [books_per_author],
 }
 
 book_sampler = BookSampler(
@@ -120,7 +126,6 @@ for book_idx in range(sum(book_author_distribution["distribution"])):
     book_item = book_sampler.sample()
     book_items[book_item["key"]] = book_item
 
-
 # COMBINE ALL ITEMS
 
 # in all_items dict we want a 'type' identifier so we know what each entity is
@@ -132,6 +137,53 @@ all_items = (
     | {key: {"type": "country", "data": item} for key, item in country_items.items()}
     | {key: {"type": "genre", "data": item} for key, item in genre_items.items()}
 )
+
+# GENERATE NAMES FOR ENTITIES
+name_bank_dir = "temp/gen_tofu/name_bank/"
+if GPT_GEN:
+    os.makedirs(name_bank_dir, exist_ok=True)
+    for country_key, author_count in zip(
+        author_country_distribution["options"],
+        author_country_distribution["distribution"],
+    ):
+        create_name_file(
+            name_bank_dir,
+            "author",
+            all_items[country_key]["data"]["name"],
+            int(author_count + 20),
+        )
+
+    for genre_key, author_count in zip(
+        author_genre_distribution["options"], author_genre_distribution["distribution"]
+    ):
+        create_name_file(
+            name_bank_dir,
+            "book",
+            all_items[genre_key]["data"]["name"],
+            int(author_count * books_per_author + 20),
+        )
+
+author_name_dict = {}
+for country_item in country_items.values():
+    country_name = country_item["name"]
+    author_names = load_name_file(name_bank_dir, "author", country_name)
+    random.shuffle(author_names)
+    author_name_dict[country_name] = author_names
+
+book_name_dict = {}
+for genre_item in genre_items.values():
+    genre_name = genre_item["name"]
+    book_names = load_name_file(name_bank_dir, "book", genre_name)
+    random.shuffle(book_names)
+    book_name_dict[genre_name] = book_names
+
+for key, item in all_items.items():
+    if item["type"] == "author":
+        country = all_items[item["data"]["nationality"]]["data"]["name"]
+        item["data"]["name"] = author_name_dict[country].pop()
+    elif item["type"] == "book":
+        genre = all_items[item["data"]["genre"]]["data"]["name"]
+        item["data"]["name"] = book_name_dict[genre].pop()
 
 # CREATE CONNECTION LIST
 
@@ -185,8 +237,8 @@ for keys in connections:
 
 # now generate two-hop questions
 for relation_1_key, relation_1_entity in all_items.items():
-    connections = formatter.get_connections(relation_1_key, other_flag=True)
-    for _, link_key in connections:
+    two_hop_connections = formatter.get_connections(relation_1_key, other_flag=True)
+    for _, link_key in two_hop_connections:
         link_connections = formatter.get_connections(link_key, other_flag=True)
         relation_2_keys = [link[1] for link in link_connections]
         for relation_2_key in relation_2_keys:

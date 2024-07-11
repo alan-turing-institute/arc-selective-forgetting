@@ -3,16 +3,20 @@ import os
 from openai import AzureOpenAI
 
 
-def list_names(entities: list[dict]) -> str:
+def list_names(entities: list[dict], apostrophes: bool = False) -> str:
     """
-    Formats a list of entitt
+    Formats a list of entities
 
     Args:
         entities: list of entity dictionaries
+        apostrophes: bool signifying if the names should be contained in apostrophes
 
     Returns:
         list of the entity names
     """
+    if apostrophes:
+        entities = [f"'{name}'" for name in entities]
+
     n_entities = len(entities)
     # first name will be entity one
     string = entities[0]["name"]

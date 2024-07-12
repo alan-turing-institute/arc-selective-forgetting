@@ -10,7 +10,6 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from arcsf.data.data_module import BlankQAFormatter, EvalQADataset, get_data
 from arcsf.eval.utils import all_eval, combine_dicts, get_metrics
-from arcsf.utils import get_device
 
 
 def evaluate_model(
@@ -43,8 +42,6 @@ def evaluate_model(
         **experiment_config["data_config"]["data_kwargs"],
         random_seed=random_seed,
     )
-    # get available device
-    device = get_device()
 
     # create datasets
     retain_dataset = EvalQADataset(
@@ -69,7 +66,6 @@ def evaluate_model(
         model,
         retain_dataset,
         batch_size,
-        device,
         tokenizer,
         **generate_kwargs,
     )
@@ -77,7 +73,6 @@ def evaluate_model(
         model,
         forget_dataset,
         batch_size,
-        device,
         tokenizer,
         **generate_kwargs,
     )

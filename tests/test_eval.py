@@ -175,9 +175,7 @@ def test_eval_end_to_end(dummy_base_model, dummy_tokenizer, dummy_data):
         eval_dataset,
         batch_size=batch_size,
         # right padding can be used since generation not performed
-        collate_fn=EvaluateDataCollator(
-            tokenizer=dummy_tokenizer, device=torch.device("cpu"), padding_side="left"
-        ),
+        collate_fn=EvaluateDataCollator(tokenizer=dummy_tokenizer, padding_side="left"),
     )
 
     formatted_inputs = next(iter(dataloader))
@@ -254,9 +252,7 @@ def test_data_collator(dummy_base_model, dummy_tokenizer, dummy_data):
         eval_dataset,
         batch_size=batch_size,
         # left padding collator
-        collate_fn=EvaluateDataCollator(
-            tokenizer=dummy_tokenizer, device=torch.device("cpu"), padding_side="left"
-        ),
+        collate_fn=EvaluateDataCollator(tokenizer=dummy_tokenizer, padding_side="left"),
     )
 
     rs_dataloader = DataLoader(
@@ -264,7 +260,7 @@ def test_data_collator(dummy_base_model, dummy_tokenizer, dummy_data):
         batch_size=batch_size,
         # right padding collator
         collate_fn=EvaluateDataCollator(
-            tokenizer=dummy_tokenizer, device=torch.device("cpu"), padding_side="right"
+            tokenizer=dummy_tokenizer, padding_side="right"
         ),
     )
 

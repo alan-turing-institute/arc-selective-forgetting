@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import transformers
+from accelerate import Accelerator
 from scipy.stats import hmean
 from torch.nn import CrossEntropyLoss
 from torch.utils.data import DataLoader
@@ -158,9 +159,7 @@ def first_idx(
 
 
 def extract_qa_for_generate(
-    inputs: dict[str, torch.tensor],
-    tokenizer: PreTrainedTokenizer,
-    device: torch.device,
+    inputs: dict[str, torch.tensor], tokenizer: PreTrainedTokenizer
 ) -> tuple[dict[str, torch.tensor], dict[str, torch.tensor]]:
     """
     Uses masked labels (generated in EvalQADataset) to extract the questions and answers
@@ -169,7 +168,6 @@ def extract_qa_for_generate(
     Args:
         inputs : batch of inputs for the model (tokenized and formatted combined QA)
         tokenizer : tokenizer used to tokenize the inputs.
-        device : device to move output data to
 
     Returns:
         batch of left padded question input_ids and attention_mask, and batch of left
@@ -212,14 +210,13 @@ def extract_qa_for_generate(
     questions["input_ids"] = questions["input_ids"][:, n_trim_pad:]
     questions["attention_mask"] = questions["attention_mask"][:, n_trim_pad:]
 
-    return questions.to(device), answers.to(device)
+    return questions, answers
 
 
 def all_eval(
     model: transformers.PreTrainedModel,
     dataset: EvalQADataset,
     batch_size: int,
-    device: torch.device,
     tokenizer: transformers.PreTrainedTokenizer,
     **generate_kwargs: dict,
 ) -> tuple[torch.Tensor, torch.Tensor]:
@@ -236,17 +233,27 @@ def all_eval(
     Returns:
         output_dict : output dictionary with the values for analysis
     """
-    # move model to device create dataloader, initialise all_losses tensor
-    model = model.to(device)
     n_perturbed = dataset.n_perturbed
     tokenizer.padding_side = "left"
-    eval_collate_fn = EvaluateDataCollator(tokenizer=tokenizer, device=device)
+    eval_collate_fn = EvaluateDataCollator(tokenizer=tokenizer)
     data_loader = DataLoader(
         dataset,
         batch_size=batch_size,
         shuffle=False,
         collate_fn=eval_collate_fn,
     )
+
+    # Make data loader that returns batches of separated questions and ground truth
+    # answers (so this can then be passed to accelerate to handle moving data to device)
+    # batch[0] below selects the ground truth q/a pair (rather than perturbed answers)
+    # batch size 1 as batch already created in previous data loader
+    qa = [extract_qa_for_generate(batch[0], tokenizer) for batch in data_loader]
+    qa_loader = DataLoader(qa, batch_size=1, collate_fn=lambda x: x[0], shuffle=False)
+
+    # handle moving model and data loader to device
+    accelerator = Accelerator()
+    model, data_loader, qa_loader = accelerator.prepare(model, data_loader, qa_loader)
+
     dataset_len = len(dataset)
     output_dict = {
         "all_losses": torch.zeros((dataset_len, n_perturbed + 1), dtype=torch.float64),
@@ -254,27 +261,41 @@ def all_eval(
         "rougeL_recall": torch.zeros(dataset_len),
         "rouge1_recall": torch.zeros(dataset_len),
     }
-    # loop over batches
-    for batch_idx, batch in enumerate(tqdm(data_loader, desc="Batch")):
+
+    # =========
+    # Metrics on logits of ground truth and perturbed answers
+    # =========
+    for batch_idx, batch in enumerate(
+        tqdm(data_loader, desc="GT and Perturbed Logits")
+    ):
         gt_batch = batch[0]
         pt_batches = batch[1:]
         batch_start_index = batch_idx * batch_size
         batch_end_index = batch_start_index + batch_size
 
-        # =========
-        # Ground truth: Loss based on logits vs. actual answers
-        # =========
+        # Ground truth answers
         with torch.no_grad():
             # DO pass position_ids into this method -> see collator for info
             gt_outputs = model(**gt_batch)
 
-        gt_loss = get_loss(gt_outputs.logits, gt_batch["labels"].to(device))
+        gt_loss = get_loss(gt_outputs.logits, gt_batch["labels"])
         output_dict["all_losses"][batch_start_index:batch_end_index, 0] = gt_loss.cpu()
 
-        # =========
-        # Ground truth: Metrics on generated answers vs. actual answers
-        # =========
-        questions, answers = extract_qa_for_generate(gt_batch, tokenizer, device)
+        # Perturbed answers
+        for perturbed_index in range(n_perturbed):
+            pt_batch = pt_batches[perturbed_index]
+            with torch.no_grad():
+                p_output = model(**pt_batch)
+            output_dict["all_losses"][
+                batch_start_index:batch_end_index, perturbed_index + 1
+            ] = get_loss(p_output.logits, pt_batch["labels"]).cpu()
+
+    # =========
+    # Metrics on generated answers vs. actual ground truth answers
+    # =========
+    for batch_idx, qa in enumerate(tqdm(qa_loader, desc="Generate")):
+        batch_start_index = batch_idx * batch_size
+        questions, answers = qa
 
         with torch.no_grad():
             # DO NOT pass position_ids into this method -> see collator for info
@@ -309,17 +330,6 @@ def all_eval(
             output_dict["rouge1_recall"][batch_start_index + rouge_idx] = rouge_result[
                 "rouge1_recall"
             ]
-
-        # =========
-        # Perturbed answers: Loss based on logits vs. perturbed (incorrect) answers
-        # =========
-        for perturbed_index in range(n_perturbed):
-            pt_batch = pt_batches[perturbed_index]
-            with torch.no_grad():
-                p_output = model(**pt_batch)
-            output_dict["all_losses"][
-                batch_start_index:batch_end_index, perturbed_index + 1
-            ] = get_loss(p_output.logits, pt_batch["labels"]).cpu()
 
     # calculate truth_ratio and return them along with losses
     output_dict["truth_ratios"] = truth_ratio(output_dict["all_losses"])

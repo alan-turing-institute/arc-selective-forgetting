@@ -128,7 +128,7 @@ class EvalQADataset(torch.utils.data.Dataset):
         outputs each separately, however this can be changed at a later date.
 
         Args:
-            data: torch Dataset containing data for the dataset
+            data: HuggingFace dataset containing 'question' and 'answer' columns
             tokenizer : Used to tokenize the input
             qa_formatter : QAFormatter instance used to format input before passing it
                 to the model
@@ -415,16 +415,10 @@ class EvaluateDataCollator:
     batch.
     """
 
-    def __init__(
-        self,
-        tokenizer: AutoTokenizer,
-        device: torch.device,
-        padding_side="left",
-    ):
+    def __init__(self, tokenizer: AutoTokenizer, padding_side="left"):
         """
         Args:
             tokenizer: Tokenizer being used by the model.
-            device: Device to move the tensors to.
             padding_side: Side on which to perform the padding. Defaults to "left".
 
         Raises:
@@ -454,8 +448,6 @@ class EvaluateDataCollator:
             self.reverse = lambda x: torch.flip(x, [-1])
         else:
             self.reverse = lambda x: x
-
-        self.device = device
 
     def pad_from_list(
         self, input_list: list[torch.Tensor], pad_value: int
@@ -507,7 +499,7 @@ class EvaluateDataCollator:
                 ],
                 self.pad_value_dict[key],
             )
-            output_dict[key] = output_dict[key].to(self.device)
+            output_dict[key] = output_dict[key]
 
         # position_ids ensures left sided padding produces the same results as right
         # sided padding. To preserve model behaviour should be passed the model, either

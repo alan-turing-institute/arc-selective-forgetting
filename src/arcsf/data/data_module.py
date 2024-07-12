@@ -3,6 +3,7 @@ from typing import Any, Callable, Dict, List
 
 import datasets
 import torch
+from numpy.random import default_rng
 from torch.nn.utils.rnn import pad_sequence
 from transformers import AutoTokenizer
 from transformers.data.data_collator import InputDataClass
@@ -118,9 +119,8 @@ class EvalQADataset(torch.utils.data.Dataset):
         tokenizer: AutoTokenizer,
         qa_formatter: QAFormatter,
         loss_type: str,
-        device: torch.device = torch.device("cpu"),
-        random_seed: int = 42,
-        **kwargs,
+        n_perturbed: int,
+        random_seed: int | None = None,
     ):
         """
         Dataset for evaluation purposes which returns a tokenized version of the input
@@ -134,26 +134,20 @@ class EvalQADataset(torch.utils.data.Dataset):
                 to the model
             loss_type : type of loss used, currently only one option changes behaviour:
                     "idk" : labels are sampled from 'idk.jsonl'
-            return_perturbed : Flag denoting whether returning perturbed samples for
-                    eval effects the format function, adding perturbed samples
-            device : torch.device to pass inputs to
+            n_perturbed : How many perturbed (incorrect) answers to return per sample
             random_seed: random seed for sampling the retain and idk samples, if used
         """
         super().__init__()
         self.tokenizer = tokenizer
         self.qa_formatter = qa_formatter
-        self.rand_gen = torch.Generator().manual_seed(random_seed)
-        self.random_seed = random_seed
         self.loss_type = loss_type
         self.data = data
-        self.device = device
-
-        if "n_perturbed" in kwargs.keys():
-            self.n_perturbed = kwargs["n_perturbed"]
-        else:
-            self.n_perturbed = 2
+        self.n_perturbed = n_perturbed
+        self.rand_gen = default_rng(random_seed)
 
         if loss_type == "idk":
+            if random_seed is None:
+                raise ValueError("random_seed must be provided when using 'idk' loss.")
             self.idk = get_idk_responses()
             self.answer_sampler = self.get_idk
         else:
@@ -163,7 +157,7 @@ class EvalQADataset(torch.utils.data.Dataset):
 
     def get_idk(self, _):
         """returns randomly sampled "I don't know" answer"""
-        rand_pos = torch.randint(0, len(self.idk), (1,), generator=self.rand_gen).item()
+        rand_pos = self.rand_gen.integers(0, len(self.idk))
         return self.idk[rand_pos]
 
     def get_answer(self, row):
@@ -209,9 +203,9 @@ class EvalQADataset(torch.utils.data.Dataset):
         labels[0, :num_question_tokens] = -100
 
         return {
-            "input_ids": encoded["input_ids"][0].to(self.device),
-            "labels": labels[0].to(self.device),
-            "attention_mask": encoded["attention_mask"][0].to(self.device),
+            "input_ids": encoded["input_ids"][0],
+            "labels": labels[0],
+            "attention_mask": encoded["attention_mask"][0],
         }
 
     def __len__(self):
@@ -233,8 +227,10 @@ class EvalQADataset(torch.utils.data.Dataset):
         tar = self.answer_sampler(idx)
         qa = (inp, tar)
         gt_inputs = self.model_formatter(qa)  # Ground truth inputs
+        if self.n_perturbed == 0:
+            return [gt_inputs]
 
-        # Perturbed answer: Incorrect answer to this question (here pick random answers
+        # Perturbed answers: Incorrect answer to this question (here pick random answers
         # from a different question about the same author)
         author_n = self.data[idx]["author_index"]
         question_n = self.data[idx]["question_index"]
@@ -242,7 +238,7 @@ class EvalQADataset(torch.utils.data.Dataset):
             perturbed_options = self.data.filter(
                 lambda sample: sample["author_index"] == author_n
                 and sample["question_index"] != question_n
-            ).shuffle(seed=self.random_seed)
+            ).shuffle(generator=self.rand_gen)
         if len(perturbed_options) < self.n_perturbed:
             raise ValueError(
                 f"{self.n_perturbed=} but only {len(perturbed_options)} possible "
@@ -419,10 +415,16 @@ class EvaluateDataCollator:
     batch.
     """
 
-    def __init__(self, tokenizer: AutoTokenizer, padding_side="left"):
+    def __init__(
+        self,
+        tokenizer: AutoTokenizer,
+        device: torch.device,
+        padding_side="left",
+    ):
         """
         Args:
             tokenizer: Tokenizer being used by the model.
+            device: Device to move the tensors to.
             padding_side: Side on which to perform the padding. Defaults to "left".
 
         Raises:
@@ -431,13 +433,11 @@ class EvaluateDataCollator:
         """
         if tokenizer.pad_token_id:
             padding_value = tokenizer.pad_token_id
-
         elif tokenizer.eos_token_id and tokenizer.bos_token_id:
             if padding_side == "right":
                 padding_value = tokenizer.eos_token_id
             elif padding_side == "left":
                 padding_value = tokenizer.bos_token_id
-
         else:
             raise ValueError(
                 "Tokenizer should have attributes pad_token_id or"
@@ -454,6 +454,8 @@ class EvaluateDataCollator:
             self.reverse = lambda x: torch.flip(x, [-1])
         else:
             self.reverse = lambda x: x
+
+        self.device = device
 
     def pad_from_list(
         self, input_list: list[torch.Tensor], pad_value: int
@@ -505,6 +507,8 @@ class EvaluateDataCollator:
                 ],
                 self.pad_value_dict[key],
             )
+            output_dict[key] = output_dict[key].to(self.device)
+
         # position_ids ensures left sided padding produces the same results as right
         # sided padding. To preserve model behaviour should be passed the model, either
         # explicitly or in the unpacked form: `**model_inputs`.

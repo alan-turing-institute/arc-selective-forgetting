@@ -71,12 +71,12 @@ def combine_dicts(
     retain_dict: dict[str, np.ndarray | torch.Tensor],
 ) -> dict[str, torch.Tensor]:
     """
-    Combines the evaluation dictionaries from both models to return only the values used
-    for the aggregation.
+    Combines the evaluation dictionaries from the forget and retain data to return only
+    the values used for the aggregation.
 
     Args:
-        forget_dict: Evaluation metrics from the forget model
-        retain_dict: Evaluation metrics from the retain model
+        forget_dict: Evaluation metrics from the forget data
+        retain_dict: Evaluation metrics from the retain data
 
     Returns:
         Dictionary containing the retain truth ratios, forget truth ratios, and forget
@@ -184,15 +184,24 @@ def extract_qa_for_generate(
     # index of first non-masked token in labels of each sequence should indicate the
     # start of the answer (question prompt is everything before that)
     answer_start_ids = first_idx(inputs["labels"], value=-100, equal=False, dim=-1)
-    questions = collator(
-        [
+    questions = []
+    answers = []
+    for idx, start in enumerate(answer_start_ids):
+        questions.append(
             {
                 "input_ids": inputs["input_ids"][idx, :start],
                 "attention_mask": inputs["attention_mask"][idx, :start],
             }
-            for idx, start in enumerate(answer_start_ids)
-        ]
-    )
+        )
+        answers.append(
+            {
+                "input_ids": inputs["input_ids"][idx, start:],
+                "attention_mask": inputs["attention_mask"][idx, start:],
+            }
+        )
+
+    questions = collator(questions)
+    answers = collator(answers)
 
     # The original combined QA is left padded to make all the QA the same length.
     # After extracting the questions by themselves they then have more padding than
@@ -202,16 +211,6 @@ def extract_qa_for_generate(
     )
     questions["input_ids"] = questions["input_ids"][:, n_trim_pad:]
     questions["attention_mask"] = questions["attention_mask"][:, n_trim_pad:]
-
-    answers = collator(
-        [
-            {
-                "input_ids": inputs["input_ids"][idx, start:],
-                "attention_mask": inputs["attention_mask"][idx, start:],
-            }
-            for idx, start in enumerate(answer_start_ids)
-        ]
-    )
 
     return questions.to(device), answers.to(device)
 
@@ -241,7 +240,7 @@ def all_eval(
     model = model.to(device)
     n_perturbed = dataset.n_perturbed
     tokenizer.padding_side = "left"
-    eval_collate_fn = EvaluateDataCollator(tokenizer=tokenizer)
+    eval_collate_fn = EvaluateDataCollator(tokenizer=tokenizer, device=device)
     data_loader = DataLoader(
         dataset,
         batch_size=batch_size,

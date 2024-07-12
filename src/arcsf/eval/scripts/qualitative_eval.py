@@ -60,8 +60,7 @@ if __name__ == "__main__":
         tokenizer,
         qa_formatter,
         "standard",
-        qualitative_eval=True,
-        quantitative_eval=False,
+        n_perturbed=2,
     )
     # pass all to the function
     qualitative_eval(

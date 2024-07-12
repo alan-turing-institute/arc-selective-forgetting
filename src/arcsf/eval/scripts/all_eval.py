@@ -56,10 +56,8 @@ if __name__ == "__main__":
         tokenizer,
         qa_formatter,
         "standard",
-        device=get_device(),
         n_perturbed=2,
         random_seed=random_seed,
-        padding=False,
     )
 
     # pass all to the function

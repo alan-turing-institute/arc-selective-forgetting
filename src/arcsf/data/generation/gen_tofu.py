@@ -8,8 +8,15 @@ from uuid import uuid4
 import networkx as nx
 from datasets import Dataset, DatasetDict
 from pyvis.network import Network
+from tqdm import tqdm
 
-from arcsf.data.generation.name_generation import create_name_file, load_name_file
+from arcsf.data.generation.gpt_generation import (
+    check_book_name,
+    create_name_file,
+    load_name_file,
+    paraphrase_question_answer,
+    perturb_question_answer,
+)
 from arcsf.data.generation.questions import NetworkQuestionGenerator
 from arcsf.data.generation.utils import (
     AuthorSampler,
@@ -24,6 +31,7 @@ random.seed(42)
 
 # DEFINING THE CONSTANTS
 GPT_GEN = False
+verbose = False
 
 # Currently the constraints/assumptions are:
 #
@@ -39,7 +47,7 @@ book_date_limits = ["01/01/1970", "01/01/2010"]
 
 countries = ["Canada", "United Kingdom"]
 country_map = {"Canada": "Canadian", "United Kingdom": "British"}
-genres = ["Sci-Fi", "Crime", "History", "Architecture", "Motivational"]
+genres = ["Sci-Fi", "Crime", "History", "Architecture", "Fantasy"]
 
 # This allows us to represent these as entities in our graph, and their UUIDs will be
 # used in other items to represent connections.
@@ -150,11 +158,12 @@ if GPT_GEN:
             name_bank_dir,
             "author",
             all_items[country_key]["data"]["name"],
-            int(author_count + 20),
+            int(author_count + 30),
         )
 
     for genre_key, author_count in zip(
-        author_genre_distribution["options"], author_genre_distribution["distribution"]
+        author_genre_distribution["options"],
+        author_genre_distribution["distribution"],
     ):
         create_name_file(
             name_bank_dir,
@@ -162,6 +171,7 @@ if GPT_GEN:
             all_items[genre_key]["data"]["name"],
             int(author_count * books_per_author + 20),
         )
+
 
 author_name_dict = {}
 for country_item in country_items.values():
@@ -180,10 +190,24 @@ for genre_item in genre_items.values():
 for key, item in all_items.items():
     if item["type"] == "author":
         country = all_items[item["data"]["nationality"]]["data"]["name"]
-        item["data"]["name"] = author_name_dict[country].pop()
+        selected_name = author_name_dict[country].pop()
+        item["data"]["name"] = selected_name.strip()
     elif item["type"] == "book":
         genre = all_items[item["data"]["genre"]]["data"]["name"]
-        item["data"]["name"] = book_name_dict[genre].pop()
+        selected_name = book_name_dict[genre].pop()
+        item["data"]["name"] = selected_name.strip()
+
+# CHECK BOOK NAMES
+if GPT_GEN:
+    model_name_outputs = []
+    for key, item in tqdm(all_items.items()):
+        if item["type"] == "book":
+            question, answer = check_book_name(item, all_items)
+            model_name_outputs.append(f"{question} {answer}")
+
+    name_check_file = open(name_bank_dir + "../name_check.csv", "w")
+    for model_name_output in model_name_outputs:
+        name_check_file.write(model_name_output + "\n")
 
 # CREATE CONNECTION LIST
 
@@ -236,19 +260,39 @@ for keys in connections:
     questions.append(row)
 
 # now generate two-hop questions
+skip_count = 0
 for relation_1_key, relation_1_entity in all_items.items():
     two_hop_connections = formatter.get_connections(relation_1_key, other_flag=True)
     for _, link_key in two_hop_connections:
         link_connections = formatter.get_connections(link_key, other_flag=True)
         relation_2_keys = [link[1] for link in link_connections]
         for relation_2_key in relation_2_keys:
+            if relation_1_key == relation_2_key:
+                skip_count += 1
+                continue
             qa, linked_keys = qa_generator.sample_link_question(
                 (relation_1_key, relation_2_key), link_key
             )
             if qa:
                 row = {"question": qa[0], "answer": qa[1], "keys": linked_keys}
                 questions.append(row)
+print(f"skipped {skip_count} same entity connections.")
 
+# Paraphrase Questions
+# if GPT_GEN:
+for question_dict in tqdm(random.choices(questions, k=15)):
+    # for question_dict in tqdm(questions):
+    paraphrased_question, paraphrased_answer = paraphrase_question_answer(question_dict)
+    perturbed_answers = perturb_question_answer(question_dict)
+    question_dict["paraphrased_question"] = paraphrased_question
+    question_dict["paraphrased_answer"] = paraphrased_answer
+    question_dict["perturbed_answers"] = perturbed_answers
+    if verbose:
+        print(f"\n\nQuestion: {question_dict['question']}")
+        print(f"Answer: {question_dict['answer']}\n")
+        print(f"Paraphrased Question: {paraphrased_question}")
+        print(f"Paraphrased Answer: {paraphrased_answer}")
+        print(f"Perturbed Answers:\n{perturbed_answers}")
 
 # SAVE ITEMS + CONNECTIONS + QUESTIONS
 

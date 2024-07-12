@@ -4,6 +4,19 @@ from typing import Any, Never
 from uuid import uuid4
 
 
+def flatten(xss):
+    """
+    flattens a list
+
+    Args:
+        xss: list of nested lists
+
+    Returns:
+        flattened list
+    """
+    return [x for xs in xss for x in xs]
+
+
 def find_between(string: str, start: str, end: str):
     """
     Extracts the string between a start and end tag within a string.

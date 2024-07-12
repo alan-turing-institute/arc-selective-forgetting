@@ -52,7 +52,7 @@ def evaluate_model(
         tokenizer,
         BlankQAFormatter(),
         "standard",
-        device=device,
+        n_perturbed=2,
         random_seed=random_seed,
     )
     forget_dataset = EvalQADataset(
@@ -60,7 +60,7 @@ def evaluate_model(
         tokenizer,
         BlankQAFormatter(),
         "standard",
-        device=device,
+        n_perturbed=2,
         random_seed=random_seed,
     )
 

@@ -31,7 +31,6 @@ random.seed(42)
 
 # DEFINING THE CONSTANTS
 GPT_GEN = False
-verbose = False
 
 # Currently the constraints/assumptions are:
 #
@@ -279,15 +278,16 @@ for relation_1_key, relation_1_entity in all_items.items():
 print(f"skipped {skip_count} same entity connections.")
 
 # Paraphrase Questions
-# if GPT_GEN:
-for question_dict in tqdm(random.choices(questions, k=15)):
-    # for question_dict in tqdm(questions):
-    paraphrased_question, paraphrased_answer = paraphrase_question_answer(question_dict)
-    perturbed_answers = perturb_question_answer(question_dict)
-    question_dict["paraphrased_question"] = paraphrased_question
-    question_dict["paraphrased_answer"] = paraphrased_answer
-    question_dict["perturbed_answers"] = perturbed_answers
-    if verbose:
+if GPT_GEN:
+    for question_dict in tqdm(random.choices(questions, k=15)):
+        paraphrased_question, paraphrased_answer = paraphrase_question_answer(
+            question_dict
+        )
+        perturbed_answers = perturb_question_answer(question_dict)
+        # Currently not writing the questions to the file
+        # question_dict["paraphrased_question"] = paraphrased_question
+        # question_dict["paraphrased_answer"] = paraphrased_answer
+        # question_dict["perturbed_answers"] = perturbed_answers
         print(f"\n\nQuestion: {question_dict['question']}")
         print(f"Answer: {question_dict['answer']}\n")
         print(f"Paraphrased Question: {paraphrased_question}")

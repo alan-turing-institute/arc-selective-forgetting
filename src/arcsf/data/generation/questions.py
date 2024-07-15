@@ -47,23 +47,16 @@ def entity_qa_generator(entity: dict[str:str, str:dict]) -> tuple[str, str]:
     entity_data = entity["data"]
     if entity_type == "publisher":
         question = f"When was {entity_data['name'].capitalize()} founded?"
-        answer = (
-            f"{entity_data['name'].capitalize()} was founded on"
-            f" {entity_data['founded']}."
-        )
+        answer = f"{entity_data['name']} was founded on" f" {entity_data['founded']}."
         return (question, answer)
     elif entity_type == "author":
-        question = f"When was {entity_data['name'].capitalize()} born?"
-        answer = (
-            f"{entity_data['name'].capitalize()}'s date of birth is"
-            f" {entity_data['dob']}."
-        )
+        question = f"When was {entity_data['name']} born?"
+        answer = f"{entity_data['name']}'s date of birth is" f" {entity_data['dob']}."
         return (question, answer)
     elif entity_type == "book":
-        question = f"When was {entity_data['name'].capitalize()} published?"
+        question = f"When was {entity_data['name']} published?"
         answer = (
-            f"{entity_data['name'].capitalize()} was published on"
-            f" {entity_data['published']}."
+            f"{entity_data['name']} was published on" f" {entity_data['published']}."
         )
         return (question, answer)
     else:
@@ -83,49 +76,43 @@ def relationship_qa_generator(
         if relation_type == "country":
             question = (
                 f"In what country is the publisher"
-                f" {main_entity_data['name'].capitalize()} based?"
+                f" {main_entity_data['name']} based?"
             )
             answer = (
-                f"{main_entity_data['name'].capitalize()} is based in "
+                f"{main_entity_data['name']} is based in "
                 f"{relation_entity_data['name']}."
             )
         return (question, answer)
 
     elif main_type == "author":
         if relation_type == "country":
-            question = (
-                f"Where was the author,"
-                f" {main_entity_data['name'].capitalize()}, born?"
-            )
+            question = f"Where was the author," f" {main_entity_data['name']}, born?"
             answer = (
-                f"{main_entity_data['name'].capitalize()} was born in "
+                f"{main_entity_data['name']} was born in "
                 f"{relation_entity_data['name']}."
             )
         return (question, answer)
 
     elif main_type == "book":
         if relation_type == "author":
-            question = f"Who wrote the book, {main_entity_data['name'].capitalize()}?"
+            question = f"Who wrote the book, {main_entity_data['name']}?"
             answer = (
-                f"{main_entity_data['name'].capitalize()} was written by"
+                f"{main_entity_data['name']} was written by"
                 f" {relation_entity_data['name']}."
             )
         elif relation_type == "publisher":
             question = (
-                f"Which publisher published the book,"
-                f" {main_entity_data['name'].capitalize()}?"
+                f"Which publisher published the book," f" {main_entity_data['name']}?"
             )
             answer = (
-                f"{main_entity_data['name'].capitalize()} was published by"
+                f"{main_entity_data['name']} was published by"
                 f" {relation_entity_data['name']}."
             )
         elif relation_type == "genre":
-            question = (
-                f"What genre is the book, {main_entity_data['name'].capitalize()}?"
-            )
+            question = f"What genre is the book, {main_entity_data['name']}?"
             answer = (
-                f"{main_entity_data['name'].capitalize()} falls under the genre of"
-                f" {relation_entity_data['name']} books."
+                f"{main_entity_data['name']} falls under the genre of"
+                f" {relation_entity_data['name'].lower()} books."
             )
         return (question, answer)
     else:
@@ -157,23 +144,19 @@ def relationship_list_qa_generator(
     if main_type == "publisher":
         if related_entity_type == "book":
             question = (
-                f"What are some books published by "
-                f"{main_entity_data['name'].capitalize()}?"
+                f"What are some books published by " f"{main_entity_data['name']}?"
             )
             answer = (
-                f"Some books published by {main_entity_data['name'].capitalize()} "
+                f"Some books published by {main_entity_data['name']} "
                 f"include: {list_names(related_entity_data)}."
             )
         return (question, answer)
 
     elif main_type == "author":
         if related_entity_type == "book":
-            question = (
-                f"What are some books written by "
-                f"{main_entity_data['name'].capitalize()}?"
-            )
+            question = f"What are some books written by " f"{main_entity_data['name']}?"
             answer = (
-                f"Some books written by {main_entity_data['name'].capitalize()} "
+                f"Some books written by {main_entity_data['name']} "
                 f"include: {list_names(related_entity_data)}."
             )
         return (question, answer)
@@ -192,21 +175,15 @@ def relationship_list_qa_generator(
 
     elif main_type == "country":
         if related_entity_type == "author":
-            question = (
-                f"Which authors were born in "
-                f"{main_entity_data['name'].capitalize()}?"
-            )
+            question = f"Which authors were born in " f"{main_entity_data['name']}?"
             answer = (
-                f"Some authors born in {main_entity_data['name'].capitalize()} "
+                f"Some authors born in {main_entity_data['name']} "
                 f"include: {list_names(related_entity_data)}."
             )
         elif related_entity_type == "publisher":
-            question = (
-                f"Which publishers are based in "
-                f"{main_entity_data['name'].capitalize()}?"
-            )
+            question = f"Which publishers are based in " f"{main_entity_data['name']}?"
             answer = (
-                f"Some publishers based in {main_entity_data['name'].capitalize()} "
+                f"Some publishers based in {main_entity_data['name']} "
                 f"include: {list_names(related_entity_data)}."
             )
         return (question, answer)
@@ -250,6 +227,7 @@ def two_hop_qa_generator(
                 f"{list_names(related_entities_data)} were both "
                 f"born in {link_entity['data']['name']}."
             )
+            return (question, answer)
 
         elif (
             related_entity_1_type == "publisher"
@@ -263,6 +241,7 @@ def two_hop_qa_generator(
                 f"{list_names(related_entities_data)} are both based in "
                 f"{link_entity['data']['name']}."
             )
+            return (question, answer)
 
         elif related_entity_1_type == "author" and related_entity_2_type == "publisher":
             question = (
@@ -275,6 +254,7 @@ def two_hop_qa_generator(
             )
             # These might be a bit excessive for now
             return None
+            return (question, answer)
 
         elif related_entity_1_type == "publisher" and related_entity_2_type == "author":
             question = (
@@ -287,19 +267,12 @@ def two_hop_qa_generator(
             )
             # These might be a bit excessive for now
             return None
+            return (question, answer)
     # The others relate books (TODO: maybe introduce a link for author-genre-author)
     elif (
         related_entities[0]["type"] == "book" and related_entities[1]["type"] == "book"
     ):
-        if link_entity_type == "genre":
-            question = (
-                f"What do the books {list_names(related_entities_data)} have in common?"
-            )
-            answer = (
-                f"{list_names(related_entities_data)} are both "
-                f"{link_entity['data']['name'].lower()} books."
-            )
-        elif link_entity_type == "author":
+        if link_entity_type == "author":
             question = (
                 f"What do the books {list_names(related_entities_data)} have in common?"
             )
@@ -307,6 +280,7 @@ def two_hop_qa_generator(
                 f"{list_names(related_entities_data)} were both "
                 f"written by {link_entity['data']['name']}."
             )
+            return (question, answer)
         elif link_entity_type == "publisher":
             question = (
                 f"What do the books {list_names(related_entities)} have in common?"
@@ -315,9 +289,8 @@ def two_hop_qa_generator(
                 f"{list_names(related_entities)} were both "
                 f" published by {link_entity['data']['name']}."
             )
-    else:
-        return None
-    return (question, answer)
+            return (question, answer)
+    return None
 
 
 class NetworkQuestionGenerator:

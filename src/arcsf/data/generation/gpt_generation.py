@@ -1,10 +1,18 @@
 import csv
 import os
+import random
 
 from openai import AzureOpenAI
 
 from arcsf.data.generation import private_keys
-from arcsf.data.generation.utils import find_between, flatten
+from arcsf.data.generation.utils import find_between, flatten, random_date
+
+NUM_PERTURB = 3
+
+
+class RandomError(Exception):
+    pass
+
 
 # client for generating using the API
 
@@ -235,7 +243,9 @@ def check_book_name(
     return prompt, response.choices[0].message.content
 
 
-def paraphrase_question_answer(question_dict: dict[str:str]) -> tuple[str, str]:
+def paraphrase_question_answer(
+    question_dict: dict[str : str | list[str]],
+) -> tuple[str, str]:
     """
     Prompts gpt to paraphrase a question such that the meaning is preserved but
     worded differently.
@@ -277,7 +287,7 @@ def paraphrase_question_answer(question_dict: dict[str:str]) -> tuple[str, str]:
     return paraphrased_question, paraphrased_answer
 
 
-def perturb_question_answer(question_dict: dict[str:str]) -> list[str]:
+def perturb_question_answer(question_dict: dict[str : str | list[str]]) -> list[str]:
     """
     Prompts gpt to rephrase a question multiple times such that the meaning is altered
     and the answers are incorrect. This creates the perturbed answers from the TOFU
@@ -293,7 +303,8 @@ def perturb_question_answer(question_dict: dict[str:str]) -> list[str]:
     question = question_dict["question"]
     answer = question_dict["answer"]
     prompt = f"""
-    Can you rephrase the answer 3 times from the following question--answer pair please:
+    Can you rephrase the answer {NUM_PERTURB} times from the following question--answer
+    pair please:
     {question}
     {answer}
     """
@@ -318,3 +329,154 @@ def perturb_question_answer(question_dict: dict[str:str]) -> list[str]:
         else:
             perturbed_answers.append(cleaned_answer)
     return perturbed_answers
+
+
+def replace_last(
+    string: str, target_string: str, replacement_string: str, proper_noun: bool = False
+) -> str:
+    """
+    Replaces the last instance of a target within a string with a specified replacment.
+
+    Args:
+        string: String in which the replacement should occur
+        target_string: Target string sequence that should be replaced
+        replacement_string: String sequence which should replace the target.
+        proper_noun: Boolean value denoting whether or not the strings are proper nouns.
+        Defaults to False.
+
+    Returns:
+        String with the target value replaced.
+    """
+    if not proper_noun:
+        target_string = target_string.lower()
+
+    start_index = string.rindex(target_string)
+    normal_section, replacement_section = (
+        string[: start_index - 1],
+        string[start_index - 1 :],
+    )
+    if proper_noun:
+        return normal_section + replacement_section.replace(
+            target_string, replacement_string
+        )
+    return normal_section + replacement_section.replace(
+        target_string.lower(), replacement_string.lower()
+    )
+
+
+class FormulaicPerturber:
+    """
+    Perturber class which takes in a question on __call__ and perturbs it to produce an
+    incorrect answer.
+    """
+
+    def __init__(self, all_entities, name_dict):
+        self.all_entities = all_entities
+        self.name_dict = name_dict
+        self.date_map = {"author": "dob", "publisher": "founded", "book": "published"}
+        self.proper_noun_map = {
+            "genre": False,
+            "publisher": True,
+            "country": True,
+            "book": True,
+            "author": True,
+        }
+
+    def perturb_value(
+        self,
+        question_dict: dict[str : str | list[str]],
+        entity_keys: list[str],
+        entity_types: list[str],
+        entity_type: str,
+    ) -> list[str]:
+        """
+        _summary_
+
+        Args:
+            question_dict: Dictionary item containing the question
+            entity_keys: List containing the entity keys in the question, used to obtain
+            the key of the value being changed.
+            entity_types: Types of entity each key denotes
+            entity_type: Type of entity that is being replaced
+
+        Returns:
+            A list of perturbed answers with key values being changed.
+        """
+        perturbed_answers = [None] * NUM_PERTURB
+        # Identify the true values
+        true_value_key = entity_keys[entity_types.index(entity_type)]
+        true_value = self.all_entities[true_value_key]["data"]["name"]
+        # Get the incorrect values that can be used to perturb the question
+        # randomly sample NUM_PERTURB of them
+        all_options = self.name_dict[entity_type]
+        index_to_drop = all_options.index(true_value)
+        incorrect_options = random.sample(
+            (all_options[:index_to_drop] + all_options[index_to_drop + 1 :]), k=3
+        )
+        # generate a perturbed answer for each
+        for perturbed_sample_index, perturbed_option in enumerate(incorrect_options):
+            perturbed_answer = replace_last(
+                question_dict["answer"],
+                true_value,
+                perturbed_option,
+                self.proper_noun_map[entity_type],
+            )
+            perturbed_answers[perturbed_sample_index] = perturbed_answer
+        # return answers
+        return perturbed_answers
+
+    def __call__(
+        self,
+        question_dict: dict[str : str | list[str]],
+    ) -> str:
+        """
+        Perturbs an input question, depending on the question type.
+
+        Args:
+            question_dict: Dictionary item containing the question.
+
+        Raises:
+            RandomError: Raised in the unlikely event that a randomly generated date is
+            the same as the true date, and this happens 5 times in a row.
+
+        Returns:
+            List of perturbed answers or None
+        """
+        question_keys = question_dict["keys"]
+        entity_types = [self.all_entities[key]["type"] for key in question_keys]
+        # These will always be date questions
+        if len(entity_types) == 1:
+            date_key = self.date_map[self.all_entities[question_keys[0]]["type"]]
+            true_date = self.all_entities[question_keys[0]]["data"][date_key]
+            perturbed_answers = [None] * NUM_PERTURB
+            for answer_index in range(NUM_PERTURB):
+                date_count = 0
+                while True:
+                    rand = random_date("01/01/1900", "01/01/2010", random.random())
+                    if rand != true_date:
+                        break
+                    date_count += 1
+                    if date_count > 5:
+                        raise RandomError(
+                            (
+                                "Somehow random_date randomly selected the true date 5 "
+                                "times in a row.."
+                            )
+                        )
+                perturbed_answers[answer_index] = question_dict["answer"].replace(
+                    true_date, rand
+                )
+
+            return perturbed_answers
+        # First two of these are a simple replacement
+        # Second two are more complex since sometimes publisher/author needs replacing
+        # depending on the context, but only 2 options left if first two return true:
+        #   book - author - book
+        #   book - publisher - book
+        for entity_to_replace in ["country", "genre", "publisher", "author"]:
+            if entity_to_replace in entity_types:
+                return self.perturb_value(
+                    question_dict, question_keys, entity_types, entity_to_replace
+                )
+        # This should not happen
+        return None

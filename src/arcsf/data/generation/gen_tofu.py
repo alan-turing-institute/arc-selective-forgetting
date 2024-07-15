@@ -11,6 +11,7 @@ from pyvis.network import Network
 from tqdm import tqdm
 
 from arcsf.data.generation.gpt_generation import (
+    FormulaicPerturber,
     check_book_name,
     create_name_file,
     load_name_file,
@@ -44,8 +45,14 @@ author_date_limits = ["01/01/1950", "01/01/2000"]
 publisher_date_limits = ["01/01/1900", "01/01/2010"]
 book_date_limits = ["01/01/1970", "01/01/2010"]
 
-countries = ["Canada", "United Kingdom"]
-country_map = {"Canada": "Canadian", "United Kingdom": "British"}
+# countries = ["Canada", "United Kingdom"]
+country_map = {
+    "Canada": "Canadian",
+    "United Kingdom": "British",
+    "Australia": "Australian",
+    "South Africa": "South African",
+}
+countries = [key for key in country_map.keys()]
 genres = ["Sci-Fi", "Crime", "History", "Architecture", "Fantasy"]
 
 # This allows us to represent these as entities in our graph, and their UUIDs will be
@@ -61,18 +68,20 @@ publishers = [
     "Brilliant Books",
     "Notorious Novels",
     "Radical Writers",
+    "Riley Press",
+    "Turing Publications",
 ]
 
 # 3 publishers per country
 publisher_country_distribution = {
     "options": list(country_items.keys()),
-    "distribution": len(countries) * [3],
+    "distribution": len(countries) * [2],
 }
 
-# 10 authors per country
+# 5 authors per country
 author_country_distribution = {
     "options": list(country_items.keys()),
-    "distribution": len(countries) * [10],
+    "distribution": len(countries) * [5],
 }
 
 # 4 authors per genre
@@ -117,7 +126,7 @@ book_publisher_distribution = {
     "distribution": len(publishers) * [10],
 }
 # ...also 3 books per author
-books_per_author = 3
+books_per_author = 4
 book_author_distribution = {
     "options": list(author_items.values()),
     "distribution": len(author_items) * [books_per_author],
@@ -293,6 +302,21 @@ if GPT_GEN:
         print(f"Paraphrased Question: {paraphrased_question}")
         print(f"Paraphrased Answer: {paraphrased_answer}")
         print(f"Perturbed Answers:\n{perturbed_answers}")
+
+
+author_names = [author_item["name"] for author_item in author_items.values()]
+
+names_dict = {
+    "genre": genres,
+    "country": countries,
+    "publisher": publishers,
+    "author": author_names,
+}
+
+perturber_formulaic = FormulaicPerturber(all_items, names_dict)
+for question_dict in tqdm(questions):
+    formulaic_perturbed = perturber_formulaic(question_dict)
+    question_dict["perturbed_answers"] = formulaic_perturbed
 
 # SAVE ITEMS + CONNECTIONS + QUESTIONS
 

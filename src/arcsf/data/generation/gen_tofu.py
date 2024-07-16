@@ -11,6 +11,8 @@ from pyvis.network import Network
 from tqdm import tqdm
 
 from arcsf.data.generation.gpt_generation import (
+    AnswerHallucinator,
+    ComplexGenerator,
     FormulaicPerturber,
     check_book_name,
     create_name_file,
@@ -32,6 +34,7 @@ random.seed(42)
 
 # DEFINING THE CONSTANTS
 GPT_GEN = False
+NAME_GEN = False
 
 # Currently the constraints/assumptions are:
 #
@@ -53,7 +56,7 @@ country_map = {
     "South Africa": "South African",
 }
 countries = [key for key in country_map.keys()]
-genres = ["Sci-Fi", "Crime", "History", "Architecture", "Fantasy"]
+genres = ["Sci-Fi", "Mystery", "Romance", "Crime", "Fantasy"]
 
 # This allows us to represent these as entities in our graph, and their UUIDs will be
 # used in other items to represent connections.
@@ -156,7 +159,7 @@ all_items = (
 
 # GENERATE NAMES FOR ENTITIES
 name_bank_dir = "temp/gen_tofu/name_bank/"
-if GPT_GEN:
+if NAME_GEN:
     os.makedirs(name_bank_dir, exist_ok=True)
     for country_key, author_count in zip(
         author_country_distribution["options"],
@@ -179,7 +182,6 @@ if GPT_GEN:
             all_items[genre_key]["data"]["name"],
             int(author_count * books_per_author + 20),
         )
-
 
 author_name_dict = {}
 for country_item in country_items.values():
@@ -232,40 +234,66 @@ for key in list(all_items.keys()):
 
 questions = []
 
+# Generate some complex questions
+complex_qa_generator = ComplexGenerator(all_items, questions, formatter)
+n_gen = 3
+for book_profile in tqdm(list(book_items.values()), desc="Book Question Gen"):
+    key = book_profile["key"]
+    qa_pairs = complex_qa_generator.generate_book_summary_questions(
+        book_profile, n_gen + 2
+    )
+    for qa in qa_pairs[:n_gen]:
+        row = {"question": qa[0], "answer": qa[1], "keys": [key]}
+        questions.append(row)
+
+for author_profile in tqdm(list(author_items.values()), desc="Author Question Gen"):
+    key = author_profile["key"]
+    qa_pairs = complex_qa_generator.generate_author_profile_question(
+        author_profile, n_gen + 2
+    )
+    for qa in qa_pairs[:n_gen]:
+        row = {"question": qa[0], "answer": qa[1], "keys": [key]}
+        questions.append(row)
+
 qa_generator = NetworkQuestionGenerator(
     all_profiles=all_items, all_connections=connections
 )
+
 # first generate basic entity questions
 for key in list(all_items.keys()):
     qa = qa_generator.sample_basic_question(key)
     if qa:
         row = {"question": qa[0], "answer": qa[1], "keys": [key]}
-    questions.append(row)
+        questions.append(row)
 
     if all_items[key]["type"] == "author":
         list_qa, keys = qa_generator.sample_relationship_list_question(key, "book")
-
+        row = {"question": list_qa[0], "answer": list_qa[1], "keys": keys}
+        questions.append(row)
     elif all_items[key]["type"] == "publisher":
         list_qa, keys = qa_generator.sample_relationship_list_question(key, "book")
+        row = {"question": list_qa[0], "answer": list_qa[1], "keys": keys}
+        questions.append(row)
 
     elif all_items[key]["type"] == "genre":
         list_qa, keys = qa_generator.sample_relationship_list_question(key, "author")
+        row = {"question": list_qa[0], "answer": list_qa[1], "keys": keys}
+        questions.append(row)
 
     elif all_items[key]["type"] == "country":
         list_qa, keys = qa_generator.sample_relationship_list_question(key, "author")
         row = {"question": list_qa[0], "answer": list_qa[1], "keys": keys}
         questions.append(row)
         list_qa, keys = qa_generator.sample_relationship_list_question(key, "publisher")
-
-    row = {"question": list_qa[0], "answer": list_qa[1], "keys": keys}
-    questions.append(row)
+        row = {"question": list_qa[0], "answer": list_qa[1], "keys": keys}
+        questions.append(row)
 
 # now generate relationship questions
 for keys in connections:
     qa = qa_generator.sample_relationship_question(keys)
     if qa:
         row = {"question": qa[0], "answer": qa[1], "keys": list(keys)}
-    questions.append(row)
+        questions.append(row)
 
 # now generate two-hop questions
 skip_count = 0
@@ -303,20 +331,25 @@ if GPT_GEN:
         print(f"Paraphrased Answer: {paraphrased_answer}")
         print(f"Perturbed Answers:\n{perturbed_answers}")
 
-
 author_names = [author_item["name"] for author_item in author_items.values()]
+book_names = [book_item["name"] for book_item in book_items.values()]
 
 names_dict = {
     "genre": genres,
     "country": countries,
     "publisher": publishers,
     "author": author_names,
+    "book": book_names,
 }
 
+answer_hallucinator = AnswerHallucinator()
 perturber_formulaic = FormulaicPerturber(all_items, names_dict)
 for question_dict in tqdm(questions):
     formulaic_perturbed = perturber_formulaic(question_dict)
-    question_dict["perturbed_answers"] = formulaic_perturbed
+    question_dict["formulaic_perturbed_answers"] = formulaic_perturbed
+    # if GPT_GEN:
+    hallucinated_answers = answer_hallucinator.hallucinate_answer(question_dict)
+    question_dict["hallucinated_perturbed_answers"] = hallucinated_answers
 
 # SAVE ITEMS + CONNECTIONS + QUESTIONS
 

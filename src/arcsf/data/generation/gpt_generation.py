@@ -5,6 +5,15 @@ import random
 from openai import AzureOpenAI
 
 from arcsf.data.generation import private_keys
+from arcsf.data.generation.pre_prompts import (
+    answer_perturbing_prompt,
+    author_name_pre_prompt,
+    book_name_pre_prompt,
+    book_questions_pre_prompt,
+    hallucinate_answer_pre_prompt,
+    profile_questions_pre_prompt,
+    question_paraphrase_prompt,
+)
 from arcsf.data.generation.utils import find_between, flatten, random_date
 
 NUM_PERTURB = 3
@@ -21,84 +30,6 @@ client = AzureOpenAI(
     api_key=private_keys.GPT35_API_KEY,
     api_version="2024-06-01",
 )
-
-# Collection of pre-prompts which have been shown to improve generation outputs
-
-author_name_pre_prompt = """
-You have been tasked with producing random names for people born in a specified country.
-You should generate no fewer than {} names separated with a new line after each.
-There should be an even distribution of Male and Female names.
-You should structure your response like so:
-
-<begin_names>
-first_name_1 surname_1
-...
-first_name_n surname_n
-...
-first_name_{} surname_{}
-<end_names>
-
-It is vitally important all names are contained between the two tags <begin_names> and
-<end names>.
-"""
-
-book_name_pre_prompt = """
-You have been tasked with producing interesting names for books of a specified genre.
-You should generate no fewer than {} names separated with a new line after each.
-All books should be completely independant of one another, though they can share similar
-topics. It is also imperative that these names have never before been used.
-Your response should be strucured as such:
-
-<begin_names>
-book_title_1
-...
-book_title_n
-...
-book_title_{}
-<end_names>
-
-It is vitally important all names are contained between the two tags <begin_names> and
-<end names>.
-On each line there should no text except that of the book title.
-DO NOT NUMBER THE BOOKS.
-"""
-
-question_paraphrase_prompt = """
-You have been tasked with paraphrasing a question and answer pair. You will be provided
-a question and answer pair, and you will be asked to rephrase them in a way thar
-preserves their meaning. Your response should be structured as such:
-
-<begin_paraphrased_question>
-Paraphrased_Question
-<end_paraphrased_question>
-<begin_paraphrased_answer>
-Paraphrased_Answer
-<begin_paraphrased_answer>
-
-It is vitally important all questions are contained between the two '<>' tags defined
-above. On each line there should no text except that of the paraphrased question and
-answer pair.
-"""
-
-
-answer_perturbing_prompt = """
-You have been tasked with rephrasing the answer to a question such that it changes its
-meaning. You will be provided with a question and answer pair, and you will be asked to
-rephrase the answer in a way that makes it incorrect. You should generate a minimum of 5
-incorrect answers that are incorrect. You should structure your response as such:
-
-<begin_incorrect_answers>
-answer_1
-answer_2
-answer_3
-answer_4
-answer_5
-<end_incorrect_answers>
-
-It is vitally important all answers are contained between the
-<begin_paraphrased_answers> and <begin_paraphrased_answers> tags defined above. On each
-line there should no text except that of the paraphrased answer.
-"""
 
 
 def get_author_names(country: str, n_names: int = 50) -> str:
@@ -385,8 +316,7 @@ class FormulaicPerturber:
     def perturb_value(
         self,
         question_dict: dict[str : str | list[str]],
-        entity_keys: list[str],
-        entity_types: list[str],
+        entity_key: str,
         entity_type: str,
     ) -> list[str]:
         """
@@ -394,9 +324,7 @@ class FormulaicPerturber:
 
         Args:
             question_dict: Dictionary item containing the question
-            entity_keys: List containing the entity keys in the question, used to obtain
-            the key of the value being changed.
-            entity_types: Types of entity each key denotes
+            entity_key: key for the entity being replaced
             entity_type: Type of entity that is being replaced
 
         Returns:
@@ -404,14 +332,14 @@ class FormulaicPerturber:
         """
         perturbed_answers = [None] * NUM_PERTURB
         # Identify the true values
-        true_value_key = entity_keys[entity_types.index(entity_type)]
-        true_value = self.all_entities[true_value_key]["data"]["name"]
+        true_value = self.all_entities[entity_key]["data"]["name"]
         # Get the incorrect values that can be used to perturb the question
         # randomly sample NUM_PERTURB of them
         all_options = self.name_dict[entity_type]
         index_to_drop = all_options.index(true_value)
         incorrect_options = random.sample(
-            (all_options[:index_to_drop] + all_options[index_to_drop + 1 :]), k=3
+            (all_options[:index_to_drop] + all_options[index_to_drop + 1 :]),
+            k=NUM_PERTURB,
         )
         # generate a perturbed answer for each
         for perturbed_sample_index, perturbed_option in enumerate(incorrect_options):
@@ -423,6 +351,79 @@ class FormulaicPerturber:
             )
             perturbed_answers[perturbed_sample_index] = perturbed_answer
         # return answers
+        return perturbed_answers
+
+    def perturb_multiple(
+        self,
+        question_dict: dict[str : str | list[str]],
+        entity_keys: str,
+        entity_types: str,
+    ) -> list[str]:
+        """
+        Function for perturbing multiple values within an answer, this is used for a
+        list style question.
+
+        Args:
+            question_dict: The question item to be perturbed
+            entity_keys: The keys of the entities that require perturbation
+            entity_types: The type of entities that require perturbation
+
+        Returns:
+            a list of perturbed answers
+        """
+        # initialise list of perturbed answers and the true values
+        perturbed_answers = [None] * NUM_PERTURB
+        true_values = [
+            self.all_entities[entity_key]["data"]["name"] for entity_key in entity_keys
+        ]
+        # iterate through each question index
+        for answer_index in range(len(perturbed_answers)):
+            # true values are blocked
+            blocked_values = true_values.copy()
+            # intial answer is the question
+            initial_answer = question_dict["answer"]
+            # create a dictionary of lists, for available names in each entity type
+            available_options = {}
+            for entity_type in entity_types:
+                # all names of that type
+                all_options = self.name_dict[entity_type]
+                # iterate through and remove the true values from this list
+                for option_index, option in enumerate(all_options):
+                    if option in true_values:
+                        all_options = (
+                            all_options[:option_index] + all_options[option_index + 1 :]
+                        )
+                # available options for each type are the ones left
+                available_options[entity_type] = all_options
+
+            # now iterate through the true values array to replace them in the question
+            for entity_type, true_value in zip(entity_types, true_values):
+                # retrieve the available options for that type
+                type_available = available_options[entity_type]
+                for option_index, option in enumerate(type_available):
+                    # if blocked remove from the available options
+                    if option in blocked_values:
+                        type_available = (
+                            type_available[:option_index]
+                            + type_available[option_index + 1 :]
+                        )
+                # randomly select an available option to replace the true value
+                perturbed_option = random.choice(type_available)
+                # add the perturbed option to available options so it isn't used again
+                # for this answer
+                blocked_values.append(perturbed_option)
+                # update the answer, replacing the true value with perturbed option
+                initial_answer = replace_last(
+                    initial_answer,
+                    true_value,
+                    perturbed_option,
+                    self.proper_noun_map[entity_type],
+                )
+                # update the available options array
+                available_options[entity_type] = type_available
+            # finally add the question to the perturbed answers list
+            perturbed_answers[answer_index] = initial_answer
+        # return all perturbed answers
         return perturbed_answers
 
     def __call__(
@@ -468,15 +469,208 @@ class FormulaicPerturber:
                 )
 
             return perturbed_answers
-        # First two of these are a simple replacement
-        # Second two are more complex since sometimes publisher/author needs replacing
-        # depending on the context, but only 2 options left if first two return true:
-        #   book - author - book
-        #   book - publisher - book
-        for entity_to_replace in ["country", "genre", "publisher", "author"]:
-            if entity_to_replace in entity_types:
-                return self.perturb_value(
-                    question_dict, question_keys, entity_types, entity_to_replace
-                )
+        # These are a simple replacement when there is a single relationship in the
+        # question
+        if len(entity_types) == 2:
+            for entity_type_to_replace in ["country", "genre", "publisher", "author"]:
+                if entity_type_to_replace in entity_types:
+                    entity_key = question_keys[
+                        entity_types.index(entity_type_to_replace)
+                    ]
+                    return self.perturb_value(
+                        question_dict, entity_key, entity_type_to_replace
+                    )
+        # These are more complex, the linking entity sometimes needs replacing, in other
+        # instances the linked entity needs replacing. This can be differentiated by the
+        # location of the country or genre (these are first in a list-type qa pair).
+        else:
+            for entity_type_to_replace in ["country", "genre", "publisher", "author"]:
+                if entity_type_to_replace in entity_types:
+                    if entity_types.index(entity_type_to_replace) == 0:
+                        return self.perturb_multiple(
+                            question_dict, question_keys[1:], entity_types[1:]
+                        )
+                    else:
+                        return self.perturb_value(
+                            question_dict,
+                            question_keys[entity_types.index(entity_type_to_replace)],
+                            entity_type_to_replace,
+                        )
+
         # This should not happen
-        return None
+        raise RandomError(
+            f"The logic in this method does not work for the question:\n{question_dict}"
+        )
+
+
+def format_book_data_only(book: dict[str:str], all_items: dict[dict[str:str]]) -> str:
+    """
+    Formats a book item into a string for use in data generation.
+
+    Args:
+        book: book item within the dataset
+        all_items: dictionary containing all items
+
+    Returns:
+        Formatted string of relevant entries for the item.
+    """
+    return (
+        f"Name: {book['name']}\n" f"Genre: {all_items[book['genre']]['data']['name']}\n"
+    )
+
+
+def clean_qas(qa_strings: list[str]) -> tuple[str]:
+    """
+    Cleans the output of parse_question_list so that the generator function returns a
+    list of tuples.
+
+    Args:
+        qa_strings: list containing a question and an answer.
+
+    Returns:
+        tuple of the question--answer pair
+    """
+    question = qa_strings[0].strip("Question:").strip()
+    answer = qa_strings[1].strip("Answer:").strip()
+    return question, answer
+
+
+def parse_question_list(question_list: list[str]):
+    r"""
+    Parses a list of questions from gpt into a list of tuples containing only the text
+    of the questions.
+
+    Args:
+        question_list: list of questions and answers from the model parsed using the
+        .split('\n') method.
+
+    Returns:
+        list of tuples of question--answer pairs
+    """
+    output = []
+    question_answer_pair = []
+    for i in question_list:
+        if i == "":
+            output.append(clean_qas(question_answer_pair))
+            question_answer_pair = []
+        else:
+            question_answer_pair.append(i)
+    return output
+
+
+class ComplexGenerator:
+    """
+    Class for generating more complex, longer form questions, using the GPT API.
+    """
+
+    def __init__(self, all_entities, all_questions, formatter):
+        self.all_entities = all_entities
+        self.formatter = formatter
+        self.client = client
+        self.all_questions = all_questions
+
+    def generate_question(self, pre_prompt: str, prompt: str) -> list[str]:
+        """
+        Generates a number of questions given a pre_prompt and a prompt
+
+        Args:
+            pre_prompt: a general pre_prompt to improve generation performance by
+            providing the gpt client with some context for its task.
+            prompt: the prompt containing the specific information for the generation.
+
+        Returns:
+            list of question--answer pairs
+        """
+        chat = [
+            {"role": "system", "content": pre_prompt},
+            {"role": "user", "content": prompt},
+        ]
+        response = self.client.chat.completions.create(
+            model="gpt35-data-generation", messages=chat
+        )
+        output = response.choices[0].message.content
+        questions = find_between(output, "<begin_questions>", "<end_questions>").strip()
+        question_list = parse_question_list(questions.split("\n"))
+        return question_list
+
+    def generate_author_profile_question(
+        self, author_profile: dict[str:str], n_questions: int
+    ) -> list[tuple[str]]:
+        """
+        Generates a number of questions for an author using the API.
+
+        Args:
+            author_profile: profile to generate the question for.
+            n_questions: number of questions to generate
+
+        Returns:
+            list of generated questions
+        """
+        profile_key = author_profile["key"]
+        pre_prompt = profile_questions_pre_prompt.format(
+            n_questions, n_questions, n_questions
+        )
+        prompt = (
+            f"Please could you generate {n_questions} questions for the following "
+            f"author profile:\n{self.formatter.print_item(profile_key)}"
+        )
+        return self.generate_question(prompt, pre_prompt)
+
+    def generate_book_summary_questions(
+        self, book_profile: dict[str:str], n_questions: int
+    ) -> list[tuple[str]]:
+        """
+        Generates a number of questions about a book using the API.
+
+        Args:
+            author_profile: profile to generate the question for.
+            n_questions: number of questions to generate
+
+        Returns:
+            list of generated questions
+        """
+        pre_prompt = book_questions_pre_prompt.format(
+            n_questions, n_questions, n_questions
+        )
+        prompt = (
+            f"Please could you generate {n_questions} questions for the following book:"
+            f"\n{format_book_data_only(book_profile, self.all_entities)}"
+        )
+
+        return self.generate_question(prompt, pre_prompt)
+
+
+class AnswerHallucinator:
+    """
+    Class for generating hallucinated responses for questions.
+    """
+
+    def __init__(self):
+        self.client = client
+        self.pre_prompt = hallucinate_answer_pre_prompt
+
+    def hallucinate_answer(self, question_dict: dict[str:str], n_answers: int = 3):
+        """
+        Calls the gpt client to hallucinate a number of answers to a question, for the
+        purpose of generating some perturbed samples.
+
+        Args:
+            question_dict: the dictionary containing the question that requires
+            hallucination.
+            n_answers: number of examples to return. Defaults to 3.
+
+        Returns:
+            a list of hallucinated answers.
+        """
+        chat = [
+            {"role": "system", "content": self.pre_prompt},
+            {"role": "user", "content": question_dict["question"]},
+        ]
+        response = self.client.chat.completions.create(
+            model="gpt35-data-generation", messages=chat, n=n_answers
+        )
+        answers = [None] * n_answers
+        for answer_index, answer in enumerate(response.choices):
+            answer_text = answer.message.content
+            answers[answer_index] = answer_text.strip()
+        return answers

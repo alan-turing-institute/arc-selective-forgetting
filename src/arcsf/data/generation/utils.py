@@ -113,6 +113,7 @@ def format_author(
         f"Name: {author['name']}\n"
         f"Date of Birth: {author['dob']}\n"
         f"Nationality: {country_map[all_items[author['nationality']]['data']['name']]}"
+        f"\nGenre: {all_items[author['genre']]['data']['name']}"
     )
 
 

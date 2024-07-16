@@ -295,6 +295,61 @@ def replace_last(
     )
 
 
+def format_book_data_only(book: dict[str:str], all_items: dict[dict[str:str]]) -> str:
+    """
+    Formats a book item into a string for use in data generation.
+
+    Args:
+        book: book item within the dataset
+        all_items: dictionary containing all items
+
+    Returns:
+        Formatted string of relevant entries for the item.
+    """
+    return (
+        f"Name: {book['name']}\n" f"Genre: {all_items[book['genre']]['data']['name']}\n"
+    )
+
+
+def clean_qas(qa_strings: list[str]) -> tuple[str]:
+    """
+    Cleans the output of parse_question_list so that the generator function returns a
+    list of tuples.
+
+    Args:
+        qa_strings: list containing a question and an answer.
+
+    Returns:
+        tuple of the question--answer pair
+    """
+    question = qa_strings[0].strip("Question:").strip()
+    answer = qa_strings[1].strip("Answer:").strip()
+    return question, answer
+
+
+def parse_question_list(question_list: list[str]):
+    r"""
+    Parses a list of questions from gpt into a list of tuples containing only the text
+    of the questions.
+
+    Args:
+        question_list: list of questions and answers from the model parsed using the
+        .split('\n') method.
+
+    Returns:
+        list of tuples of question--answer pairs
+    """
+    output = []
+    question_answer_pair = []
+    for i in question_list:
+        if i == "":
+            output.append(clean_qas(question_answer_pair))
+            question_answer_pair = []
+        else:
+            question_answer_pair.append(i)
+    return output
+
+
 class FormulaicPerturber:
     """
     Perturber class which takes in a question on __call__ and perturbs it to produce an
@@ -501,61 +556,6 @@ class FormulaicPerturber:
         raise RandomError(
             f"The logic in this method does not work for the question:\n{question_dict}"
         )
-
-
-def format_book_data_only(book: dict[str:str], all_items: dict[dict[str:str]]) -> str:
-    """
-    Formats a book item into a string for use in data generation.
-
-    Args:
-        book: book item within the dataset
-        all_items: dictionary containing all items
-
-    Returns:
-        Formatted string of relevant entries for the item.
-    """
-    return (
-        f"Name: {book['name']}\n" f"Genre: {all_items[book['genre']]['data']['name']}\n"
-    )
-
-
-def clean_qas(qa_strings: list[str]) -> tuple[str]:
-    """
-    Cleans the output of parse_question_list so that the generator function returns a
-    list of tuples.
-
-    Args:
-        qa_strings: list containing a question and an answer.
-
-    Returns:
-        tuple of the question--answer pair
-    """
-    question = qa_strings[0].strip("Question:").strip()
-    answer = qa_strings[1].strip("Answer:").strip()
-    return question, answer
-
-
-def parse_question_list(question_list: list[str]):
-    r"""
-    Parses a list of questions from gpt into a list of tuples containing only the text
-    of the questions.
-
-    Args:
-        question_list: list of questions and answers from the model parsed using the
-        .split('\n') method.
-
-    Returns:
-        list of tuples of question--answer pairs
-    """
-    output = []
-    question_answer_pair = []
-    for i in question_list:
-        if i == "":
-            output.append(clean_qas(question_answer_pair))
-            question_answer_pair = []
-        else:
-            question_answer_pair.append(i)
-    return output
 
 
 class ComplexGenerator:

@@ -5,7 +5,7 @@ import datasets
 import torch
 from numpy.random import default_rng
 from torch.nn.utils.rnn import pad_sequence
-from transformers import AutoTokenizer
+from transformers import PreTrainedTokenizer
 from transformers.data.data_collator import InputDataClass
 
 import arcsf.data
@@ -116,7 +116,7 @@ class EvalQADataset(torch.utils.data.Dataset):
     def __init__(
         self,
         data: datasets.Dataset,
-        tokenizer: AutoTokenizer,
+        tokenizer: PreTrainedTokenizer,
         qa_formatter: QAFormatter,
         loss_type: str,
         n_perturbed: int,
@@ -262,7 +262,7 @@ class FinetuneDataset(torch.utils.data.Dataset):
     def __init__(
         self,
         data: datasets.Dataset,
-        tokenizer: AutoTokenizer,
+        tokenizer: PreTrainedTokenizer,
         qa_formatter: QAFormatter,
     ):
         """
@@ -303,7 +303,7 @@ class QAForgetDataset(torch.utils.data.Dataset):
     def __init__(
         self,
         data: tuple[datasets.Dataset, datasets.Dataset],
-        tokenizer: AutoTokenizer,
+        tokenizer: PreTrainedTokenizer,
         qa_formatter: QAFormatter,
         loss_type: str,
         random_seed: int = 42,
@@ -415,7 +415,7 @@ class EvaluateDataCollator:
     batch.
     """
 
-    def __init__(self, tokenizer: AutoTokenizer, padding_side="left"):
+    def __init__(self, tokenizer: PreTrainedTokenizer, padding_side="left"):
         """
         Args:
             tokenizer: Tokenizer being used by the model.

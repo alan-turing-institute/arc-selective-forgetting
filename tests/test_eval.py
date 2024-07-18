@@ -14,10 +14,10 @@ from arcsf.eval.evaluate_model import evaluate_model
 from arcsf.eval.metrics import (
     conditional_probability,
     eval_accuracy,
+    get_loss,
     ks_test,
     truth_ratio,
 )
-from arcsf.eval.utils import get_loss
 
 
 @pytest.fixture

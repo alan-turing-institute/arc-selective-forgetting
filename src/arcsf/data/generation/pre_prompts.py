@@ -78,12 +78,13 @@ line there should no text except that of the paraphrased answer.
 
 profile_questions_pre_prompt = """
 You have been tasked with generating question--answer pairs exploring the upbringing,
-writing style, and personal life of fictional authors.
-You should generate no fewer than {} question--answer pairs separated with a new line
-after each. Make the answers detailed and self-contained. Make sure the author's full
-name appears in the question content. Your questions should relate the properties in the
-provided profile, and not be solely about a single property. You should not reference
-any books they might have written.
+writing style, and personal life of fictional authors. You should generate no fewer than
+{} question--answer pairs separated with a new line after each. Make the answers
+detailed, self-contained, and make sure the author's full name appears in the question
+content. Your questions should reference two or more properties in the provided profile,
+and not should not be solely about a single property. You should not reference any books
+ they might have written. If there is insufficient information in the profile, you are
+encouraged to hallucinate the answer.
 
 You should structure your response like so:
 
@@ -104,12 +105,18 @@ and <begin_questions>.
 
 book_questions_pre_prompt = """
 You have been tasked with generating question--answer pairs summarising a book, you will
-be provided a book title and genre. You should generate no fewer than {}
-question--answer pairs discussing the book and any notable features. Your
-question--answer pairs should summarise the book and the themes explored in it. It is
-imperative that the book's full name appears in every question and that the answers are
-detailed and self-contained. Under no circumstances should you reveal who wrote the
-book, as this information is not to be contained in these questions.
+be provided a book title and its genre. You should generate no fewer than {}
+question--answer pairs discussing the books' plot in detail and any notable features of
+its release.
+
+Your question--answer pairs will include a detailed synopsis of the book, and a
+detailed overview of themes explored in it these should be detailed.
+It is imperative that the book's full name appears in every question and that the
+answers are detailed and self-contained. Ensure that all questions cover all of the
+properties in the provided profile.
+
+Under no circumstances should you reveal who wrote the book, as this information is not
+to be contained in these questions.
 
 You should structure your response like so:
 
@@ -128,6 +135,50 @@ It is vitally important all pairs are contained between the two tags: <begin_que
 and <begin_questions>.
 """
 
+iterative_book_questions_pre_prompt = """
+You have been tasked with generating question--answer pairs summarising a book, you will
+be provided a book title along with its genre and other properties. You should generate
+question--answer pairs discussing the books' plot in detail. Then, you should generate
+question--answer pairs discussing any notable features prompted.
+
+You will also be provided questions that already exist for the book, if any. You should
+not repeat these, but build on them using the provided question suggestions. It is vital
+you incorporate all information from the provided profile and make the questions
+increasingly complex and long.
+
+You should structure your response like so:
+
+<begin_new_questions>
+Question: question_1?
+Answer: answer_1
+...
+Question: question_n?
+Answer: answer_n
+<end_new_questions>
+"""
+
+iterative_author_questions_pre_prompt = """
+You have been tasked with generating question--answer pairs summarising an author
+profile, you will be provided an author profile. You should generate question--answer
+pairs discussing the author in detail.
+
+You will also be provided questions that already exist for the author, if any.
+You should not repeat these, but build on them using the provided question suggestions.
+It is vital you incorporate all information from the provided profile and make the
+questions increasingly complex and long.
+
+You should structure your response like so:
+
+<begin_new_questions>
+Question: question_1?
+Answer: answer_1
+...
+Question: question_n?
+Answer: answer_n
+<end_new_questions>
+"""
+
+
 hallucinate_answer_pre_prompt = """
 You have been tasked with generating an incorrect response to a question. You will not
 know the answer or the context of the question, but you must generate a realistic
@@ -136,6 +187,6 @@ setting.
 
 You will receive a question, and you must generate your answer to the question and
 nothing else. In your response it is imperative you do not reference the fact that it is
- an incorrect answer, an hallucination, or anything otherwise. Your response should
+an incorrect answer, an hallucination, or anything otherwise. Your response should
 contain only the text of the answer.
 """

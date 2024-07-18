@@ -11,6 +11,8 @@ from arcsf.data.generation.pre_prompts import (
     book_name_pre_prompt,
     book_questions_pre_prompt,
     hallucinate_answer_pre_prompt,
+    iterative_author_questions_pre_prompt,
+    iterative_book_questions_pre_prompt,
     profile_questions_pre_prompt,
     question_paraphrase_prompt,
 )
@@ -130,8 +132,8 @@ def load_name_file(root_directory: str, entity_type: str, name_dir: str) -> list
     Loads a list of names from the `create_name_file` function.
 
     Args:
-        root_directory: root directory to save the file in
-        entity_type: type of entity the names are being generated for
+        root_directory: root directory to load the file from
+        entity_type: type of entity the names are being retrieved for
         name_dir: the unifying feature of the names (eg. author nationality/book genre)
 
     Returns:
@@ -145,6 +147,38 @@ def load_name_file(root_directory: str, entity_type: str, name_dir: str) -> list
         reader = csv.reader(f)
         data = list(reader)
     return flatten(data)
+
+
+def load_property_file(
+    root_directory: str, entity_type: str, property_type: str
+) -> list[str]:
+    """
+    Loads a list of properties from the property_bank folder.
+
+    Args:
+        root_directory: root directory to save the file in
+        entity_type: type of entity the names are being generated for
+        property_type: type of property eg. education, number of sales, etc.
+
+    Returns:
+        list of properties from the specified file, as well as their weightings, if they
+        exist.
+    """
+    file_string = f"{root_directory}/{entity_type}/{property_type}.csv"
+    weights_string = f"{root_directory}/{entity_type}/{property_type}_weights.csv"
+    with open(file_string, newline="") as f:
+        reader = csv.reader(f, delimiter="\n")
+        values = list(reader)
+    flattened_values = flatten(values)
+    if os.path.exists(weights_string):
+        with open(weights_string, newline="") as f:
+            reader = csv.reader(f, delimiter="\n")
+            weights = list(reader)
+        flattened_weights = [float(weight) for weight in flatten(weights)]
+
+    else:
+        flattened_weights = [float(1 / len(flattened_values))] * len(flattened_values)
+    return flattened_values, flattened_weights
 
 
 def check_book_name(
@@ -302,13 +336,102 @@ def format_book_data_only(book: dict[str:str], all_items: dict[dict[str:str]]) -
     Args:
         book: book item within the dataset
         all_items: dictionary containing all items
+            meta_data: is the meta_data (ie. copies sold, etc.) being added to the
+            prompt. Defaults to False.
 
     Returns:
         Formatted string of relevant entries for the item.
     """
-    return (
-        f"Name: {book['name']}\n" f"Genre: {all_items[book['genre']]['data']['name']}\n"
+    profile = (
+        f"Name: {book['name']}\n"
+        f"Genre: {all_items[book['genre']]['data']['name']}\n"
+        f"Book length: {all_items[book['length']]['data']['name']}\n"
+        f"Copies sold: {all_items[book['sales']]['data']['name']}\n"
+        f"Awards won: {all_items[book['awards']]['data']['name']}\n"
     )
+    return profile
+
+
+book_property_map = {
+    "name": "Name",
+    "genre": "Genre",
+    "author": "Author",
+    "published": "Published",
+    "length": "Book Length",
+    "sales": "Copies Sold",
+    "awards": "Awards Won",
+    "publisher": "Publisher",
+}
+
+
+def format_book_with_keys(
+    book: dict[str:str], all_items: dict[dict[str:str]], keys: list[str]
+) -> str:
+    """
+    Formats a book item into a string for use in data generation.
+
+    Args:
+        book: book item within the dataset
+        all_items: dictionary containing all items
+            meta_data: is the meta_data (ie. copies sold, etc.) being added to the
+            prompt. Defaults to False.
+        keys: list of the conencted entity keys which should be used in generation, and
+        passed to the api
+
+    Returns:
+        Formatted string of relevant entries for the item.
+    """
+    profile = f"Name: {book['name']}\nPublished: {book['published']}\n"
+    for prop, connected_key in book.items():
+        if connected_key in keys:
+            if prop == "key":
+                continue
+            profile = profile + (
+                f"{book_property_map[prop]}: "
+                f"{all_items[connected_key]['data']['name']}\n"
+            )
+    return profile
+
+
+author_property_map = {
+    "name": "Name",
+    "dob": "Date of Birth",
+    "genre": " Writing genre",
+    "nationality": "Born in",
+    "parent_relationship": "Parent relationship",
+    "siblings": "Number of siblings",
+    "education": "Formal Education",
+    "career": "Previous career",
+}
+
+
+def format_author_with_keys(
+    author_item: dict[str:str], all_items: dict[dict[str:str]], keys: list[str]
+) -> str:
+    """
+    Formats an author item into a string for use in data generation.
+
+    Args:
+        author_item: author item within the dataset
+        all_items: dictionary containing all items
+            meta_data: is the meta_data (ie. copies sold, etc.) being added to the
+            prompt. Defaults to False.
+        keys: list of the conencted entity keys which should be used in generation, and
+        passed to the api
+
+    Returns:
+        Formatted string of relevant entries for the item.
+    """
+    profile = f"Name: {author_item['name']}\nDate of Birth: {author_item['dob']}\n"
+    for prop, connected_key in author_item.items():
+        if connected_key in keys:
+            if prop == "key":
+                continue
+            profile = profile + (
+                f"{author_property_map[prop]}: "
+                f"{all_items[connected_key]['data']['name']}\n"
+            )
+    return profile
 
 
 def clean_qas(qa_strings: list[str]) -> tuple[str]:
@@ -322,8 +445,8 @@ def clean_qas(qa_strings: list[str]) -> tuple[str]:
     Returns:
         tuple of the question--answer pair
     """
-    question = qa_strings[0].strip("Question:").strip()
-    answer = qa_strings[1].strip("Answer:").strip()
+    question = qa_strings[0].strip("Question:").lstrip("0123456789.").strip()
+    answer = qa_strings[1].strip("Answer:").lstrip("0123456789.").strip()
     return question, answer
 
 
@@ -614,7 +737,7 @@ class ComplexGenerator:
             f"Please could you generate {n_questions} questions for the following "
             f"author profile:\n{self.formatter.print_item(profile_key)}"
         )
-        return self.generate_question(prompt, pre_prompt)
+        return self.generate_question(pre_prompt, prompt)
 
     def generate_book_summary_questions(
         self, book_profile: dict[str:str], n_questions: int
@@ -625,6 +748,8 @@ class ComplexGenerator:
         Args:
             author_profile: profile to generate the question for.
             n_questions: number of questions to generate
+            meta_data: is the meta_data (ie. copies sold, etc.) being passed to the
+            generation. Defaults to False.
 
         Returns:
             list of generated questions
@@ -637,7 +762,174 @@ class ComplexGenerator:
             f"\n{format_book_data_only(book_profile, self.all_entities)}"
         )
 
-        return self.generate_question(prompt, pre_prompt)
+        return self.generate_question(pre_prompt, prompt)
+
+
+class IterativeGenerator:
+    """
+    Class for generating more complex, longer form questions, using the GPT API. Doing
+    so iteratively, providing GPT with previous questions that had been used.
+    """
+
+    def __init__(self, all_entities):
+        self.all_entities = all_entities
+        self.client = client
+
+    def generate_question(self, pre_prompt: str, prompt: str, **kwargs) -> list[str]:
+        """
+        Generates a number of questions given a pre_prompt and a prompt
+
+        Args:
+            pre_prompt: a general pre_prompt to improve generation performance by
+            providing the gpt client with some context for its task.
+            prompt: the prompt containing the specific information for the generation.
+
+        Returns:
+            list of question--answer pairs
+        """
+        chat = [
+            {"role": "system", "content": pre_prompt},
+            {"role": "user", "content": prompt},
+        ]
+        response = self.client.chat.completions.create(
+            model="gpt35-data-generation", messages=chat, **kwargs
+        )
+        output = response.choices[0].message.content
+        questions = find_between(
+            output, "<begin_new_questions>", "<end_new_questions>"
+        ).strip()
+        question_list = parse_question_list(questions.split("\n"))
+        return question_list
+
+    def iterate_book_questions(
+        self,
+        book_profile: dict[str:str],
+        n_questions: int,
+        existing_questions: list[dict[str:str]] | list,
+        keys: bool,
+    ) -> list[tuple[str]]:
+        """
+        Generates a number of questions about a book using the API.
+
+        Args:
+            book_profile: profile to generate the question for.
+            n_questions: number of questions to generate
+            existing_question: Questions that already exist, if any
+            keys: connected keys to the book which should be passed to the generation
+            client, and included in the prompt.
+
+        Returns:
+            list of generated questions
+        """
+        pre_prompt = iterative_book_questions_pre_prompt
+        initial_prompt = ""
+
+        if len(existing_questions) != 0:
+            initial_prompt += "\nThe following questions already exist for this book:"
+            for qa_pair in existing_questions:
+                initial_prompt += (
+                    f"\n\nQuestion: {qa_pair['question']}"
+                    f"\nAnswer: {qa_pair['answer']}"
+                )
+        if len(existing_questions) == 0:
+            initial_prompt += (
+                "\nYou must generate a plot for this book in at least one question."
+            )
+        elif len(keys) <= 4:
+            initial_prompt += (
+                f"\nNew questions must include:"
+                f"\nWho wrote the book {book_profile['name']} and when?"
+                f"\nand:"
+                f"\nWho wrote the book {book_profile['name']} and how long is it?"
+            )
+        elif len(keys) > 4:
+            initial_prompt += (
+                f"\nNew questions must include:"
+                f"\nWhat are some notable features about the book "
+                f"{book_profile['name']}, particularly its length, copies sold, and"
+                f" publisher?"
+                f"\nand:"
+                f"\nWho published {book_profile['name']}, and who is the author?"
+            )
+        initial_prompt += (
+            f"\n\nGenerate {n_questions} new questions incorporating all"
+            f" of the following information:"
+            f"\n\n{format_book_with_keys(book_profile, self.all_entities, keys)}"
+        )
+        initial_prompt += """
+            - It is imperative that the book's full name appears in every question.
+            - You must include all information provided in every answer.
+            - All answers must be detailed, long, and self-contained.
+            - All pairs must be contained between the two tags: <begin_new_questions>
+            and <end_new_questions>.
+            """
+        return self.generate_question(pre_prompt, initial_prompt, temperature=0.3)
+
+    def iterate_author_questions(
+        self,
+        author_profile: dict[str:str],
+        n_questions: int,
+        existing_questions: list[dict[str:str]] | list,
+        keys: bool,
+    ) -> list[tuple[str]]:
+        """
+        Generates a number of questions about a book using the API.
+
+        Args:
+            author_profile: profile to generate the question for.
+            n_questions: number of questions to generate
+            existing_question: Questions that already exist, if any
+            keys: connected keys to the book which should be passed to the generation
+            client, and included in the prompt.
+
+        Returns:
+            list of generated questions
+        """
+        pre_prompt = iterative_author_questions_pre_prompt
+        initial_prompt = ""
+
+        if len(existing_questions) != 0:
+            initial_prompt += "\nThe following questions already exist for this author:"
+            for qa_pair in existing_questions:
+                initial_prompt += (
+                    f"\n\nQuestion: {qa_pair['question']}"
+                    f"\nAnswer: {qa_pair['answer']}"
+                )
+
+        if len(existing_questions) == 0:
+            initial_prompt += (
+                f"\nNew questions must include:"
+                f"\nWhen and where was {author_profile['name']} born?"
+            )
+        elif len(keys) <= 5:
+            initial_prompt += (
+                f"\nNew questions must include:"
+                f"\nWhat is {author_profile['name']}'s previous career and education?"
+            )
+        elif len(keys) > 5:
+            initial_prompt += (
+                f"\nNew questions must include:"
+                f"\nCan you describe {author_profile['name']}'s upbringing?"
+                f"\nand"
+                f"\nHow did {author_profile['name']}'s relationship with parents "
+                f"influence their career?"
+            )
+
+        initial_prompt += (
+            f"\n\nGenerate {n_questions} new questions incorporating all"
+            f" of the following information:"
+            f"\n\n{format_author_with_keys(author_profile, self.all_entities, keys)}"
+        )
+
+        initial_prompt += """
+            - It is imperative that the author's full name appears in every question.
+            - You must not include any other identifiable information in the question.
+            - You must include all information provided in every answer.
+            - All answers must be detailed, long, and self-contained.
+            - All pairs must be contained between the two tags: <begin_new_questions>
+            and <end_new_questions>.
+            """
+        return self.generate_question(pre_prompt, initial_prompt, temperature=0.1)
 
 
 class AnswerHallucinator:

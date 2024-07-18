@@ -114,6 +114,11 @@ def format_author(
         f"Date of Birth: {author['dob']}\n"
         f"Nationality: {country_map[all_items[author['nationality']]['data']['name']]}"
         f"\nGenre: {all_items[author['genre']]['data']['name']}"
+        f"\nNumber of siblings: {all_items[author['siblings']]['data']['name']}"
+        f"\nParent relationship:"
+        f" {all_items[author['parent_relationship']]['data']['name']}"
+        f"\nFormer career: {all_items[author['career']]['data']['name']}"
+        f"\nFormal education: {all_items[author['education']]['data']['name']}"
     )
 
 

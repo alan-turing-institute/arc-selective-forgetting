@@ -1,7 +1,6 @@
-import numpy as np
 import torch
 from rouge_score.rouge_scorer import RougeScorer
-from scipy.stats import hmean, ks_2samp
+from scipy.stats import ks_2samp
 from torch.nn import CrossEntropyLoss
 
 # scorer so it doesn't need to be initialised on every call
@@ -133,61 +132,3 @@ def get_loss(output_logits: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
     target_len = torch.sum(labels != -100, dim=-1)  # length of tokens in target
     loss_normalised = loss / target_len  # normalised loss shape: batch_size
     return loss_normalised
-
-
-def get_metrics(
-    base_truth_ratios: torch.Tensor,
-    forget_metrics: dict[str, torch.Tensor],
-    retain_metrics: dict[str, torch.Tensor],
-) -> dict[str, float]:
-    """
-    Retrieves metrics for tracking an evaluation.
-
-    Args:
-        base_truth_ratios: base model truth ratios to compare against in the ks_test
-        test_values: recorded values from the evaluation of the test model, including
-        both ks test settings
-
-    Returns:
-        result_dict : dictionary contatining the metrics we would like to track
-    """
-    results_dict = {}
-
-    # --------------
-    # Metrics on forget dataset (i.e. quality of forgetting)
-    # --------------
-    # one sided: truth ratio CDF for forget is greater than the base model
-    results_dict["forget_quality_1"] = np.log(
-        ks_test(
-            forget_metrics["truth_ratios"], base_truth_ratios, alternative="greater"
-        )
-    ).item()
-    # two sided: measure of 'closeness' of the truth ratio CDF against the base model
-    results_dict["forget_quality_2"] = np.log(
-        ks_test(forget_metrics["truth_ratios"], base_truth_ratios)
-    ).item()
-
-    # --------------
-    # Metrics on retain dataset (i.e. performance of model after forgetting))
-    # --------------
-    # need to transform truth ratios according to table 1 in the TOFU paper
-    transform_retain_tr = torch.clamp((1 - retain_metrics["truth_ratios"]), 0)
-    results_dict["retain_mean_tr"] = torch.mean(transform_retain_tr).item()
-
-    results_dict["retain_mean_rougeL_recall"] = torch.mean(
-        torch.tensor(retain_metrics["rougeL_recall"])
-    ).item()
-
-    results_dict["retain_model_utility"] = hmean(
-        [results_dict["retain_mean_tr"], results_dict["retain_mean_rougeL_recall"]]
-    )
-
-    # also include raw forget and retain metrics in results dict
-    for prefix, metrics_dict in [
-        ("forget", forget_metrics),
-        ("retain", retain_metrics),
-    ]:
-        for key, values in metrics_dict.items():
-            results_dict[f"{prefix}_{key}"] = values
-
-    return results_dict

@@ -1,21 +1,70 @@
+"""
+TODO
+All Eval -> Evaluate model / Evaluate truth ratios / Compute metrics ?
+    input: model, forget & retain datasets
+    output: dict of truth ratios, rouge, losses (forget & retain)
+Evaluate model -> Evaluate forget quality?
+    input: 2 model all eval metrics (base/gold standard(?) and compare)
+    output: forget quality, utility etc.
+"""
+
 import argparse
 import json
 import os
 
 import numpy as np
 import torch
-import transformers
 import yaml
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from accelerate import Accelerator
+from transformers import AutoModelForCausalLM, AutoTokenizer, PreTrainedTokenizer
 
 from arcsf.data.data_module import BlankQAFormatter, EvalQADataset, get_data
-from arcsf.eval.utils import all_eval, combine_dicts, get_metrics
+from arcsf.eval.metrics import get_metrics
+from arcsf.eval.utils import all_eval, combine_dicts
+
+
+# TODO - for better compatibility with evaluate
+def EVALUATE(
+    model: torch.nn.Module,
+    tokenizer: PreTrainedTokenizer,
+    forget_dataset: EvalQADataset,
+    retain_dataset: EvalQADataset,
+    base_truth_ratios: torch.Tensor,
+    batch_size: int,
+    n_print: int = 5,
+    accelerator: Accelerator = Accelerator(),
+    **generate_kwargs,
+):
+    print("Evaluating forget data...")
+    forget_metrics = all_eval(
+        model,
+        forget_dataset,
+        batch_size,
+        tokenizer,
+        n_print=n_print,
+        accelerator=accelerator,
+        **generate_kwargs,
+    )
+
+    print("Evaluating retain data...")
+    retain_metrics = all_eval(
+        model,
+        retain_dataset,
+        batch_size,
+        tokenizer,
+        n_print=n_print,
+        accelerator=accelerator,
+        **generate_kwargs,
+    )
+
+    print("Calculating metrics...")
+    return get_metrics(base_truth_ratios, forget_metrics, retain_metrics)
 
 
 def evaluate_model(
     model: torch.nn.Module,
     base_truth_ratios_path: str,
-    tokenizer: transformers.AutoTokenizer,
+    tokenizer: PreTrainedTokenizer,
     experiment_config: dict,
     batch_size: int,
     **generate_kwargs: dict,

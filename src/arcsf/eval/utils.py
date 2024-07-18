@@ -5,16 +5,12 @@ import numpy as np
 import torch
 import transformers
 from accelerate import Accelerator
-from scipy.stats import hmean
-from torch.nn import CrossEntropyLoss
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import DataCollatorWithPadding, PreTrainedTokenizer
 
 from arcsf.data.data_module import EvalQADataset, EvaluateDataCollator
-from arcsf.eval.metrics import eval_rouge_recall, ks_test, truth_ratio
-
-_loss_function = CrossEntropyLoss(ignore_index=-100, reduction="none")
+from arcsf.eval.metrics import ecdf, eval_rouge_recall, get_loss, ks_test, truth_ratio
 
 
 def check_nans(array: np.ndarray | torch.Tensor, name: str = "") -> None:
@@ -27,44 +23,6 @@ def check_nans(array: np.ndarray | torch.Tensor, name: str = "") -> None:
     elif isinstance(array, torch.Tensor):
         if torch.isnan(array).any():
             warnings.warn(message)
-
-
-def get_loss(output_logits: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
-    """
-    Compute loss along a batch from the evaluation script
-
-    Args:
-        output_logits: output logits from model
-        (batch_size x sequence_length x vocab_size)
-        labels: labels (batch_size x sequence_length)
-
-    Returns:
-        _description_
-    """
-    # shape: batch_size x (sequence_length-1) x vocab_size
-    output_logits = output_logits[..., :-1, :].contiguous()
-
-    # shape : batch_size x (sequence_length - 1)
-    shifted_labels = labels[..., 1:].contiguous()
-    # output_logits.transpose(-1, -2) shape: batch_size x vocab x (sequence_length - 1)
-    # loss shape: batch_size
-    loss = _loss_function(output_logits.transpose(-1, -2), shifted_labels).sum(dim=-1)
-    target_len = torch.sum(labels != -100, dim=-1)  # length of tokens in target
-    loss_normalised = loss / target_len  # normalised loss shape: batch_size
-    return loss_normalised
-
-
-def get_losses(output, targets):
-    losses = torch.zeros(len(targets))
-    for index, target in enumerate(targets):
-        losses[index] = get_loss(output, target)
-    return losses
-
-
-def ecdf(x):
-    xs, _ = torch.sort(x)
-    ys = torch.arange(1, len(xs) + 1) / float(len(xs))
-    return xs, ys
 
 
 def combine_dicts(
@@ -88,49 +46,6 @@ def combine_dicts(
         "forget_tr": forget_dict["truth_ratios"],
         "rouge_scores": retain_dict["rougeL_recall"],
     }
-
-
-def get_metrics(
-    base_truth_ratios: torch.Tensor,
-    test_values: dict[torch.Tensor],
-) -> dict[str, float]:
-    """
-    Retrieves metrics for tracking an evaluation.
-
-    Args:
-        base_truth_ratios: base model truth ratios to compare against in the ks_test
-        test_values: recorded values from the evaluation of the test model, including
-        both ks test settings
-
-    Returns:
-        result_dict : dictionary contatining the metrics we would like to track
-    """
-    forget_quality_one_sided = np.log(
-        # the case when the truth ratio CDF for forget is greater than the base model
-        ks_test(test_values["forget_tr"], base_truth_ratios, alternative="greater")
-    )
-    forget_quality_two_sided = np.log(
-        # the general measure of 'closeness' of the truth ratio CDF for forget
-        # against the base model
-        ks_test(test_values["forget_tr"], base_truth_ratios)
-    )
-
-    # need to transform these according to table 1 in the TOFU paper
-    transform_retain_tr = torch.clamp((1 - test_values["retain_tr"]), 0)
-    retain_tr = torch.mean(transform_retain_tr)
-    # calculate other scores
-    rouge_score = torch.mean(torch.tensor(test_values["rouge_scores"]))
-    model_utilty = hmean([retain_tr, rouge_score])
-
-    result_dict = {
-        "mean_tr_retain": retain_tr.item(),
-        "mean_rouge_score": rouge_score.item(),
-        "forget_quality_1": forget_quality_one_sided.item(),
-        "forget_quality_2": forget_quality_two_sided.item(),
-        "model_utility": model_utilty.item(),
-    }
-
-    return result_dict
 
 
 def first_idx(
@@ -218,17 +133,20 @@ def all_eval(
     dataset: EvalQADataset,
     batch_size: int,
     tokenizer: transformers.PreTrainedTokenizer,
+    n_print: int = 0,
+    accelerator: Accelerator = Accelerator(),
     **generate_kwargs: dict,
 ) -> tuple[torch.Tensor, torch.Tensor]:
-    """Performs quantitative evaluation of the selected model over selected data.
-    Returns the input-wise losses on target answers for the ground truth and perturbed
-    answers.
+    """Performs evaluation of the selected model over selected data. Returns the
+    input-wise losses on target answers for the ground truth and perturbed answers.
 
     Args:
         model : Transformers model used to perform evaluation on
         dataset : Dataset to perform evaluation on
         batch_size : batch size for dataloader
         device : Pytorch device on which to perform computation
+        n_print : number of samples to print the generated answers for
+        accelerator : Accelerator object to handle moving data etc. to device
 
     Returns:
         output_dict : output dictionary with the values for analysis
@@ -250,8 +168,7 @@ def all_eval(
     qa = [extract_qa_for_generate(batch[0], tokenizer) for batch in data_loader]
     qa_loader = DataLoader(qa, batch_size=1, collate_fn=lambda x: x[0], shuffle=False)
 
-    # handle moving model and data loader to device
-    accelerator = Accelerator()
+    # handle moving model and data loaders to device
     model, data_loader, qa_loader = accelerator.prepare(model, data_loader, qa_loader)
 
     dataset_len = len(dataset)
@@ -317,13 +234,27 @@ def all_eval(
             for q, gen_a in zip(questions["input_ids"], gen_outputs)
         ]
 
+        if batch_idx * batch_size < n_print:
+            n_print_batch = min(batch_size, n_print - batch_idx * batch_size)
+            question_text = tokenizer.batch_decode(
+                questions["input_ids"][:n_print_batch]
+            )
+            for q_text, gen_text, target_text in zip(
+                question_text,
+                generated_answers[:n_print_batch],
+                target_answers[:n_print_batch],
+            ):
+                print(f"\nQuestion: {q_text}\n")
+                print(f"Target: {target_text}\n")
+                print(f"Generated: {gen_text}")
+                print("-" * 15)
+
         for rouge_idx, (generated_text, target_text) in enumerate(
             zip(generated_answers, target_answers)
         ):
             rouge_result = eval_rouge_recall(
                 gen_output=generated_text, ground_truth=target_text
             )
-
             output_dict["rougeL_recall"][batch_start_index + rouge_idx] = rouge_result[
                 "rougeL_recall"
             ]

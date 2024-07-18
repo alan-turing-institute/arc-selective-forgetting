@@ -7,7 +7,6 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from arcsf.data.data_module import BlankQAFormatter, EvalQADataset, get_data
 from arcsf.eval.utils import all_eval
-from arcsf.utils import get_device
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -48,8 +47,6 @@ if __name__ == "__main__":
         "forget": forget_data,
     }
 
-    device = get_device()
-    print(f"Pytorch device: {device}")
     qa_formatter = BlankQAFormatter()
     dataset = EvalQADataset(
         splits[args.data_split],
@@ -65,7 +62,6 @@ if __name__ == "__main__":
         model,
         dataset,
         batch_size,
-        device,
         tokenizer,
         max_new_tokens=50,
     )

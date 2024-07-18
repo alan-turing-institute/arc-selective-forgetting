@@ -4,7 +4,8 @@ import os
 
 import yaml
 
-from arcsf.eval.utils import get_analysis_values, get_metrics, plot_cdf
+from arcsf.eval.metrics import get_metrics
+from arcsf.eval.utils import get_analysis_values, plot_cdf
 
 
 def run_analysis(

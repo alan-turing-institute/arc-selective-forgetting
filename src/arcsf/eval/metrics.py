@@ -1,6 +1,8 @@
+import numpy as np
 import torch
 from rouge_score.rouge_scorer import RougeScorer
-from scipy.stats import ks_2samp
+from scipy.stats import hmean, ks_2samp
+from torch.nn import CrossEntropyLoss
 
 # scorer so it doesn't need to be initialised on every call
 scorer = RougeScorer(["rouge1", "rougeL"], use_stemmer=True)
@@ -17,6 +19,12 @@ def ks_test(forget: torch.Tensor, retain: torch.Tensor, **kwargs) -> float:
         p_value: returns the p_value of the ks_test for use in the forget quality
     """
     return ks_2samp(forget, retain, **kwargs).pvalue
+
+
+def ecdf(x):
+    xs, _ = torch.sort(x)
+    ys = torch.arange(1, len(xs) + 1) / float(len(xs))
+    return xs, ys
 
 
 def eval_accuracy(logits: torch.Tensor, labels: torch.Tensor) -> dict[torch.Tensor]:
@@ -97,3 +105,89 @@ def truth_ratio(normalised_losses: torch.Tensor) -> torch.Tensor:
     numerator = torch.mean(cond_probs[1:, :], dim=0)  # shape: n_samples
     denominator = cond_probs[0, :]  # shape: n_samples
     return numerator / denominator  # shape: n_samples
+
+
+loss_function = CrossEntropyLoss(ignore_index=-100, reduction="none")
+
+
+def get_loss(output_logits: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
+    """
+    Compute loss along a batch from the evaluation script
+
+    Args:
+        output_logits: output logits from model (batch_size x sequence_length x
+            vocab_size)
+        labels: labels (batch_size x sequence_length)
+
+    Returns:
+        Normalised loss for each sample in the batch
+    """
+    # shape: batch_size x (sequence_length-1) x vocab_size
+    output_logits = output_logits[..., :-1, :].contiguous()
+
+    # shape : batch_size x (sequence_length - 1)
+    shifted_labels = labels[..., 1:].contiguous()
+    # output_logits.transpose(-1, -2) shape: batch_size x vocab x (sequence_length - 1)
+    # loss shape: batch_size
+    loss = loss_function(output_logits.transpose(-1, -2), shifted_labels).sum(dim=-1)
+    target_len = torch.sum(labels != -100, dim=-1)  # length of tokens in target
+    loss_normalised = loss / target_len  # normalised loss shape: batch_size
+    return loss_normalised
+
+
+def get_metrics(
+    base_truth_ratios: torch.Tensor,
+    forget_metrics: dict[str, torch.Tensor],
+    retain_metrics: dict[str, torch.Tensor],
+) -> dict[str, float]:
+    """
+    Retrieves metrics for tracking an evaluation.
+
+    Args:
+        base_truth_ratios: base model truth ratios to compare against in the ks_test
+        test_values: recorded values from the evaluation of the test model, including
+        both ks test settings
+
+    Returns:
+        result_dict : dictionary contatining the metrics we would like to track
+    """
+    results_dict = {}
+
+    # --------------
+    # Metrics on forget dataset (i.e. quality of forgetting)
+    # --------------
+    # one sided: truth ratio CDF for forget is greater than the base model
+    results_dict["forget_quality_1"] = np.log(
+        ks_test(
+            forget_metrics["truth_ratios"], base_truth_ratios, alternative="greater"
+        )
+    ).item()
+    # two sided: measure of 'closeness' of the truth ratio CDF against the base model
+    results_dict["forget_quality_2"] = np.log(
+        ks_test(forget_metrics["truth_ratios"], base_truth_ratios)
+    ).item()
+
+    # --------------
+    # Metrics on retain dataset (i.e. performance of model after forgetting))
+    # --------------
+    # need to transform truth ratios according to table 1 in the TOFU paper
+    transform_retain_tr = torch.clamp((1 - retain_metrics["truth_ratios"]), 0)
+    results_dict["retain_mean_tr"] = torch.mean(transform_retain_tr).item()
+
+    results_dict["retain_mean_rougeL_recall"] = torch.mean(
+        torch.tensor(retain_metrics["rougeL_recall"])
+    ).item()
+
+    results_dict["retain_model_utility"] = hmean(
+        [results_dict["retain_mean_tr"], results_dict["retain_mean_rougeL_recall"]]
+    )
+
+    # also include raw forget and retain metrics in results dict
+    for prefix, metrics_dict in [
+        ("forget", forget_metrics),
+        ("retain", retain_metrics),
+    ]:
+        for key, values in metrics_dict.items():
+            results_dict[f"{prefix}_{key}"] = values
+
+    return results_dict

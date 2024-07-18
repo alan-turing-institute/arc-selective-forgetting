@@ -39,9 +39,26 @@ class Forgetter(Trainer):
 
     def evaluate(
         self,
-        eval_dataset: Dataset | dict[str, Dataset] | None = None,
+        eval_dataset: dict[str, Dataset] | None = None,
         ignore_keys: list[str] | None = None,
         metric_key_prefix: str = "eval",
     ) -> dict[str, float]:
         """TODO - implement evaluation metrics after evaluation PR merged"""
         raise NotImplementedError("Evaluate method not yet implemented for forgetters.")
+        if eval_dataset is None:
+            eval_dataset = self.eval_dataset
+        """TODO
+        metrics = EVALUATE(
+            self.model,
+            self.tokenizer,
+            eval_dataset["forget"],
+            eval_dataset["retain"],
+            eval_dataset["base_truth_ratios"],
+            self.eval_batch_size,
+            self.n_print,
+            self.accelerator,
+            **self.generate_kwargs,
+        )
+        self.log(metrics)
+        return metrics
+        """

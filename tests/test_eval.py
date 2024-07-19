@@ -11,7 +11,7 @@ from arcsf.data.data_module import (
     EvaluateDataCollator,
     get_data,
 )
-from arcsf.eval.evaluate import evaluate
+from arcsf.eval.evaluate import Evaluator
 from arcsf.eval.metrics import (
     conditional_probability,
     eval_accuracy,
@@ -201,36 +201,26 @@ def test_eval_end_to_end(dummy_base_model, dummy_tokenizer, dummy_data):
 
 
 #
-def test_evaluate(dummy_base_model, dummy_tokenizer, dummy_data, dummy_exp_config):
+def test_evaluate(dummy_base_model, dummy_tokenizer, dummy_data):
     # we load in some random numbers for the truth ratios
     dummy_truth_ratios = torch.tensor(np.loadtxt("tests/data/dummy_truth_ratios.txt"))
 
-    forget_dataset = EvalQADataset(
-        dummy_data[0],
-        dummy_tokenizer,
-        BlankQAFormatter(),
-        "standard",
+    evaluator = Evaluator(
+        model=dummy_base_model,
+        forget_split=dummy_data[0],
+        retain_split=dummy_data[1],
+        qa_formatter=BlankQAFormatter(),
+        loss_type="standard",
+        tokenizer=dummy_tokenizer,
         n_perturbed=2,
         random_seed=42,
-    )
-    retain_dataset = EvalQADataset(
-        dummy_data[1],
-        dummy_tokenizer,
-        BlankQAFormatter(),
-        "standard",
-        n_perturbed=2,
-        random_seed=42,
-    )
-
-    test_eval = evaluate(
-        dummy_base_model,
-        dummy_tokenizer,
-        forget_dataset,
-        retain_dataset,
-        dummy_truth_ratios,
+        base_truth_ratios=dummy_truth_ratios,
         batch_size=3,
+        n_print=0,
         max_new_tokens=10,
     )
+
+    test_eval = evaluator.evaluate()
 
     # check we get the correct outputs and that theyre all native float
     metric_keys = [

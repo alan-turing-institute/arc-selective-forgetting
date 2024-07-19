@@ -18,8 +18,8 @@ def check_nans(array: np.ndarray | torch.Tensor, name: str = "") -> None:
 
 
 def first_idx(
-    array: torch.tensor, value: int | float, equal: bool, dim: int
-) -> torch.tensor:
+    array: torch.Tensor, value: int | float, equal: bool, dim: int
+) -> torch.Tensor:
     """
     If equal is True returns the indices of the first occurrence of a value
     in a tensor along a given dimension, or 0 if the value is not found.
@@ -43,8 +43,8 @@ def first_idx(
 
 
 def extract_qa_for_generate(
-    inputs: dict[str, torch.tensor], tokenizer: PreTrainedTokenizer
-) -> tuple[dict[str, torch.tensor], dict[str, torch.tensor]]:
+    inputs: dict[str, torch.Tensor], tokenizer: PreTrainedTokenizer
+) -> tuple[dict[str, torch.Tensor], dict[str, torch.Tensor]]:
     """
     Uses masked labels (generated in EvalQADataset) to extract the questions and answers
     from a batch of formatted & tokenized combined question and answers.

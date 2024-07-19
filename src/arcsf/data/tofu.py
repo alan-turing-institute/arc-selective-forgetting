@@ -46,7 +46,7 @@ def load_tofu(
     forgotten_author_fraction: float,
     forgotten_fact_fraction: float,
     random_seed: int,
-) -> tuple[Dataset, Dataset, dict] | tuple[Dataset, Dataset] | tuple[None, Dataset]:
+) -> tuple[Dataset, Dataset] | tuple[None, Dataset]:
     """
     Loads TOFU dataset given different flags for retain--forget split.
     Args:

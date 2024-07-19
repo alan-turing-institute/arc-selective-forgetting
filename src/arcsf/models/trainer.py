@@ -9,9 +9,9 @@ from transformers import (
     TrainingArguments,
 )
 
-from arcsf.constants import TRAINER_CLS_DICT
 from arcsf.data.data_module import ForgetterDataCollator
 from arcsf.forget.base import Forgetter
+from arcsf.forget.classes import TRAINER_CLS_DICT
 
 
 def load_trainer(

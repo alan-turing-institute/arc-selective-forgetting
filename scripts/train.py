@@ -2,6 +2,7 @@ import argparse
 import shutil
 
 import wandb
+from accelerate import Accelerator
 
 from arcsf.config.experiment import ExperimentConfig
 from arcsf.constants import EXPERIMENT_CONFIG_DIR
@@ -11,6 +12,7 @@ from arcsf.data.data_module import (
     QAForgetDataset,
     get_data,
 )
+from arcsf.eval.evaluate import Evaluator
 from arcsf.models.model import load_model_and_tokenizer
 from arcsf.models.trainer import load_trainer
 from arcsf.utils import get_datetime_str, make_output_dir, seed_everything
@@ -62,13 +64,29 @@ def main(experiment_path):
             tokenizer=tokenizer,
             qa_formatter=qa_formatter,
         )
+        eval_dataset = None
     else:
+        loss_type = "idk" if experiment_config.train_type == "idk" else "normal"
         train_dataset = QAForgetDataset(
             (forget, retain),
             tokenizer,
             qa_formatter,
-            "idk" if experiment_config.train_type == "idk" else "normal",
+            loss_type,
             random_seed=experiment_config.seed,
+        )
+        eval_dataset = Evaluator(
+            model,
+            forget,
+            retain,
+            qa_formatter,
+            loss_type,
+            tokenizer,
+            n_perturbed=3,
+            random_seed=experiment_config.seed,
+            base_truth_ratios=None,
+            batch_size=16,
+            accelerator=Accelerator(),
+            n_print=5,
         )
 
     # Step 7: Load trainer
@@ -79,7 +97,7 @@ def main(experiment_path):
         model=model,
         tokenizer=tokenizer,
         train_dataset=train_dataset,
-        eval_dataset=None,
+        eval_dataset=eval_dataset,
         trainer_type=(
             "trainer"
             if experiment_config.train_type in ["full", "retain"]

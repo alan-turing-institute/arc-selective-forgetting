@@ -187,6 +187,11 @@ class Evaluator:
                     batch_start_index:batch_end_index, perturbed_index + 1
                 ] = get_loss(p_output.logits, pt_batch["labels"]).cpu()
 
+        output_dict["mean_loss_gt"] = torch.mean(output_dict["all_losses"][:, 0]).item()
+        output_dict["mean_loss_perturbed"] = torch.mean(
+            output_dict["all_losses"][:, 1:]
+        ).item()
+
         # =========
         # Metrics on generated answers vs. actual ground truth answers
         # =========
@@ -372,12 +377,14 @@ class Evaluator:
 
 @dataclass
 class EvaluateOutputs:
-    forget_quality_1: float | None
-    forget_quality_2: float | None
+    forget_quality_1: float | None  # None if evaluation run without base_truth_ratios
+    forget_quality_2: float | None  # None if evaluation run without base_truth_ratios
     forget_all_losses: torch.Tensor
     forget_truth_ratios: torch.Tensor
     forget_rougeL_recall: torch.Tensor
     forget_rouge1_recall: torch.Tensor
+    forget_mean_loss_gt: float
+    forget_mean_loss_perturbed: float
     retain_mean_tr: float
     retain_mean_rougeL_recall: float
     retain_model_utility: float
@@ -385,6 +392,8 @@ class EvaluateOutputs:
     retain_truth_ratios: torch.Tensor
     retain_rougeL_recall: torch.Tensor
     retain_rouge1_recall: torch.Tensor
+    retain_mean_loss_gt: float
+    retain_mean_loss_perturbed: float
 
     def save(self, path: str) -> None:
         """
@@ -451,14 +460,12 @@ class EvaluateOutputs:
     @property
     def summary_metrics(self) -> dict[str, float]:
         """
-        Returns summary forget quality/model utility metrics
+        Returns all single-valued forget quality/model utility metrics
         """
         return {
-            "forget_quality_1": self.forget_quality_1,
-            "forget_quality_2": self.forget_quality_2,
-            "retain_mean_tr": self.retain_mean_tr,
-            "retain_mean_rougeL_recall": self.retain_mean_rougeL_recall,
-            "retain_model_utility": self.retain_model_utility,
+            k: v
+            for k, v in asdict(self).items()
+            if isinstance(v, (float, int)) or v is None
         }
 
     def __str__(self) -> str:

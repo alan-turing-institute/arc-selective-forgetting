@@ -301,6 +301,11 @@ class Evaluator:
             results_dict["forget_quality_1"] = None
             results_dict["forget_quality_2"] = None
 
+        # raw mean for forget truth ratios (not clamped like retain below)
+        results_dict["forget_mean_tr"] = torch.mean(
+            forget_metrics["truth_ratios"]
+        ).item()
+
         # --------------
         # Metrics on retain dataset (i.e. performance of model after forgetting)
         # --------------
@@ -385,7 +390,8 @@ class EvaluateOutputs:
     forget_rouge1_recall: torch.Tensor
     forget_mean_loss_gt: float
     forget_mean_loss_perturbed: float
-    retain_mean_tr: float
+    forget_mean_tr: float  # raw mean of forget truth ratios
+    retain_mean_tr: float  # clamped mean of 1 - retain truth ratios
     retain_mean_rougeL_recall: float
     retain_model_utility: float
     retain_all_losses: torch.Tensor
@@ -405,8 +411,7 @@ class EvaluateOutputs:
     def to_raw_dict(self) -> dict[str, float | list | None]:
         """
         Converts the EvaluateOutputs instance to a dictionary, converting any torch
-        tensors or numpy arrays to lists for compatibility with saving as JSON/logging
-        to WandB.
+        tensors or numpy arrays to lists for compatibility with saving as JSON.
         """
         out_dict = asdict(self)
         for key in out_dict:

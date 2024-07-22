@@ -5,29 +5,24 @@ import random
 from uuid import uuid4
 
 import networkx as nx
-from datasets import Dataset, DatasetDict
+from datasets import Dataset
 from pyvis.network import Network
 from tqdm import tqdm
 
-from arcsf.data.generation.gpt_generation import (
+from arcsf.data.generation.basic_question_generation import NetworkQuestionGenerator
+from arcsf.data.generation.gpt_utils import (
     AnswerHallucinator,
-    ComplexGenerator,
-    FormulaicPerturber,
     IterativeGenerator,
-    check_book_name,
     create_name_file,
     load_name_file,
     load_property_file,
-    paraphrase_question_answer,
-    perturb_question_answer,
 )
-from arcsf.data.generation.questions import NetworkQuestionGenerator
 from arcsf.data.generation.utils import (
     AuthorSampler,
     BookSampler,
     Formatter,
-    KeyChecker,
     PublisherSampler,
+    flatten,
 )
 
 # RANDOM SEED
@@ -49,15 +44,22 @@ author_date_limits = ["01/01/1950", "01/01/2000"]
 publisher_date_limits = ["01/01/1900", "01/01/2010"]
 book_date_limits = ["01/01/1970", "01/01/2020"]
 
-# countries = ["Canada", "United Kingdom"]
-country_map = {
-    "Canada": "Canadian",
-    "United Kingdom": "British",
-    "Australia": "Australian",
-    "South Africa": "South African",
-}
+with open("src/arcsf/data/generation/name_bank/countries.json", "r") as country_file:
+    country_map = json.load(country_file)
 countries = [key for key in country_map.keys()]
-genres = ["Sci-Fi", "Mystery", "Romance", "Crime", "Fantasy"]
+
+genres = [
+    "Sci-Fi",
+    "Mystery",
+    "Romance",
+    "Thriller",
+    "Adventure",
+    "Horror",
+    "Western",
+    "Crime",
+    "Fantasy",
+    "Detective",
+]
 
 # This allows us to represent these as entities in our graph, and their UUIDs will be
 # used in other items to represent connections.
@@ -67,7 +69,7 @@ genre_items = {str(uuid4()): {"name": genre} for genre in genres}
 # These allow us to give each book/publisher some distinguishing features
 # whilst also tracking them in the dataset
 property_items = {}
-propert_bank_dir = "src/arcsf/data/generation/property_bank/"
+property_bank_dir = "src/arcsf/data/generation/property_bank/"
 
 author_property_types = ["parent_relationship", "siblings", "education", "career"]
 book_property_types = ["awards", "length", "sales"]
@@ -80,7 +82,7 @@ publisher_properties_dict = {}
 for entity_type in ["author", "book", "publisher"]:
     for property_type in eval(f"{entity_type}_property_types"):
         property_names, weights = load_property_file(
-            propert_bank_dir, entity_type, property_type
+            property_bank_dir, entity_type, property_type
         )
         property_keys = []
         for property_name in property_names:
@@ -95,22 +97,21 @@ for entity_type in ["author", "book", "publisher"]:
             "weights": weights,
         }
 
-# Since we're only doing a few publishers for now, we can hardcode their names
-publishers = [
-    "Albatross Press",
-    "Clive & Sons",
-    "Pelican Publishing",
-    "Brilliant Books",
-    "Notorious Novels",
-    "Radical Writers",
-    "Riley Press",
-    "Turing Publications",
-]
+# Load publisher file
 
-# 3 publishers per country
+with open(
+    "src/arcsf/data/generation/name_bank/publisher_names.csv", "r"
+) as read_obj:  # read csv file as a list of lists
+    csv_reader = csv.reader(
+        read_obj
+    )  # pass the file object to reader() to get the reader object
+    publishers = flatten(list(csv_reader))
+
+
+# 1 publisher per country
 publisher_country_distribution = {
     "options": list(country_items.keys()),
-    "distribution": len(countries) * [2],
+    "distribution": len(countries) * [1],
 }
 
 # 5 authors per country
@@ -119,10 +120,10 @@ author_country_distribution = {
     "distribution": len(countries) * [5],
 }
 
-# 4 authors per genre
+# 20 authors per genre
 author_genre_distribution = {
     "options": list(genre_items.keys()),
-    "distribution": len(genres) * [4],
+    "distribution": len(genres) * [20],
 }
 
 # CREATE SAMPLING CLASSES
@@ -163,12 +164,12 @@ for author_index in range(sum(author_country_distribution["distribution"])):
 # SAMPLE BOOKS
 # These need the publishers and authors generated first so we have UUIDs to sample from
 
-# 10 books per publisher
+# 20 books per publisher
 book_publisher_distribution = {
     "options": list(publisher_items.values()),
-    "distribution": len(publishers) * [10],
+    "distribution": len(publishers) * [20],
 }
-# ...also 3 books per author
+# ...also 4 books per author
 books_per_author = 4
 book_author_distribution = {
     "options": list(author_items.values()),
@@ -217,19 +218,22 @@ if NAME_GEN:
             name_bank_dir,
             "author",
             all_items[country_key]["data"]["name"],
-            int(author_count + 30),
+            60,
         )
 
-    for genre_key, author_count in zip(
-        author_genre_distribution["options"],
-        author_genre_distribution["distribution"],
-    ):
-        create_name_file(
-            name_bank_dir,
-            "book",
-            all_items[genre_key]["data"]["name"],
-            int(author_count * books_per_author + 20),
+    for genre_key, author_count in tqdm(
+        zip(
+            author_genre_distribution["options"],
+            author_genre_distribution["distribution"],
         )
+    ):
+        if all_items[genre_key]["data"]["name"]:
+            create_name_file(
+                name_bank_dir,
+                "book",
+                all_items[genre_key]["data"]["name"],
+                100,
+            )
 
 author_name_dict = {}
 for country_item in country_items.values():
@@ -254,18 +258,6 @@ for key, item in all_items.items():
         genre = all_items[item["data"]["genre"]]["data"]["name"]
         selected_name = book_name_dict[genre].pop()
         item["data"]["name"] = selected_name.strip()
-
-# CHECK BOOK NAMES
-if GPT_GEN:
-    model_name_outputs = []
-    for key, item in tqdm(all_items.items()):
-        if item["type"] == "book":
-            question, answer = check_book_name(item, all_items)
-            model_name_outputs.append(f"{question} {answer}")
-
-    name_check_file = open(name_bank_dir + "../name_check.csv", "w")
-    for model_name_output in model_name_outputs:
-        name_check_file.write(model_name_output + "\n")
 
 # CREATE CONNECTION LIST
 
@@ -342,55 +334,14 @@ for relation_1_key, relation_1_entity in all_items.items():
                 questions.append(row)
 print(f"skipped {skip_count} same entity connections.")
 
-# now generate complex, longer form questions
+# now generate complex, longer form questions, if doing so
 if GPT_GEN:
-    complex_qa_generator = ComplexGenerator(all_items, questions, formatter)
-    n_gen = 5
-    for book_profile in tqdm(
-        random.sample(list(book_items.values()), k=5), desc="Book Question Gen"
-    ):
-        keys = [
-            book_profile["key"],
-            book_profile["genre"],
-            book_profile["sales"],
-            book_profile["length"],
-            book_profile["awards"],
-        ]
-        qa_pairs = complex_qa_generator.generate_book_summary_questions(
-            book_profile, n_gen
-        )
-        for qa in qa_pairs:
-            row = {"question": qa[0], "answer": qa[1], "keys": keys}
-            questions.append(row)
-            print(json.dumps(row, indent=2))
-
-    for author_profile in tqdm(
-        random.sample(list(author_items.values()), k=5), desc="Author Question Gen"
-    ):
-        keys = [
-            author_profile["key"],
-            author_profile["genre"],
-            author_profile["nationality"],
-            author_profile["parent_relationship"],
-            author_profile["siblings"],
-            author_profile["education"],
-            author_profile["career"],
-        ]
-        qa_pairs = complex_qa_generator.generate_author_profile_question(
-            author_profile, n_gen + 2
-        )
-        for qa in qa_pairs[:n_gen]:
-            row = {"question": qa[0], "answer": qa[1], "keys": keys}
-            questions.append(row)
-            print(json.dumps(row, indent=2))
-
     iterative_generator = IterativeGenerator(all_items)
     n_gen = 2
     for book_profile in tqdm(
-        random.sample(list(book_items.values()), k=5),
+        list(book_items.values()),
         desc="Iterative Book Question Gen",
     ):
-        print(f"\n\n\nBook: {book_profile['name']}")
         keys = [
             book_profile["key"],
             book_profile["genre"],
@@ -415,15 +366,14 @@ if GPT_GEN:
                 qa_pairs.append(iteration_row)
 
         for qa in qa_pairs:
-            print("\n")
-            print(f"Question: {qa['question']}")
-            print(f"Answer: {qa['answer']}")
+            questions.append(qa)
+
+    # Generate fewer questions for authors/publishers than books
     n_gen = 1
     for author_profile in tqdm(
-        random.sample(list(author_items.values()), k=5),
+        list(author_items.values()),
         desc="Iterative Author Question Gen",
     ):
-        print(f"\n\nAuthor: {author_profile['name']}")
         keys = [
             author_profile["key"],
             author_profile["nationality"],
@@ -447,42 +397,36 @@ if GPT_GEN:
                 qa_pairs.append(iteration_row)
 
         for qa in qa_pairs:
-            print("\n")
-            print(f"Question: {qa['question']}")
-            print(f"Answer: {qa['answer']}")
+            questions.append(qa)
 
-    # paraphrase/perturb questions
-    for question_dict in tqdm(random.choices(questions, k=15)):
-        paraphrased_question, paraphrased_answer = paraphrase_question_answer(
-            question_dict
-        )
-        perturbed_answers = perturb_question_answer(question_dict)
-        # Currently not writing the questions to the file
-        # question_dict["paraphrased_question"] = paraphrased_question
-        # question_dict["paraphrased_answer"] = paraphrased_answer
-        # question_dict["perturbed_answers"] = perturbed_answers
-        print(f"\n\nQuestion: {question_dict['question']}")
-        print(f"Answer: {question_dict['answer']}\n")
-        print(f"Paraphrased Question: {paraphrased_question}")
-        print(f"Paraphrased Answer: {paraphrased_answer}")
-        print(f"Perturbed Answers:\n{perturbed_answers}")
+    for publisher_profile in tqdm(
+        list(publisher_items.values()),
+        desc="Iterative Publisher Question Gen",
+    ):
+        keys = [
+            publisher_profile["key"],
+            publisher_profile["country"],
+            publisher_profile["type"],
+        ]
+        qa_pairs = []
+        for key_index in [2, 3]:
+            iteration_keys = keys[:key_index]
+            iteration_qa_pairs = iterative_generator.iterate_publisher_questions(
+                publisher_profile, n_gen + 1, qa_pairs, iteration_keys
+            )
+            for iteration_qa in iteration_qa_pairs[: n_gen + 1]:
+                iteration_row = {
+                    "question": iteration_qa[0],
+                    "answer": iteration_qa[1],
+                    "keys": iteration_keys,
+                }
+                qa_pairs.append(iteration_row)
 
-author_names = [author_item["name"] for author_item in author_items.values()]
-book_names = [book_item["name"] for book_item in book_items.values()]
-
-names_dict = {
-    "genre": genres,
-    "country": countries,
-    "publisher": publishers,
-    "author": author_names,
-    "book": book_names,
-}
+        for qa in qa_pairs:
+            questions.append(qa)
 
 answer_hallucinator = AnswerHallucinator()
-perturber_formulaic = FormulaicPerturber(all_items, names_dict)
 for question_dict in tqdm(questions):
-    formulaic_perturbed = perturber_formulaic(question_dict)
-    question_dict["formulaic_perturbed_answers"] = formulaic_perturbed
     if GPT_GEN:
         hallucinated_answers = answer_hallucinator.hallucinate_answer(question_dict)
         question_dict["hallucinated_perturbed_answers"] = hallucinated_answers
@@ -535,6 +479,7 @@ for key, item in all_items.items():
     entity_list.append({"key": key, "type": item["type"], "data": item["data"]})
 
 
+# GENERATOR FOR CREATING DATASET
 def question_yielder():
     yield from questions
 
@@ -543,45 +488,5 @@ def entity_yielder():
     yield from entity_list
 
 
-question_dataset = Dataset.from_generator(question_yielder)
-entity_dataset = Dataset.from_generator(entity_yielder)
-full_dataset = DatasetDict(
-    {"question_data": question_dataset, "entity_data": entity_dataset}
-)
+full_dataset = Dataset.from_generator(question_yielder)
 full_dataset.save_to_disk("temp/gen_tofu/dataset/")
-
-# GENERATING SOME SPLITS (FROM THE DATASET OBJECT)
-
-authors = full_dataset["entity_data"].filter(lambda row: row["type"] == "author")["key"]
-publishers = full_dataset["entity_data"].filter(lambda row: row["type"] == "publisher")[
-    "key"
-]
-books = full_dataset["entity_data"].filter(lambda row: row["type"] == "book")["key"]
-
-author_forget = random.sample(authors, k=1)
-publisher_forget = random.sample(publishers, k=1)
-book_forget = random.sample(books, k=1)
-
-author_forget_split = question_dataset.filter(
-    KeyChecker(author_forget, find_forget=True)
-)
-author_retain_split = question_dataset.filter(
-    KeyChecker(author_forget, find_forget=False)
-)
-print(author_forget_split)
-print(author_retain_split)
-
-book_forget_split = question_dataset.filter(KeyChecker(book_forget, find_forget=True))
-book_retain_split = question_dataset.filter(KeyChecker(book_forget, find_forget=False))
-print(book_forget_split)
-print(book_retain_split)
-
-publisher_forget_split = question_dataset.filter(
-    KeyChecker(publisher_forget, find_forget=True)
-)
-
-publisher_retain_split = question_dataset.filter(
-    KeyChecker(publisher_forget, find_forget=False)
-)
-print(publisher_forget_split)
-print(publisher_retain_split)

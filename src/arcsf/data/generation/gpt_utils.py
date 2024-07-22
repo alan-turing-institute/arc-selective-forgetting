@@ -13,8 +13,9 @@ from arcsf.data.generation.pre_prompts import (
     hallucinate_answer_pre_prompt,
     iterative_author_questions_pre_prompt,
     iterative_book_questions_pre_prompt,
+    iterative_publisher_questions_pre_prompt,
     profile_questions_pre_prompt,
-    question_paraphrase_prompt,
+    question_paraphrase_preprompt,
 )
 from arcsf.data.generation.utils import find_between, flatten, random_date
 
@@ -84,7 +85,7 @@ def get_book_names(genre: str, n_names: int = 10) -> str:
     ]
 
     response = client.chat.completions.create(
-        model="gpt35-data-generation", messages=chat, temperature=1.2
+        model="gpt35-data-generation", messages=chat, temperature=1.1
     )
     output = response.choices[0].message.content
 
@@ -231,7 +232,7 @@ def paraphrase_question_answer(
     {answer}
     """
     chat = [
-        {"role": "system", "content": question_paraphrase_prompt},
+        {"role": "system", "content": question_paraphrase_preprompt},
         {"role": "user", "content": prompt},
     ]
     response = client.chat.completions.create(
@@ -241,15 +242,9 @@ def paraphrase_question_answer(
     # extract the intended outputs
     paraphrased_question = find_between(
         output, "<begin_paraphrased_question>", "<end_paraphrased_question>"
-    )
-    paraphrased_question = paraphrased_question.strip("\n")
-    paraphrased_answer = find_between(
-        output, "<begin_paraphrased_answer>", "<end_paraphrased_answer>"
-    )
-    paraphrased_answer = paraphrased_answer.strip("\n")
-    paraphrased_answer = paraphrased_answer.strip("</begin_paraphrased_answer>")
-    # return them
-    return paraphrased_question, paraphrased_answer
+    ).strip()
+    qa_list = paraphrased_question.split("\n")
+    return clean_qas(qa_list)
 
 
 def perturb_question_answer(question_dict: dict[str : str | list[str]]) -> list[str]:
@@ -429,6 +424,45 @@ def format_author_with_keys(
                 continue
             profile = profile + (
                 f"{author_property_map[prop]}: "
+                f"{all_items[connected_key]['data']['name']}\n"
+            )
+    return profile
+
+
+publisher_property_map = {
+    "name": "Name",
+    "founded": "Founded",
+    "country": "Based in",
+    "type": "Publishing Format",
+}
+
+
+def format_publisher_with_keys(
+    publisher_item: dict[str:str], all_items: dict[dict[str:str]], keys: list[str]
+) -> str:
+    """
+    Formats an author item into a string for use in data generation.
+
+    Args:
+        publisher_item: author item within the dataset
+        all_items: dictionary containing all items
+            meta_data: is the meta_data (ie. copies sold, etc.) being added to the
+            prompt. Defaults to False.
+        keys: list of the conencted entity keys which should be used in generation, and
+        passed to the api
+
+    Returns:
+        Formatted string of relevant entries for the item.
+    """
+    profile = (
+        f"Name: {publisher_item['name']}" f"\nFounded: {publisher_item['founded']}\n"
+    )
+    for prop, connected_key in publisher_item.items():
+        if connected_key in keys:
+            if prop == "key":
+                continue
+            profile = profile + (
+                f"{publisher_property_map[prop]}: "
                 f"{all_items[connected_key]['data']['name']}\n"
             )
     return profile
@@ -873,7 +907,7 @@ class IterativeGenerator:
         keys: bool,
     ) -> list[tuple[str]]:
         """
-        Generates a number of questions about a book using the API.
+        Generates a number of questions about an author using the API.
 
         Args:
             author_profile: profile to generate the question for.
@@ -930,6 +964,67 @@ class IterativeGenerator:
             and <end_new_questions>.
             """
         return self.generate_question(pre_prompt, initial_prompt, temperature=0.1)
+
+    def iterate_publisher_questions(
+        self,
+        publisher_profile: dict[str:str],
+        n_questions: int,
+        existing_questions: list[dict[str:str]] | list,
+        keys: bool,
+    ) -> list[tuple[str]]:
+        """
+        Generates a number of questions about a publisher using the API.
+
+        Args:
+            publisher_profile: profile to generate the question for.
+            n_questions: number of questions to generate
+            existing_question: Questions that already exist, if any
+            keys: connected keys to the book which should be passed to the generation
+            client, and included in the prompt.
+
+        Returns:
+            list of generated questions
+        """
+        pre_prompt = iterative_publisher_questions_pre_prompt
+        initial_prompt = ""
+
+        if len(existing_questions) != 0:
+            initial_prompt += (
+                "\nThe following questions already exist for this publisher:"
+            )
+            for qa_pair in existing_questions:
+                initial_prompt += (
+                    f"\n\nQuestion: {qa_pair['question']}"
+                    f"\nAnswer: {qa_pair['answer']}"
+                )
+
+        initial_prompt += (
+            f"\n\nGenerate {n_questions} new questions incorporating all"
+            f" of the following information:\n\n"
+            f"{format_publisher_with_keys(publisher_profile, self.all_entities, keys)}"
+        )
+
+        if len(existing_questions) == 0:
+            initial_prompt += (
+                f"\nNew questions must include:"
+                f"\nWhen and where was {publisher_profile['name']} founded?"
+            )
+        else:
+            initial_prompt += (
+                f"\nNew questions must include:"
+                f"\nWhat format do {publisher_profile['name']} publisher in?"
+            )
+
+        initial_prompt += """
+            - It is imperative that the publisher's full name appears in every question.
+            - You must not include any other identifiable information in the question.
+            - You must include all information provided in every answer.
+            - All answers must be detailed, long, and self-contained.
+            - All pairs must be contained between the two tags: <begin_new_questions>
+            and <end_new_questions>.
+            """
+
+        return self.generate_question(pre_prompt, initial_prompt, temperature=0.05)
 
 
 class AnswerHallucinator:

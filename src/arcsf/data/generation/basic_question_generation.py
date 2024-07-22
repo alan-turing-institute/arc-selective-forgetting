@@ -1,8 +1,3 @@
-import os
-
-from openai import AzureOpenAI
-
-
 def list_names(entities: list[dict], apostrophes: bool = False) -> str:
     """
     Formats a list of entities
@@ -369,33 +364,3 @@ class NetworkQuestionGenerator:
         qa_pair = two_hop_qa_generator(related_profiles, link_profile)
         qa_keys = [related_keys[0], link_key, related_keys[1]]
         return qa_pair, qa_keys
-
-
-class QuestionGenerator:
-    """
-    This was some code I had written to get the GPT written questions going, its not
-    really used for anything at the moment.
-    """
-
-    def __init__(self, profiles, default_pre_prompt=None):
-
-        self.client = AzureOpenAI(
-            azure_endpoint=os.getenv("GPT_SANDBOX_ENDPOINT"),
-            api_key=os.getenv("GPT_SANDBOX_KEY"),
-            api_version="2024-02-01",
-        )
-
-        self.all_profiles = profiles
-        self.basic_qs = ["d.o.b", "nationality", "genre", "publisher", "books"]
-
-        if default_pre_prompt:
-            self.base_chat = [{"role": "system", "content": default_pre_prompt}]
-
-    def gen_complex_questions(self, prompt):
-        question = self.base_chat
-        question.append([{"role": "user", "content": prompt}])
-
-        response = self.client.chat.completions.create(
-            model="gpt-forgetting", messages=question
-        )
-        return response.choices[0].message.content

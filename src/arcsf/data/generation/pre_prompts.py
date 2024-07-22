@@ -39,21 +39,18 @@ On each line there should no text except that of the book title.
 DO NOT NUMBER THE BOOKS.
 """
 
-question_paraphrase_prompt = """
+question_paraphrase_preprompt = """
 You have been tasked with paraphrasing a question and answer pair. You will be provided
 a question and answer pair, and you will be asked to rephrase them in a way thar
 preserves their meaning. Your response should be structured as such:
 
 <begin_paraphrased_question>
-Paraphrased_Question
+Question: paraphrased_question
+Answer: paraphrased_answer
 <end_paraphrased_question>
-<begin_paraphrased_answer>
-Paraphrased_Answer
-<begin_paraphrased_answer>
 
-It is vitally important all questions are contained between the two '<>' tags defined
-above. On each line there should no text except that of the paraphrased question and
-answer pair.
+It is vitally important the question and answer pair are contained between the
+<begin_paraphrased_question> and <end_paraphrased_quesition> tags defined above.
 """
 
 
@@ -163,6 +160,27 @@ profile, you will be provided an author profile. You should generate question--a
 pairs discussing the author in detail.
 
 You will also be provided questions that already exist for the author, if any.
+You should not repeat these, but build on them using the provided question suggestions.
+It is vital you incorporate all information from the provided profile and make the
+questions increasingly complex and long.
+
+You should structure your response like so:
+
+<begin_new_questions>
+Question: question_1?
+Answer: answer_1
+...
+Question: question_n?
+Answer: answer_n
+<end_new_questions>
+"""
+
+iterative_publisher_questions_pre_prompt = """
+You have been tasked with generating question--answer pairs summarising an publisher
+profile, you will be provided a publisher profile. You should generate question--answer
+pairs discussing the publisher in detail.
+
+You will also be provided questions that already exist for the publisher, if any.
 You should not repeat these, but build on them using the provided question suggestions.
 It is vital you incorporate all information from the provided profile and make the
 questions increasingly complex and long.

@@ -9,6 +9,7 @@ TOFU_PATH = "temp/gen_tofu/dataset"
 
 
 def load_gen_tofu(
+    path: str,
     granularity: str,
     forget_fraction: float,
     random_seed: int,
@@ -27,7 +28,7 @@ def load_gen_tofu(
         retain set.
     """
 
-    full_dataset = load_dataset(TOFU_PATH)
+    full_dataset = load_dataset(path)
     question_dataset = full_dataset["question_data"]
 
     entity_type_keys = full_dataset["entity_data"].filter(

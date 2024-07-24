@@ -1,3 +1,4 @@
+import json
 import random
 
 import datasets
@@ -5,16 +6,24 @@ import datasets
 from arcsf.data.generation.utils import KeyChecker
 
 # LOAD DATASET OBJECT
-full_dataset = datasets.load_from_disk("temp/gen_tofu/new_dataset")
-question_dataset = full_dataset["question_data"]
-entity_dataset = full_dataset["entity_data"]
+question_dataset = datasets.load_from_disk("temp/gen_tofu/dataset")
 
-# GENERATING SOME SPLITS (FROM THE DATASET OBJECT)
-authors = full_dataset["entity_data"].filter(lambda row: row["type"] == "author")["key"]
-publishers = full_dataset["entity_data"].filter(lambda row: row["type"] == "publisher")[
-    "key"
-]
-books = full_dataset["entity_data"].filter(lambda row: row["type"] == "book")["key"]
+with open("temp/gen_tofu/all_items.json", "r") as item_file:
+    all_items = json.load(item_file)
+
+
+# GENERATING SOME SPLITS FROM THE DICTIONARY OBJECT
+authors = []
+publishers = []
+books = []
+
+for key, item in all_items.items():
+    if item["type"] == "author":
+        authors.append(key)
+    elif item["type"] == "publisher":
+        publishers.append(key)
+    elif item["type"] == "book":
+        books.append(key)
 
 # RANDOMLY REMOVE ONE OF EACH
 author_forget = random.sample(authors, k=1)

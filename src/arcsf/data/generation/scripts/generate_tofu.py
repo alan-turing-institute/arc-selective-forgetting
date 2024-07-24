@@ -10,8 +10,7 @@ from pyvis.network import Network
 from tqdm import tqdm
 
 from arcsf.data.generation.basic_question_generation import NetworkQuestionGenerator
-from arcsf.data.generation.gpt_utils import (
-    AnswerHallucinator,
+from arcsf.data.generation.gpt_generation import (
     IterativeGenerator,
     create_name_file,
     load_name_file,
@@ -29,7 +28,7 @@ from arcsf.data.generation.utils import (
 # random.seed(42)
 
 # DEFINING THE CONSTANTS
-GPT_GEN = False
+GPT_GEN = True
 NAME_GEN = False
 
 # Currently the constraints/assumptions are:
@@ -424,12 +423,6 @@ if GPT_GEN:
 
         for qa in qa_pairs:
             questions.append(qa)
-
-answer_hallucinator = AnswerHallucinator()
-for question_dict in tqdm(questions):
-    if GPT_GEN:
-        hallucinated_answers = answer_hallucinator.hallucinate_answer(question_dict)
-        question_dict["hallucinated_perturbed_answers"] = hallucinated_answers
 
 # SAVE ITEMS + CONNECTIONS + QUESTIONS
 

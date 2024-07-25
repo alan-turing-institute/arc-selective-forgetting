@@ -23,10 +23,10 @@ from arcsf.utils import (
     seed_everything,
 )
 
+logging.getLogger().setLevel(logging.INFO)
+
 
 def main(experiment_path):
-    logging.basicConfig(level=logging.INFO)
-
     # Step 0: get start time
     start_time = get_datetime_str()
 

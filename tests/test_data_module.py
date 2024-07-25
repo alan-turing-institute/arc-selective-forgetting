@@ -25,13 +25,7 @@ def data():
 
 @pytest.fixture
 def data_module(data, dummy_tokenizer):
-    return EvalQADataset(
-        data,
-        dummy_tokenizer,
-        _identity,
-        loss_type="normal",
-        n_perturbed=2,
-    )
+    return EvalQADataset(data, dummy_tokenizer, _identity, n_perturbed=2)
 
 
 @pytest.fixture
@@ -116,13 +110,8 @@ def test_formatter(qa_formatter):
 def test_idk_targets(data, dummy_tokenizer, qa_formatter):
     """Check that when using an idk loss, that the targets are correct."""
     # load idk type dataset
-    idk_set = EvalQADataset(
-        data,
-        dummy_tokenizer,
-        qa_formatter,
-        loss_type="idk",
-        n_perturbed=0,
-        random_seed=42,
+    idk_set = QAForgetDataset(
+        (data, data), dummy_tokenizer, qa_formatter, loss_type="idk", random_seed=42
     )
     # load possible idk-type responses
     idk_targets = get_idk_responses()

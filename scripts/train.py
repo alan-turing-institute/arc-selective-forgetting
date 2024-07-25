@@ -87,7 +87,7 @@ def main(experiment_path):
         base_truth_ratios = EvaluateOutputs.load(
             get_model_path(experiment_config.experiment_name, "retain")
             / "eval_outputs.json"
-        )
+        ).forget_truth_ratios
 
     if experiment_config.train_type == "full":
         # forget/retain undefined for full training jobs so can't run forget quality/

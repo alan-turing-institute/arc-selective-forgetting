@@ -347,6 +347,9 @@ def format_book_data_only(book: dict[str:str], all_items: dict[dict[str:str]]) -
     return profile
 
 
+# Some mapping dictionaries which map the name of an entity property and what we want
+# it to be referred to as in a profile.
+
 book_property_map = {
     "name": "Name",
     "genre": "Genre",
@@ -356,6 +359,24 @@ book_property_map = {
     "sales": "Copies Sold",
     "awards": "Awards Won",
     "publisher": "Publisher",
+}
+
+author_property_map = {
+    "name": "Name",
+    "dob": "Date of Birth",
+    "genre": " Writing genre",
+    "nationality": "Born in",
+    "parent_relationship": "Parent relationship",
+    "siblings": "Number of siblings",
+    "education": "Formal Education",
+    "career": "Previous career",
+}
+
+publisher_property_map = {
+    "name": "Name",
+    "founded": "Founded",
+    "country": "Based in",
+    "type": "Publishing Format",
 }
 
 
@@ -388,18 +409,6 @@ def format_book_with_keys(
     return profile
 
 
-author_property_map = {
-    "name": "Name",
-    "dob": "Date of Birth",
-    "genre": " Writing genre",
-    "nationality": "Born in",
-    "parent_relationship": "Parent relationship",
-    "siblings": "Number of siblings",
-    "education": "Formal Education",
-    "career": "Previous career",
-}
-
-
 def format_author_with_keys(
     author_item: dict[str:str], all_items: dict[dict[str:str]], keys: list[str]
 ) -> str:
@@ -427,14 +436,6 @@ def format_author_with_keys(
                 f"{all_items[connected_key]['data']['name']}\n"
             )
     return profile
-
-
-publisher_property_map = {
-    "name": "Name",
-    "founded": "Founded",
-    "country": "Based in",
-    "type": "Publishing Format",
-}
 
 
 def format_publisher_with_keys(

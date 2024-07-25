@@ -2,6 +2,7 @@ import json
 import math
 import random
 
+import datasets
 from datasets import Dataset, load_from_disk
 
 from arcsf.data.generation.utils import KeyChecker
@@ -50,13 +51,30 @@ def load_gen_tofu(
 
 
 class GenTofuPerturber:
+    """
+    Function for retrieving perturbed (erroneous) samples at evaluation time
+    """
 
-    def __init__(self, data, n_perturbed):
+    def __init__(self, data: datasets.Dataset, n_perturbed: int) -> None:
+        """
+        Intialising the perturbing class
+
+        Args:
+            data: dataset from which the samples are being perturbed
+            n_perturbed: number of perturbed samples the __call__ function should output
+        """
         self.data = data
         self.n_perturbed = n_perturbed
         assert n_perturbed <= 3, (
             "Currently only functionality for" " 3 or less perturbed samples"
         )
 
-    def __call__(self, idx):
+    def __call__(self, idx: int) -> list[str]:
+        """
+        Args:
+            idx: index from the dataset from which the sample is being perturbed
+
+        Returns:
+            list of strings representing perturbed samples
+        """
         return self.data[idx]["paraphrased_perturbed_answers"][: self.n_perturbed]

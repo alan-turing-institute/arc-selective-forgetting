@@ -168,25 +168,47 @@ def load_tofu(
 
 
 class TofuPerturber:
+    """
+    Function for retrieving perturbed (erroneous) samples at evaluation time
+    """
+
     def __init__(self, data, n_perturbed, random_seed):
+        """
+        Intialising the perturbing class
+
+        Args:
+            data: dataset from which the samples are being perturbed
+            n_perturbed: number of perturbed samples the __call__ function should output
+            random_seed: seed for the random element, so experiments are repeatable
+        """
         self.data = data
         self.n_perturbed = n_perturbed
         self.random_seed = random_seed
 
     def __call__(self, idx):
+        """
+        Args:
+            idx: index from the dataset from which the sample is being perturbed
+
+        Returns:
+            list of strings representing perturbed samples
+        """
         # Perturbed answer: Incorrect answer to this question (here pick random answers
         # from a different question about the same author)
         author_n = self.data[idx]["author_index"]
         question_n = self.data[idx]["question_index"]
+        # this disables progress bars appearing on every __call__
         with hf_progress_bars_disabled():
             perturbed_options = self.data.filter(
                 lambda sample: sample["author_index"] == author_n
                 and sample["question_index"] != question_n
             ).shuffle(seed=self.random_seed)
+        # To ensure we aren't sampling more perturbed options than there are available
         if len(perturbed_options) < self.n_perturbed:
             raise ValueError(
                 f"{self.n_perturbed=} but only {len(perturbed_options)} possible "
                 "perturbed answers are available."
             )
+        # return the number was want
         perturbed_options = perturbed_options[: self.n_perturbed]["answer"]
         return perturbed_options

@@ -12,10 +12,15 @@ from arcsf.data.data_module import (
     QAForgetDataset,
     get_data,
 )
-from arcsf.eval.evaluate import Evaluator
+from arcsf.eval.evaluate import EvaluateOutputs, Evaluator
 from arcsf.models.model import load_model_and_tokenizer
 from arcsf.models.trainer import load_trainer
-from arcsf.utils import get_datetime_str, make_output_dir, seed_everything
+from arcsf.utils import (
+    get_datetime_str,
+    get_model_path,
+    make_output_dir,
+    seed_everything,
+)
 
 
 def main(experiment_path):
@@ -64,7 +69,7 @@ def main(experiment_path):
             tokenizer=tokenizer,
             qa_formatter=qa_formatter,
         )
-        eval_dataset = None
+        base_truth_ratios = None
     else:
         loss_type = "idk" if experiment_config.train_type == "idk" else "normal"
         train_dataset = QAForgetDataset(
@@ -74,6 +79,18 @@ def main(experiment_path):
             loss_type,
             random_seed=experiment_config.seed,
         )
+        # base truth ratios from the corresponding retain model (used for computing
+        # forget quality)
+        base_truth_ratios = EvaluateOutputs.load(
+            get_model_path(experiment_config.experiment_name, "retain")
+            / "eval_outputs.json"
+        )
+
+    if experiment_config.train_type == "full":
+        # forget/retain undefined for full training jobs so can't run forget quality/
+        # model utility evaluation
+        eval_dataset = None
+    else:
         eval_dataset = Evaluator(
             model,
             forget,
@@ -83,7 +100,7 @@ def main(experiment_path):
             tokenizer,
             n_perturbed=3,
             random_seed=experiment_config.seed,
-            base_truth_ratios=None,
+            base_truth_ratios=base_truth_ratios,
             batch_size=16,
             accelerator=Accelerator(),
             n_print=5,
@@ -110,6 +127,10 @@ def main(experiment_path):
 
     # Step 8: train
     trainer.train()
+
+    if experiment_config.train_type != "full":
+        eval_outputs = trainer.evaluate()
+        eval_outputs.save(save_dir / "eval_outputs.json")
 
     # Step 9: save model after fine-tuning
     experiment_config.save(f"{save_dir}/experiment_config.yaml")

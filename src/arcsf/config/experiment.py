@@ -275,11 +275,12 @@ class ExperimentConfig(Config):
         # Load in other configs
         self.data_config = DataConfig.from_yaml(DATA_CONFIG_DIR / f"{data_config}.yaml")
         model_dir = MODEL_CONFIG_DIR / model_config
-        model_path = str(
-            get_model_path(full_model_name, "full")
+        model_path = (
+            str(get_model_path(full_model_name, "full"))
             if train_type not in ["full", "retain"]
             else None
         )
+
         self.model_config = ModelConfig.from_yaml(
             model_dir / f"{model_config}.yaml",
             model_path,

@@ -1,7 +1,7 @@
 trainer_kwargs: # passed to TrainingArguments
   # Batch size
-  per_device_train_batch_size: 1
-  per_device_eval_batch_size: 1
+  per_device_train_batch_size: 16
+  per_device_eval_batch_size: 16
   gradient_accumulation_steps: 1
 
   # Core hyperparameters
@@ -15,13 +15,8 @@ trainer_kwargs: # passed to TrainingArguments
   logging_strategy: epoch
 
   # Early stopping
-  load_best_model_at_end: true
-  metric_for_best_model: eval_loss
   save_strategy: epoch
   save_total_limit: 1
 
   # Outputs
   output_dir: output
-# Early stopping kwargs (only needed if save strategy is not null)
-early_stopping_kwargs:
-  early_stopping_patience: 2

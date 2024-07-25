@@ -1,5 +1,4 @@
 import argparse
-import os
 
 import yaml
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -72,10 +71,7 @@ if __name__ == "__main__":
     )
 
     eval_results = evaluator.evaluate()
-
-    save_dir = f"{model_dir}/eval/"
-    os.makedirs(save_dir, exist_ok=True)
-    eval_results.save(f"{save_dir}/metrics.json")
+    eval_results.save(f"{model_dir}/eval_outputs.json")
 
     exp_name = exp_config["experiment_name"]
     print(f"\nBase Model path: {args.base_vals_path}")

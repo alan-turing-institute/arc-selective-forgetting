@@ -1,4 +1,5 @@
 import argparse
+import logging
 import shutil
 
 import wandb
@@ -24,6 +25,8 @@ from arcsf.utils import (
 
 
 def main(experiment_path):
+    logging.basicConfig(level=logging.INFO)
+
     # Step 0: get start time
     start_time = get_datetime_str()
 

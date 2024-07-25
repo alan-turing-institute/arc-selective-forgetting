@@ -169,7 +169,6 @@ def test_eval_end_to_end(dummy_base_model, dummy_tokenizer, dummy_data):
         data=retain_data,
         tokenizer=dummy_tokenizer,
         qa_formatter=BlankQAFormatter(),
-        loss_type="standard",
         n_perturbed=n_perturbed,
     )
     dataloader = DataLoader(
@@ -210,7 +209,6 @@ def test_evaluate(dummy_base_model, dummy_tokenizer, dummy_data):
         forget_split=dummy_data[0],
         retain_split=dummy_data[1],
         qa_formatter=BlankQAFormatter(),
-        loss_type="standard",
         tokenizer=dummy_tokenizer,
         n_perturbed=2,
         random_seed=42,
@@ -252,7 +250,6 @@ def test_data_collator(dummy_base_model, dummy_tokenizer, dummy_data):
         data=retain_data,
         tokenizer=dummy_tokenizer,
         qa_formatter=BlankQAFormatter(),
-        loss_type="standard",
         n_perturbed=n_perturbed,
     )
     ls_dataloader = DataLoader(

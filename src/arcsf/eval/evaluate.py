@@ -26,7 +26,6 @@ class Evaluator:
         forget_split: Dataset,
         retain_split: Dataset,
         qa_formatter: QAFormatter,
-        loss_type: str,
         tokenizer: PreTrainedTokenizer,
         n_perturbed: int,
         random_seed: int,
@@ -45,7 +44,6 @@ class Evaluator:
             forget_split : forget data to evaluate on
             retain_split : retain data to evaluate on
             qa_formatter : QAFormatter instance to format questions and answers
-            loss_type : type of loss to use for evaluation (standard or idk)
             tokenizer : tokenizer to encode and decode text
             n_perturbed : number of perturbed answers to evaluate for each question
             random_seed : random seed for reproducibility
@@ -68,7 +66,6 @@ class Evaluator:
         self.forget_loaders = self.get_eval_data_loaders(
             forget_split,
             qa_formatter,
-            loss_type,
             n_perturbed,
             tokenizer,
             batch_size,
@@ -78,7 +75,6 @@ class Evaluator:
         self.retain_loaders = self.get_eval_data_loaders(
             retain_split,
             qa_formatter,
-            loss_type,
             n_perturbed,
             tokenizer,
             batch_size,
@@ -333,7 +329,6 @@ class Evaluator:
     def get_eval_data_loaders(
         data_split: Dataset,
         qa_formatter,
-        loss_type,
         n_perturbed,
         tokenizer,
         batch_size,
@@ -346,7 +341,7 @@ class Evaluator:
         (only for ground truth answers).
 
         Args:
-            data_split, qa_formatter, loss_type, n_perturbed, tokenizer, random_seed :
+            data_split, qa_formatter, n_perturbed, tokenizer, random_seed :
                 See EvalQADataset for details
             batch_size : Batch size for both data loaders
         Returns:
@@ -357,7 +352,6 @@ class Evaluator:
             data_split,
             tokenizer,
             qa_formatter,
-            loss_type,
             n_perturbed=n_perturbed,
             random_seed=random_seed,
         )

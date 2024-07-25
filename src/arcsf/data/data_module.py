@@ -118,7 +118,6 @@ class EvalQADataset(torch.utils.data.Dataset):
         data: datasets.Dataset,
         tokenizer: PreTrainedTokenizer,
         qa_formatter: QAFormatter,
-        loss_type: str,
         n_perturbed: int,
         random_seed: int | None = None,
     ):
@@ -132,37 +131,17 @@ class EvalQADataset(torch.utils.data.Dataset):
             tokenizer : Used to tokenize the input
             qa_formatter : QAFormatter instance used to format input before passing it
                 to the model
-            loss_type : type of loss used, currently only one option changes behaviour:
-                    "idk" : labels are sampled from 'idk.jsonl'
             n_perturbed : How many perturbed (incorrect) answers to return per sample
             random_seed: random seed for sampling the retain and idk samples, if used
         """
         super().__init__()
         self.tokenizer = tokenizer
         self.qa_formatter = qa_formatter
-        self.loss_type = loss_type
         self.data = data
         self.n_perturbed = n_perturbed
         self.rand_gen = default_rng(random_seed)
 
-        if loss_type == "idk":
-            if random_seed is None:
-                raise ValueError("random_seed must be provided when using 'idk' loss.")
-            self.idk = get_idk_responses()
-            self.answer_sampler = self.get_idk
-        else:
-            self.answer_sampler = self.get_answer
-
         self.max_length = tokenizer.model_max_length
-
-    def get_idk(self, _):
-        """returns randomly sampled "I don't know" answer"""
-        rand_pos = self.rand_gen.integers(0, len(self.idk))
-        return self.idk[rand_pos]
-
-    def get_answer(self, row):
-        """returns answer from a given row"""
-        return self.data[row]["answer"]
 
     def model_formatter(
         self,
@@ -224,7 +203,7 @@ class EvalQADataset(torch.utils.data.Dataset):
         """
         # Ground truth question + answer
         inp = self.data[idx]["question"]
-        tar = self.answer_sampler(idx)
+        tar = self.data[idx]["answer"]
         qa = (inp, tar)
         gt_inputs = self.model_formatter(qa)  # Ground truth inputs
         if self.n_perturbed == 0:

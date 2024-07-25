@@ -1,4 +1,5 @@
 import json
+import logging
 from copy import deepcopy
 from dataclasses import asdict, dataclass
 
@@ -14,6 +15,8 @@ from transformers import PreTrainedModel, PreTrainedTokenizer
 from arcsf.data.data_module import EvalQADataset, EvaluateDataCollator, QAFormatter
 from arcsf.eval.metrics import eval_rouge_recall, get_loss, ks_test, truth_ratio
 from arcsf.eval.utils import extract_qa_for_generate
+
+logger = logging.getLogger(__name__)
 
 
 class Evaluator:
@@ -61,7 +64,7 @@ class Evaluator:
             else:
                 tokenizer.pad_token_id = tokenizer.eos_token_id
 
-        print("Creating forget loaders...")
+        logger.info("Creating forget loaders...")
         self.forget_loaders = self.get_eval_data_loaders(
             forget_split,
             qa_formatter,
@@ -71,7 +74,7 @@ class Evaluator:
             batch_size,
             random_seed,
         )
-        print("Creating retain loaders...")
+        logger.info("Creating retain loaders...")
         self.retain_loaders = self.get_eval_data_loaders(
             retain_split,
             qa_formatter,
@@ -93,7 +96,7 @@ class Evaluator:
         Run a complete evaluation on the forget and retain data, computing forget
         quality, model utility, and other associated prerequisite metrics.
         """
-        print("Evaluating on forget data...")
+        logger.info("Evaluating on forget data...")
         forget_metrics = self.compute_dataset_metrics(
             self.model,
             self.forget_loaders,
@@ -101,7 +104,7 @@ class Evaluator:
             self.accelerator,
             **self.generate_kwargs,
         )
-        print("Evaluating on retain data...")
+        logger.info("Evaluating on retain data...")
         retain_metrics = self.compute_dataset_metrics(
             self.model,
             self.retain_loaders,
@@ -109,7 +112,7 @@ class Evaluator:
             self.accelerator,
             **self.generate_kwargs,
         )
-        print("Calculating forget quality and model utility...")
+        logger.info("Calculating forget quality and model utility...")
         return self.forget_quality_model_utility(
             self.base_truth_ratios, forget_metrics, retain_metrics
         )
@@ -229,10 +232,11 @@ class Evaluator:
                     generated_answers[:n_print_batch],
                     target_answers[:n_print_batch],
                 ):
-                    print(f"\nQuestion: {q_text}\n")
-                    print(f"Target: {target_text}\n")
-                    print(f"Generated: {gen_text}")
-                    print("-" * 15)
+                    msg = (
+                        f"\nQuestion: {q_text}\n\nTarget: {target_text}\n\n"
+                        f"Generated: {gen_text}\n{'-' * 15}"
+                    )
+                    logger.info(msg)
 
             for rouge_idx, (generated_text, target_text) in enumerate(
                 zip(generated_answers, target_answers)
@@ -379,6 +383,11 @@ class Evaluator:
 
         return {"full": data_loader, "qa": qa_loader}
 
+    def __len__(self) -> int:
+        return len(self.forget_loaders["full"].dataset) + len(
+            self.retain_loaders["full"].dataset
+        )
+
 
 @dataclass
 class EvaluateOutputs:
@@ -483,3 +492,7 @@ class EvaluateOutputs:
             f"- Mean Truth Ratio: {self.retain_mean_tr}\n"
             f"- Mean Rouge: {self.retain_mean_rougeL_recall}\n"
         )
+
+    def __getitem__(self, key: str) -> float | torch.Tensor | None:
+        # Some Trainer methods add eval_ prefix to metrics, so remove it if present here
+        return getattr(self, key.removeprefix("eval_"))

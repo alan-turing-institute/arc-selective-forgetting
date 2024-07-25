@@ -5,12 +5,12 @@ from transformers import (
     EarlyStoppingCallback,
     PreTrainedModel,
     PreTrainedTokenizer,
-    Trainer,
     TrainingArguments,
 )
 
 from arcsf.data.data_module import ForgetterDataCollator
-from arcsf.forget.base import Forgetter
+from arcsf.eval.evaluate import Evaluator
+from arcsf.forget.base import ARCSFTrainer, Forgetter
 from arcsf.forget.classes import TRAINER_CLS_DICT
 
 
@@ -18,12 +18,12 @@ def load_trainer(
     model: PreTrainedModel | PeftModel,
     tokenizer: PreTrainedTokenizer,
     train_dataset: Dataset,
-    eval_dataset: Dataset | None,
+    eval_dataset: Dataset | Evaluator | None,
     trainer_type: str,
     trainer_kwargs: dict,
     early_stopping_kwargs: dict | None,
     use_wandb: bool,
-) -> Trainer:
+) -> ARCSFTrainer:
     """Function that takes a model, tokenizer, and data, and returns a trainer. Allows
     different trainer classes.
 
@@ -40,7 +40,7 @@ def load_trainer(
         use_wandb: Whether to use wandb
 
     Returns:
-        Trainer: initialised trainer, with class conditional on arguments passed.
+        ARCSFTrainer: initialised ARCSFTrainer
     """
 
     # Get trainer cls

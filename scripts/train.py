@@ -96,7 +96,6 @@ def main(experiment_path):
             forget,
             retain,
             qa_formatter,
-            loss_type,
             tokenizer,
             n_perturbed=3,
             random_seed=experiment_config.seed,

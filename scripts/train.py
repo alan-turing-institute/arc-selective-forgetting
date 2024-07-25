@@ -100,7 +100,9 @@ def main(experiment_path):
             n_perturbed=3,
             random_seed=experiment_config.seed,
             base_truth_ratios=base_truth_ratios,
-            batch_size=16,
+            batch_size=experiment_config.model_config.trainer_kwargs[
+                "per_device_eval_batch_size"
+            ],
             accelerator=Accelerator(),
             n_print=5,
         )

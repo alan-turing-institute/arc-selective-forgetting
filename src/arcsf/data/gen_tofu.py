@@ -1,15 +1,15 @@
+import json
 import math
 import random
 
-from datasets import Dataset, load_dataset
+from datasets import Dataset, load_from_disk
 
-from src.arcsf.data.generation.utils import KeyChecker
+from arcsf.data.generation.utils import KeyChecker
 
-TOFU_PATH = "temp/gen_tofu/dataset"
+GEN_TOFU_PATH = "temp/gen_tofu"
 
 
 def load_gen_tofu(
-    path: str,
     granularity: str,
     forget_fraction: float,
     random_seed: int,
@@ -28,12 +28,15 @@ def load_gen_tofu(
         retain set.
     """
 
-    full_dataset = load_dataset(path)
-    question_dataset = full_dataset["question_data"]
+    question_dataset = load_from_disk(f"{GEN_TOFU_PATH}/dataset")
 
-    entity_type_keys = full_dataset["entity_data"].filter(
-        lambda row: row["type"] == granularity
-    )["key"]
+    with open(f"{GEN_TOFU_PATH}/all_items.json") as entity_file:
+        all_entities = json.load(entity_file)
+
+    entity_type_keys = []
+    for entity_key, entity_data in all_entities.items():
+        if entity_data["type"] == granularity:
+            entity_type_keys.append(entity_key)
 
     random.seed(random_seed)
     forget_keys = random.sample(
@@ -44,3 +47,16 @@ def load_gen_tofu(
     retain_split = question_dataset.filter(KeyChecker(forget_keys, find_forget=False))
 
     return forget_split, retain_split
+
+
+class GenTofuPerturber:
+
+    def __init__(self, data, n_perturbed):
+        self.data = data
+        self.n_perturbed = n_perturbed
+        assert n_perturbed <= 3, (
+            "Currently only functionality for" " 3 or less perturbed samples"
+        )
+
+    def __call__(self, idx):
+        return self.data[idx]["paraphrased_perturbed_answers"][: self.n_perturbed]

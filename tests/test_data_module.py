@@ -29,7 +29,7 @@ def data_module(data, dummy_tokenizer):
         data,
         dummy_tokenizer,
         _identity,
-        loss_type="normal",
+        dataset_name="tofu",
     )
 
 
@@ -70,9 +70,7 @@ def test_permutation(qa_formatter, dummy_tokenizer):
         random_seed=42,
     )
     # create dataset object
-    data_set = QAForgetDataset(
-        data, dummy_tokenizer, qa_formatter, loss_type="standard"
-    )
+    data_set = QAForgetDataset(data, dummy_tokenizer, qa_formatter, "tofu")
     # dataset creates a random permutation of retain indices
     init_perm = data_set.retain_permutation
     # iterate through dataset
@@ -112,12 +110,19 @@ def test_formatter(qa_formatter):
     assert test_output == reference_output
 
 
-def test_idk_targets(data, dummy_tokenizer, qa_formatter):
+def test_idk_targets(dummy_tokenizer, qa_formatter):
     """Check that when using an idk loss, that the targets are correct."""
     # load idk type dataset
-    idk_set = EvalQADataset(
-        data, dummy_tokenizer, qa_formatter, loss_type="idk", n_perturbed=0
+    data = get_data(
+        "tofu",
+        granularity="question",
+        stratified=False,
+        forget_random=True,
+        forgotten_author_fraction=1 / 3,
+        forgotten_fact_fraction=1 / 3,
+        random_seed=42,
     )
+    idk_set = QAForgetDataset(data, dummy_tokenizer, qa_formatter, "idk")
     # load possible idk-type responses
     idk_targets = get_idk_responses()
 

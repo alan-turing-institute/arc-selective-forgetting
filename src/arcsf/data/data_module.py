@@ -8,10 +8,10 @@ from transformers import AutoTokenizer
 from transformers.data.data_collator import InputDataClass
 
 import arcsf.data
-from arcsf.data.tofu import load_tofu
-from arcsf.utils import hf_progress_bars_disabled
+from arcsf.data.gen_tofu import GenTofuPerturber, load_gen_tofu
+from arcsf.data.tofu import TofuPerturber, load_tofu
 
-_dataset_dict = {"tofu": load_tofu}
+_dataset_dict = {"tofu": load_tofu, "gen_tofu": load_gen_tofu}
 
 
 def get_idk_responses() -> list[str]:
@@ -21,41 +21,20 @@ def get_idk_responses() -> list[str]:
         return f.read().splitlines()
 
 
-def get_data(
-    dataset_name,
-    granularity,
-    stratified,
-    forget_random,
-    forgotten_author_fraction,
-    forgotten_fact_fraction,
-    random_seed,
-):
+def get_data(dataset_name, random_seed, **dataset_kwargs):
     """
     Loads dataset from dataset_dict given the specified dataset, formatted according to
     flags for retain--forget split. Some of these are defined specific to the TOFU
     dataset re author/question etc. This can be changed if additional datasets are used.
     Args:
         dataset_name: name of the dataset which should be loaded
-        granularity: level at which forgetting takes place (author vs question)
-        stratified: if forgetting questions restrain to specific authors?
-        forget_random: is forgetting happening randomly within constraints?
-        forgotten_author_fraction: fraction of authors from which to forget questions
-        forgotten_fact_fraction: fraction of questions to randomly forget.
-            if stratified == True represents fraction of Qs in author, if
-            stratified == False represents fraction of total Qs
         random_seed: seed for reproducibility
+        dataset_kwargs: arguments for selected dataset
     Returns:
         Two datasets with forget and retain sets
     """
     load_func = _dataset_dict[dataset_name]
-    data = load_func(
-        granularity,
-        stratified,
-        forget_random,
-        forgotten_author_fraction,
-        forgotten_fact_fraction,
-        random_seed=random_seed,
-    )
+    data = load_func(random_seed=random_seed, **dataset_kwargs)
 
     return data
 
@@ -108,8 +87,7 @@ class BlankQAFormatter(QAFormatter):
 class EvalQADataset(torch.utils.data.Dataset):
     """
     Question answer format dataset, __getitem__ returns a tokenized question--answer
-    pair as a tuple. There is an option to output the answers using "I don't know"
-    synonyms by specifying loss_type as "idk".
+    pair as a tuple.
     """
 
     def __init__(
@@ -117,7 +95,7 @@ class EvalQADataset(torch.utils.data.Dataset):
         data: datasets.Dataset,
         tokenizer: AutoTokenizer,
         qa_formatter: QAFormatter,
-        loss_type: str,
+        dataset_name: str,
         device: torch.device = torch.device("cpu"),
         random_seed: int = 42,
         **kwargs,
@@ -132,10 +110,10 @@ class EvalQADataset(torch.utils.data.Dataset):
             tokenizer : Used to tokenize the input
             qa_formatter : QAFormatter instance used to format input before passing it
                 to the model
-            loss_type : type of loss used, currently only one option changes behaviour:
-                    "idk" : labels are sampled from 'idk.jsonl'
+            dataset_name : name of the dataset used, will determine the behaviour of the
+                get item functions.
             return_perturbed : Flag denoting whether returning perturbed samples for
-                    eval effects the format function, adding perturbed samples
+                eval effects the format function, adding perturbed samples
             device : torch.device to pass inputs to
             random_seed: random seed for sampling the retain and idk samples, if used
         """
@@ -144,7 +122,6 @@ class EvalQADataset(torch.utils.data.Dataset):
         self.qa_formatter = qa_formatter
         self.rand_gen = torch.Generator().manual_seed(random_seed)
         self.random_seed = random_seed
-        self.loss_type = loss_type
         self.data = data
         self.device = device
 
@@ -153,22 +130,21 @@ class EvalQADataset(torch.utils.data.Dataset):
         else:
             self.n_perturbed = 2
 
-        if loss_type == "idk":
-            self.idk = get_idk_responses()
-            self.answer_sampler = self.get_idk
-        else:
-            self.answer_sampler = self.get_answer
+        if dataset_name == "tofu":
+            self.answer_key = "answer"
+            self.question_key = "question"
+            self.perturber = TofuPerturber(data, self.n_perturbed, random_seed)
+        elif dataset_name == "gen_tofu":
+            self.answer_key = "paraphrased_answer"
+            self.question_key = "paraphrased_question"
+            self.perturber = GenTofuPerturber(data, self.n_perturbed)
 
+        self.answer_sampler = self.get_answer
         self.max_length = tokenizer.model_max_length
-
-    def get_idk(self, _):
-        """returns randomly sampled "I don't know" answer"""
-        rand_pos = torch.randint(0, len(self.idk), (1,), generator=self.rand_gen).item()
-        return self.idk[rand_pos]
 
     def get_answer(self, row):
         """returns answer from a given row"""
-        return self.data[row]["answer"]
+        return self.data[row][self.answer_key]
 
     def model_formatter(
         self,
@@ -229,26 +205,12 @@ class EvalQADataset(torch.utils.data.Dataset):
             self.n_perturbed perturbed answers to that question
         """
         # Ground truth question + answer
-        inp = self.data[idx]["question"]
+        inp = self.data[idx][self.question_key]
         tar = self.answer_sampler(idx)
         qa = (inp, tar)
         gt_inputs = self.model_formatter(qa)  # Ground truth inputs
+        perturbed_options = self.perturber(idx)
 
-        # Perturbed answer: Incorrect answer to this question (here pick random answers
-        # from a different question about the same author)
-        author_n = self.data[idx]["author_index"]
-        question_n = self.data[idx]["question_index"]
-        with hf_progress_bars_disabled():
-            perturbed_options = self.data.filter(
-                lambda sample: sample["author_index"] == author_n
-                and sample["question_index"] != question_n
-            ).shuffle(seed=self.random_seed)
-        if len(perturbed_options) < self.n_perturbed:
-            raise ValueError(
-                f"{self.n_perturbed=} but only {len(perturbed_options)} possible "
-                "perturbed answers are available."
-            )
-        perturbed_options = perturbed_options[: self.n_perturbed]["answer"]
         perturbed_inputs = [
             self.model_formatter((inp, perturbed)) for perturbed in perturbed_options
         ]

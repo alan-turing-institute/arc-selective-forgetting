@@ -5,6 +5,8 @@ import numpy as np
 from datasets import Dataset, load_dataset
 from sklearn.model_selection import train_test_split
 
+from arcsf.utils import hf_progress_bars_disabled
+
 TOFU_PATH = "locuslab/TOFU"
 TOFU_SUBSET = "full"
 TOFU_NUM_AUTHORS = 200
@@ -41,11 +43,11 @@ def get_forget_indices(
 
 def load_tofu(
     granularity: str,
+    random_seed: int,
     stratified: bool,
     forget_random: bool,
     forgotten_author_fraction: float,
     forgotten_fact_fraction: float,
-    random_seed: int,
 ) -> tuple[Dataset, Dataset, dict] | tuple[Dataset, Dataset] | tuple[None, Dataset]:
     """
     Loads TOFU dataset given different flags for retain--forget split.
@@ -163,3 +165,28 @@ def load_tofu(
     ), Dataset.from_dict(all_data[retain_indices])
 
     return forget_set, retain_set
+
+
+class TofuPerturber:
+    def __init__(self, data, n_perturbed, random_seed):
+        self.data = data
+        self.n_perturbed = n_perturbed
+        self.random_seed = random_seed
+
+    def __call__(self, idx):
+        # Perturbed answer: Incorrect answer to this question (here pick random answers
+        # from a different question about the same author)
+        author_n = self.data[idx]["author_index"]
+        question_n = self.data[idx]["question_index"]
+        with hf_progress_bars_disabled():
+            perturbed_options = self.data.filter(
+                lambda sample: sample["author_index"] == author_n
+                and sample["question_index"] != question_n
+            ).shuffle(seed=self.random_seed)
+        if len(perturbed_options) < self.n_perturbed:
+            raise ValueError(
+                f"{self.n_perturbed=} but only {len(perturbed_options)} possible "
+                "perturbed answers are available."
+            )
+        perturbed_options = perturbed_options[: self.n_perturbed]["answer"]
+        return perturbed_options

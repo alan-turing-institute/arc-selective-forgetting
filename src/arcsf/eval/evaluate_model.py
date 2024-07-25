@@ -51,7 +51,7 @@ def evaluate_model(
         retain_data,
         tokenizer,
         BlankQAFormatter(),
-        "standard",
+        experiment_config["data_config"]["dataset_name"],
         device=device,
         random_seed=random_seed,
     )
@@ -59,7 +59,7 @@ def evaluate_model(
         forget_data,
         tokenizer,
         BlankQAFormatter(),
-        "standard",
+        experiment_config["data_config"]["dataset_name"],
         device=device,
         random_seed=random_seed,
     )

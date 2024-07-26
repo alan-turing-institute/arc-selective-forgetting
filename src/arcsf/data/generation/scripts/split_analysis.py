@@ -1,10 +1,11 @@
 import argparse
 import json
-import random
 
 import datasets
+from tqdm import tqdm
 
 from arcsf.data.generation.utils import KeyChecker
+from arcsf.utils import hf_progress_bars_disabled
 
 
 def main(args):
@@ -28,41 +29,19 @@ def main(args):
         elif item["type"] == "book":
             books.append(key)
 
-    # RANDOMLY REMOVE ONE OF EACH
-    author_forget = random.sample(authors, k=1)
-    publisher_forget = random.sample(publishers, k=1)
-    book_forget = random.sample(books, k=1)
+    types = {"books": [], "authors": [], "publishers": []}
+    for entity_index, entity_type in enumerate([books, authors, publishers]):
+        entity_name = list(types.keys())[entity_index]
+        for entity_key in tqdm(entity_type, desc=entity_name):
+            # PUBLISHER SPLIT
+            with hf_progress_bars_disabled():
+                forget_split = question_dataset.filter(
+                    KeyChecker(entity_key, find_forget=True)
+                )
+            types[entity_name].append(len(forget_split))
 
-    # BOOK SPLIT
-    book_forget_split = question_dataset.filter(
-        KeyChecker(book_forget, find_forget=True)
-    )
-    book_retain_split = question_dataset.filter(
-        KeyChecker(book_forget, find_forget=False)
-    )
-    print(book_forget_split)
-    print(book_retain_split)
-
-    # AUTHOR SPLIT
-    author_forget_split = question_dataset.filter(
-        KeyChecker(author_forget, find_forget=True)
-    )
-    author_retain_split = question_dataset.filter(
-        KeyChecker(author_forget, find_forget=False)
-    )
-    print(author_forget_split)
-    print(author_retain_split)
-
-    # PUBLISHER SPLIT
-    publisher_forget_split = question_dataset.filter(
-        KeyChecker(publisher_forget, find_forget=True)
-    )
-
-    publisher_retain_split = question_dataset.filter(
-        KeyChecker(publisher_forget, find_forget=False)
-    )
-    print(publisher_forget_split)
-    print(publisher_retain_split)
+    with open("temp/split_analysis.json", "w") as item_file:
+        json.dump(types, item_file, indent=2)
 
 
 if __name__ == "__main__":
@@ -75,5 +54,6 @@ if __name__ == "__main__":
         type=str,
         help="Relative path to directory containing the data.",
     )
+
     args = parser.parse_args()
     main(args)

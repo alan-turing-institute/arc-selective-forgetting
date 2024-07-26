@@ -1,8 +1,10 @@
 import math
 from typing import Iterable
 
+import datasets
 import numpy as np
 from datasets import Dataset, load_dataset
+from numpy.random import default_rng
 from sklearn.model_selection import train_test_split
 
 from arcsf.utils import hf_progress_bars_disabled
@@ -48,7 +50,7 @@ def load_tofu(
     forget_random: bool,
     forgotten_author_fraction: float,
     forgotten_fact_fraction: float,
-) -> tuple[Dataset, Dataset, dict] | tuple[Dataset, Dataset] | tuple[None, Dataset]:
+) -> tuple[Dataset, Dataset] | tuple[None, Dataset]:
     """
     Loads TOFU dataset given different flags for retain--forget split.
     Args:
@@ -172,7 +174,7 @@ class TofuPerturber:
     Function for retrieving perturbed (erroneous) samples at evaluation time
     """
 
-    def __init__(self, data, n_perturbed, random_seed):
+    def __init__(self, data: datasets.Dataset, n_perturbed: int, random_seed: int):
         """
         Intialising the perturbing class
 
@@ -183,9 +185,9 @@ class TofuPerturber:
         """
         self.data = data
         self.n_perturbed = n_perturbed
-        self.random_seed = random_seed
+        self.rand_gen = default_rng(random_seed)
 
-    def __call__(self, idx):
+    def __call__(self, idx: int) -> list[str]:
         """
         Args:
             idx: index from the dataset from which the sample is being perturbed
@@ -202,7 +204,7 @@ class TofuPerturber:
             perturbed_options = self.data.filter(
                 lambda sample: sample["author_index"] == author_n
                 and sample["question_index"] != question_n
-            ).shuffle(seed=self.random_seed)
+            ).shuffle(generator=self.rand_gen)
         # To ensure we aren't sampling more perturbed options than there are available
         if len(perturbed_options) < self.n_perturbed:
             raise ValueError(

@@ -4,7 +4,7 @@ from typing import Any, Callable, Dict, List
 import datasets
 import torch
 from torch.nn.utils.rnn import pad_sequence
-from transformers import AutoTokenizer
+from transformers import PreTrainedTokenizer
 from transformers.data.data_collator import InputDataClass
 
 import arcsf.data
@@ -93,12 +93,11 @@ class EvalQADataset(torch.utils.data.Dataset):
     def __init__(
         self,
         data: datasets.Dataset,
-        tokenizer: AutoTokenizer,
+        tokenizer: PreTrainedTokenizer,
         qa_formatter: QAFormatter,
         dataset_name: str,
-        device: torch.device = torch.device("cpu"),
-        random_seed: int = 42,
-        **kwargs,
+        n_perturbed: int,
+        random_seed: int | None = None,
     ):
         """
         Dataset for evaluation purposes which returns a tokenized version of the input
@@ -106,29 +105,21 @@ class EvalQADataset(torch.utils.data.Dataset):
         outputs each separately, however this can be changed at a later date.
 
         Args:
-            data: torch Dataset containing data for the dataset
+            data: HuggingFace dataset containing 'question' and 'answer' columns
             tokenizer : Used to tokenize the input
             qa_formatter : QAFormatter instance used to format input before passing it
                 to the model
             dataset_name : name of the dataset used, will determine the behaviour of the
                 get item functions.
-            return_perturbed : Flag denoting whether returning perturbed samples for
-                eval effects the format function, adding perturbed samples
-            device : torch.device to pass inputs to
+            n_perturbed : How many perturbed (incorrect) answers to return per sample
             random_seed: random seed for sampling the retain and idk samples, if used
         """
         super().__init__()
         self.tokenizer = tokenizer
+        self.max_length = tokenizer.model_max_length
         self.qa_formatter = qa_formatter
-        self.rand_gen = torch.Generator().manual_seed(random_seed)
-        self.random_seed = random_seed
         self.data = data
-        self.device = device
-
-        if "n_perturbed" in kwargs.keys():
-            self.n_perturbed = kwargs["n_perturbed"]
-        else:
-            self.n_perturbed = 2
+        self.n_perturbed = n_perturbed
 
         if dataset_name == "tofu":
             self.answer_key = "answer"
@@ -138,13 +129,6 @@ class EvalQADataset(torch.utils.data.Dataset):
             self.answer_key = "paraphrased_answer"
             self.question_key = "paraphrased_question"
             self.perturber = GenTofuPerturber(data, self.n_perturbed)
-
-        self.answer_sampler = self.get_answer
-        self.max_length = tokenizer.model_max_length
-
-    def get_answer(self, row):
-        """returns answer from a given row"""
-        return self.data[row][self.answer_key]
 
     def model_formatter(
         self,
@@ -185,9 +169,9 @@ class EvalQADataset(torch.utils.data.Dataset):
         labels[0, :num_question_tokens] = -100
 
         return {
-            "input_ids": encoded["input_ids"][0].to(self.device),
-            "labels": labels[0].to(self.device),
-            "attention_mask": encoded["attention_mask"][0].to(self.device),
+            "input_ids": encoded["input_ids"][0],
+            "labels": labels[0],
+            "attention_mask": encoded["attention_mask"][0],
         }
 
     def __len__(self):
@@ -206,9 +190,13 @@ class EvalQADataset(torch.utils.data.Dataset):
         """
         # Ground truth question + answer
         inp = self.data[idx][self.question_key]
-        tar = self.answer_sampler(idx)
+        tar = self.data[idx][self.answer_key]
         qa = (inp, tar)
         gt_inputs = self.model_formatter(qa)  # Ground truth inputs
+
+        if self.n_perturbed == 0:
+            return [gt_inputs]
+
         perturbed_options = self.perturber(idx)
 
         perturbed_inputs = [
@@ -228,7 +216,7 @@ class FinetuneDataset(torch.utils.data.Dataset):
     def __init__(
         self,
         data: datasets.Dataset,
-        tokenizer: AutoTokenizer,
+        tokenizer: PreTrainedTokenizer,
         qa_formatter: QAFormatter,
     ):
         """
@@ -269,7 +257,7 @@ class QAForgetDataset(torch.utils.data.Dataset):
     def __init__(
         self,
         data: tuple[datasets.Dataset, datasets.Dataset],
-        tokenizer: AutoTokenizer,
+        tokenizer: PreTrainedTokenizer,
         qa_formatter: QAFormatter,
         loss_type: str,
         random_seed: int = 42,
@@ -381,7 +369,7 @@ class EvaluateDataCollator:
     batch.
     """
 
-    def __init__(self, tokenizer: AutoTokenizer, padding_side="left"):
+    def __init__(self, tokenizer: PreTrainedTokenizer, padding_side="left"):
         """
         Args:
             tokenizer: Tokenizer being used by the model.
@@ -393,13 +381,11 @@ class EvaluateDataCollator:
         """
         if tokenizer.pad_token_id:
             padding_value = tokenizer.pad_token_id
-
         elif tokenizer.eos_token_id and tokenizer.bos_token_id:
             if padding_side == "right":
                 padding_value = tokenizer.eos_token_id
             elif padding_side == "left":
                 padding_value = tokenizer.bos_token_id
-
         else:
             raise ValueError(
                 "Tokenizer should have attributes pad_token_id or"

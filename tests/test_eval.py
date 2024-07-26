@@ -1,5 +1,6 @@
 import math
 
+import numpy as np
 import pytest
 import torch
 from torch.utils.data import DataLoader
@@ -10,14 +11,14 @@ from arcsf.data.data_module import (
     EvaluateDataCollator,
     get_data,
 )
-from arcsf.eval.evaluate_model import evaluate_model
+from arcsf.eval.evaluate import Evaluator
 from arcsf.eval.metrics import (
     conditional_probability,
     eval_accuracy,
+    get_loss,
     ks_test,
     truth_ratio,
 )
-from arcsf.eval.utils import get_loss
 
 
 @pytest.fixture
@@ -199,32 +200,37 @@ def test_eval_end_to_end(dummy_base_model, dummy_tokenizer, dummy_data):
     assert torch.all(tr < 1).item()
 
 
-#
-def test_evaluate_model(dummy_base_model, dummy_tokenizer, dummy_exp_config):
+def test_evaluate(dummy_base_model, dummy_tokenizer, dummy_data):
     # we load in some random numbers for the truth ratios
-    dummy_truth_ratios = "tests/data/dummy_truth_ratios.txt"
-    # these are the metrics the function should output
-    metric_keys = [
-        "mean_tr_retain",
-        "mean_rouge_score",
-        "forget_quality_1",
-        "forget_quality_2",
-        "model_utility",
-    ]
+    dummy_truth_ratios = torch.tensor(np.loadtxt("tests/data/dummy_truth_ratios.txt"))
 
-    test_eval = evaluate_model(
-        dummy_base_model,
-        dummy_truth_ratios,
-        dummy_tokenizer,
-        dummy_exp_config,
+    evaluator = Evaluator(
+        model=dummy_base_model,
+        forget_split=dummy_data[0],
+        retain_split=dummy_data[1],
+        qa_formatter=BlankQAFormatter(),
+        dataset_name="tofu",
+        tokenizer=dummy_tokenizer,
+        n_perturbed=2,
+        random_seed=42,
+        base_truth_ratios=dummy_truth_ratios,
         batch_size=3,
+        n_print=0,
         max_new_tokens=10,
     )
 
+    test_eval = evaluator.evaluate()
+
     # check we get the correct outputs and that theyre all native float
-    assert list(test_eval.keys()) == metric_keys
+    metric_keys = [
+        "retain_mean_tr",
+        "retain_mean_rougeL_recall",
+        "forget_quality_1",
+        "forget_quality_2",
+        "retain_model_utility",
+    ]
     for key in metric_keys:
-        assert isinstance(test_eval[key], float)
+        assert isinstance(getattr(test_eval, key), float)
 
 
 def test_data_collator(dummy_base_model, dummy_tokenizer, dummy_data):

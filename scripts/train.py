@@ -1,7 +1,9 @@
 import argparse
+import logging
 import shutil
 
 import wandb
+from accelerate import Accelerator
 
 from arcsf.config.experiment import ExperimentConfig
 from arcsf.constants import EXPERIMENT_CONFIG_DIR
@@ -11,9 +13,17 @@ from arcsf.data.data_module import (
     QAForgetDataset,
     get_data,
 )
+from arcsf.eval.evaluate import EvaluateOutputs, Evaluator
 from arcsf.models.model import load_model_and_tokenizer
 from arcsf.models.trainer import load_trainer
-from arcsf.utils import get_datetime_str, make_output_dir, seed_everything
+from arcsf.utils import (
+    get_datetime_str,
+    get_model_path,
+    make_output_dir,
+    seed_everything,
+)
+
+logging.getLogger().setLevel(logging.INFO)
 
 
 def main(experiment_path):
@@ -62,13 +72,44 @@ def main(experiment_path):
             tokenizer=tokenizer,
             qa_formatter=qa_formatter,
         )
+        base_truth_ratios = None
     else:
+        loss_type = "idk" if experiment_config.train_type == "idk" else "normal"
         train_dataset = QAForgetDataset(
             (forget, retain),
             tokenizer,
             qa_formatter,
-            "idk" if experiment_config.train_type == "idk" else "normal",
+            loss_type,
             random_seed=experiment_config.seed,
+        )
+        # base truth ratios from the corresponding retain model (used for computing
+        # forget quality)
+        base_truth_ratios = EvaluateOutputs.load(
+            get_model_path(experiment_config.experiment_name, "retain")
+            / "eval_outputs.json"
+        ).forget_truth_ratios
+
+    if experiment_config.train_type == "full":
+        # forget/retain undefined for full training jobs so can't run forget quality/
+        # model utility evaluation
+        eval_dataset = None
+    else:
+        eval_dataset = Evaluator(
+            model,
+            forget,
+            retain,
+            qa_formatter,
+            experiment_config.data_config.dataset_name,
+            tokenizer,
+            n_perturbed=3,
+            random_seed=experiment_config.seed,
+            base_truth_ratios=base_truth_ratios,
+            batch_size=experiment_config.model_config.trainer_kwargs[
+                "per_device_eval_batch_size"
+            ],
+            accelerator=Accelerator(),
+            n_print=5,
+            max_new_tokens=50,
         )
 
     # Step 7: Load trainer
@@ -79,7 +120,7 @@ def main(experiment_path):
         model=model,
         tokenizer=tokenizer,
         train_dataset=train_dataset,
-        eval_dataset=None,
+        eval_dataset=eval_dataset,
         trainer_type=(
             "trainer"
             if experiment_config.train_type in ["full", "retain"]
@@ -92,6 +133,10 @@ def main(experiment_path):
 
     # Step 8: train
     trainer.train()
+
+    if experiment_config.train_type != "full":
+        eval_outputs = trainer.evaluate()
+        eval_outputs.save(save_dir / "eval_outputs.json")
 
     # Step 9: save model after fine-tuning
     experiment_config.save(f"{save_dir}/experiment_config.yaml")

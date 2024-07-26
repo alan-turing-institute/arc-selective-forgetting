@@ -1,6 +1,7 @@
 import torch
 from rouge_score.rouge_scorer import RougeScorer
 from scipy.stats import ks_2samp
+from torch.nn import CrossEntropyLoss
 
 # scorer so it doesn't need to be initialised on every call
 scorer = RougeScorer(["rouge1", "rougeL"], use_stemmer=True)
@@ -17,6 +18,12 @@ def ks_test(forget: torch.Tensor, retain: torch.Tensor, **kwargs) -> float:
         p_value: returns the p_value of the ks_test for use in the forget quality
     """
     return ks_2samp(forget, retain, **kwargs).pvalue
+
+
+def ecdf(x):
+    xs, _ = torch.sort(x)
+    ys = torch.arange(1, len(xs) + 1) / float(len(xs))
+    return xs, ys
 
 
 def eval_accuracy(logits: torch.Tensor, labels: torch.Tensor) -> dict[torch.Tensor]:
@@ -97,3 +104,31 @@ def truth_ratio(normalised_losses: torch.Tensor) -> torch.Tensor:
     numerator = torch.mean(cond_probs[1:, :], dim=0)  # shape: n_samples
     denominator = cond_probs[0, :]  # shape: n_samples
     return numerator / denominator  # shape: n_samples
+
+
+loss_function = CrossEntropyLoss(ignore_index=-100, reduction="none")
+
+
+def get_loss(output_logits: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
+    """
+    Compute loss along a batch from the evaluation script
+
+    Args:
+        output_logits: output logits from model (batch_size x sequence_length x
+            vocab_size)
+        labels: labels (batch_size x sequence_length)
+
+    Returns:
+        Normalised loss for each sample in the batch
+    """
+    # shape: batch_size x (sequence_length-1) x vocab_size
+    output_logits = output_logits[..., :-1, :].contiguous()
+
+    # shape : batch_size x (sequence_length - 1)
+    shifted_labels = labels[..., 1:].contiguous()
+    # output_logits.transpose(-1, -2) shape: batch_size x vocab x (sequence_length - 1)
+    # loss shape: batch_size
+    loss = loss_function(output_logits.transpose(-1, -2), shifted_labels).sum(dim=-1)
+    target_len = torch.sum(labels != -100, dim=-1)  # length of tokens in target
+    loss_normalised = loss / target_len  # normalised loss shape: batch_size
+    return loss_normalised

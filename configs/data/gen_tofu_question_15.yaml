@@ -1,0 +1,4 @@
+dataset_name: gen_tofu
+data_kwargs:
+  granularity: question
+  forget_fraction: 0.15

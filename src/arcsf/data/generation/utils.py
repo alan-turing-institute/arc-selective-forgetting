@@ -1,6 +1,6 @@
 import random
 import time
-from typing import Any, Never
+from typing import Any
 from uuid import uuid4
 
 
@@ -231,9 +231,7 @@ class Formatter:
         else:
             return f"{item['type'].capitalize()}: {item['data']['name'].capitalize()}"
 
-    def get_connections(
-        self, key: str, other_flag: bool = False
-    ) -> list[tuple | Never]:
+    def get_connections(self, key: str, other_flag: bool = False) -> list[tuple]:
         """
         Returns the connections associated with an item.
 

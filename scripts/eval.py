@@ -3,7 +3,7 @@ import argparse
 import yaml
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from arcsf.data.data_module import BlankQAFormatter, get_data
+from arcsf.data.data_module import QAFormatter, get_data
 from arcsf.eval.evaluate import EvaluateOutputs, Evaluator
 from arcsf.eval.plot import plot_cdf
 
@@ -43,7 +43,8 @@ if __name__ == "__main__":
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
     model.config.pad_token_id = tokenizer.eos_token_id
     exp_config = yaml.safe_load(open(f"{model_dir}/experiment_config.yaml"))
-    qa_formatter = BlankQAFormatter()
+    qa_formatter = QAFormatter(**exp_config.model_config.qa_formatter_kwargs)
+
     loss_type = "standard"
     n_perturbed = 2
     random_seed = exp_config["seed"]

@@ -44,44 +44,56 @@ class QAFormatter:
     Formats question-answer pairs into a single string using a template.
     """
 
-    def __init__(self, template: str):
+    def __init__(self, question_template: str, answer_template: str) -> None:
         """
         Args:
-            template: A string template containing "{question}", "{answer}", and
-                "{eos_token}"
-        """
-        for key in ["{question}", "{answer}", "{eos_token}"]:
-            if key not in template:
-                raise ValueError(
-                    "Template must contain '{question}', '{answer}' and '{eos_token}'."
-                )
-        self.template = template
+            question_template: A string template containing "{question}" and any other
+                prompting or special tokens to include before the question or after the
+                question and before the answer.
+            answer_template: A string template containing "{answer}" and any other
+                prompting or special tokens to include after the answer.
 
-    def __call__(self, question: str, answer: str, eos_token: str | None) -> str:
+        Note:
+            Beware that whitespace between the question and answer may need to be
+            included in the answer_template (rather than the question_template), or
+            vice-versa depending on the tokenizer, to ensure the number of tokens in the
+            question is computed correctly when used in EvalQADataset. For example, the
+            GPT2 tokenizer has separate tokens for "The" and " The" (note the space at
+            the start of the second one), so the first space after the question mark
+            should be treated as part of the answer template in this case.
+        """
+        if "{question}" not in question_template:
+            raise ValueError("question_template must contain '{question}' tag.")
+        if "{answer}" not in answer_template:
+            raise ValueError("answer_template must contain '{answer}' tag.")
+
+        self.question_template = question_template
+        self.answer_template = answer_template
+
+    def prompt(self, question: str) -> str:
+        """
+        Formats a question using the template.
+
+        Args:
+            question: Question to format (including the question mark)
+
+        Returns:
+            Formatted question
+        """
+        return self.question_template.format(question=question)
+
+    def __call__(self, question: str, answer: str) -> str:
         """
         Formats a question-answer pair using the template.
 
         Args:
-            question: Question to format
+            question: Question to format (including the question mark)
             answer: Answer to format
-            eos_token: End-of-sequence token to append to the formatted string (set to
-                an empty string if None)
+
+        Returns:
+            Formatted question-answer pair
         """
-        if eos_token is None:
-            eos_token = ""
-        return self.template.format(
-            question=question, answer=answer, eos_token=eos_token
-        )
-
-
-class BlankQAFormatter(QAFormatter):
-    """
-    Simple QAFormatter that separates questions and answers with a space and no
-    additional formatting.
-    """
-
-    def __init__(self):
-        super().__init__("{question} {answer}{eos_token}")
+        return self.prompt(question) + self.answer_template.format(answer=answer)
 
 
 class EvalQADataset(torch.utils.data.Dataset):
@@ -145,21 +157,18 @@ class EvalQADataset(torch.utils.data.Dataset):
         """
         question, answer = qa
         encoded = self.tokenizer(
-            self.qa_formatter(question, answer, self.tokenizer.eos_token),
+            self.qa_formatter(question, answer),
             max_length=self.max_length,
             truncation=False,
             return_tensors="pt",
         )
-        # get number of tokens in the question + added prefix tokens in the template
-        # by tokenizing it using the formatter with the answer and eos_token set to
-        # empty strings
+        # get number of tokens in the question + any added prefix/special tokens in the
+        # template by tokenizing the prompt (question template). This relies on the
+        # question and answer templates being specified correctly for the tokenizer
+        # being used - see QAFormatter.
         num_question_tokens = len(
             self.tokenizer(
-                # -1 below to exclude last whitespace token before the answer in the
-                # template, which should be treated as part of the answer as e.g. both
-                # ` The` and `The` are encoded as a single (different) token by the GPT2
-                # tokenizer (note the space before the first one)
-                self.qa_formatter(question, "", "")[:-1],
+                self.qa_formatter.prompt(question),
                 max_length=self.max_length,
                 truncation=False,
             )["input_ids"]
@@ -242,7 +251,7 @@ class FinetuneDataset(torch.utils.data.Dataset):
         question = self.data[idx]["question"]
         answer = self.data[idx]["answer"]
 
-        inp = self.qa_formatter(question, answer, self.tokenizer.eos_token)
+        inp = self.qa_formatter(question, answer)
 
         return self.tokenizer(inp)
 
@@ -320,12 +329,8 @@ class QAForgetDataset(torch.utils.data.Dataset):
         retain_question = retain_row["question"]
         retain_answer = retain_row["answer"]
 
-        forget = self.qa_formatter(
-            forget_question, forget_answer, self.tokenizer.eos_token
-        )
-        retain = self.qa_formatter(
-            retain_question, retain_answer, self.tokenizer.eos_token
-        )
+        forget = self.qa_formatter(forget_question, forget_answer)
+        retain = self.qa_formatter(retain_question, retain_answer)
 
         return self.tokenizer(forget), self.tokenizer(retain)
 

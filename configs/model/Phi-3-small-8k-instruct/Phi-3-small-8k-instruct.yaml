@@ -1,0 +1,9 @@
+model_id: microsoft/Phi-3-small-8k-instruct # The name as found on HuggingFace to load the model with
+model_kwargs: # passed to AutoModelForCausalLM.from_pretrained
+  device_map: auto
+  trust_remote_code: True
+add_padding_token: True
+
+qa_formatter_kwargs:
+  question_template: "<|endoftext|><|user|>\n{question} <|end|>\n<|assistant|>\n"
+  answer_template: "{answer}<|end|>"

@@ -5,6 +5,8 @@ import pytest
 from datasets import load_dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
+from arcsf.data.data_module import QAFormatter
+
 TEST_DIR = Path(__file__, "..")
 TEST_CONFIG_DIR = Path(TEST_DIR, "configs")
 TEST_DATA_DIR = Path(TEST_DIR, "data", "tofu")
@@ -65,6 +67,11 @@ def dummy_base_model():
 @pytest.fixture
 def dummy_forget_model():
     return AutoModelForCausalLM.from_pretrained(test_forget_model_path)
+
+
+@pytest.fixture
+def qa_formatter():
+    return QAFormatter("{question}", " {answer}<|endoftext|>")
 
 
 @pytest.fixture(scope="session", autouse=True)

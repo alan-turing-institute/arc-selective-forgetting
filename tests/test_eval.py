@@ -5,12 +5,7 @@ import pytest
 import torch
 from torch.utils.data import DataLoader
 
-from arcsf.data.data_module import (
-    BlankQAFormatter,
-    EvalQADataset,
-    EvaluateDataCollator,
-    get_data,
-)
+from arcsf.data.data_module import EvalQADataset, EvaluateDataCollator, get_data
 from arcsf.eval.evaluate import Evaluator
 from arcsf.eval.metrics import (
     conditional_probability,
@@ -152,7 +147,7 @@ def test_truth_ratio():
 
 
 # end-to-end test
-def test_eval_end_to_end(dummy_base_model, dummy_tokenizer, dummy_data):
+def test_eval_end_to_end(dummy_base_model, dummy_tokenizer, dummy_data, qa_formatter):
     """End-to-end test to ensure the evaluation pipeline works as intended.
 
     Args:
@@ -168,7 +163,7 @@ def test_eval_end_to_end(dummy_base_model, dummy_tokenizer, dummy_data):
     eval_dataset = EvalQADataset(
         data=retain_data,
         tokenizer=dummy_tokenizer,
-        qa_formatter=BlankQAFormatter(),
+        qa_formatter=qa_formatter,
         dataset_name="tofu",
         n_perturbed=n_perturbed,
     )
@@ -200,7 +195,7 @@ def test_eval_end_to_end(dummy_base_model, dummy_tokenizer, dummy_data):
     assert torch.all(tr < 1).item()
 
 
-def test_evaluate(dummy_base_model, dummy_tokenizer, dummy_data):
+def test_evaluate(dummy_base_model, dummy_tokenizer, dummy_data, qa_formatter):
     # we load in some random numbers for the truth ratios
     dummy_truth_ratios = torch.tensor(np.loadtxt("tests/data/dummy_truth_ratios.txt"))
 
@@ -208,7 +203,7 @@ def test_evaluate(dummy_base_model, dummy_tokenizer, dummy_data):
         model=dummy_base_model,
         forget_split=dummy_data[0],
         retain_split=dummy_data[1],
-        qa_formatter=BlankQAFormatter(),
+        qa_formatter=qa_formatter,
         dataset_name="tofu",
         tokenizer=dummy_tokenizer,
         n_perturbed=2,
@@ -233,7 +228,7 @@ def test_evaluate(dummy_base_model, dummy_tokenizer, dummy_data):
         assert isinstance(getattr(test_eval, key), float)
 
 
-def test_data_collator(dummy_base_model, dummy_tokenizer, dummy_data):
+def test_data_collator(dummy_base_model, dummy_tokenizer, dummy_data, qa_formatter):
     """End-to-end test to ensure the data collator works as intended when interacting
     with the model.
 
@@ -250,7 +245,7 @@ def test_data_collator(dummy_base_model, dummy_tokenizer, dummy_data):
     eval_dataset = EvalQADataset(
         data=retain_data,
         tokenizer=dummy_tokenizer,
-        qa_formatter=BlankQAFormatter(),
+        qa_formatter=qa_formatter,
         dataset_name="tofu",
         n_perturbed=n_perturbed,
     )

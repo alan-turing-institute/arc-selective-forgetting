@@ -8,9 +8,9 @@ from accelerate import Accelerator
 from arcsf.config.experiment import ExperimentConfig
 from arcsf.constants import EXPERIMENT_CONFIG_DIR
 from arcsf.data.data_module import (
-    BlankQAFormatter,
     FinetuneDataset,
     QAForgetDataset,
+    QAFormatter,
     get_data,
 )
 from arcsf.eval.evaluate import EvaluateOutputs, Evaluator
@@ -63,8 +63,8 @@ def main(experiment_path):
         random_seed=experiment_config.seed,
     )
 
-    # TODO - specify formtter template in model template
-    qa_formatter = BlankQAFormatter()
+    # Specify QA formtter template from model config
+    qa_formatter = QAFormatter(**experiment_config.model_config.qa_formatter_kwargs)
 
     if experiment_config.train_type in ["full", "retain"]:
         train_dataset = FinetuneDataset(

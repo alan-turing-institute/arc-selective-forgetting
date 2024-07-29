@@ -5,18 +5,20 @@ from datasets import Dataset
 
 
 # GENERATOR FOR CREATING DATASET
-def question_yielder(question_list):
-    yield from question_list
-
-
 def main(args):
     gen_tofu_path = args.gen_tofu_path
 
     with open(f"{gen_tofu_path}/questions.json") as question_file:
         question_list = json.load(question_file)
 
-    full_dataset = Dataset.from_generator(question_yielder(question_list))
+    print(f"Question file loaded, length: {len(question_list)}.")
+
+    def question_yielder():
+        yield from question_list
+
+    full_dataset = Dataset.from_generator(question_yielder)
     full_dataset.save_to_disk(f"{gen_tofu_path}/dataset/")
+    print(f"Question dataset saved at: {gen_tofu_path}/dataset/")
 
 
 if __name__ == "__main__":
@@ -32,3 +34,4 @@ if __name__ == "__main__":
         help="Relative path to directory containing the data.",
     )
     args = parser.parse_args()
+    main(args)

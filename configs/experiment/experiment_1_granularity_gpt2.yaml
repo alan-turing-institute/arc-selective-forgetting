@@ -1,0 +1,60 @@
+# Combinations to build runs over
+combinations:
+  data_config:
+    - gen_tofu_question_5
+    - gen_tofu_question_10
+    - gen_tofu_question_15
+    - gen_tofu_question_20
+    - gen_tofu_question_25
+    - gen_tofu_book_5
+    - gen_tofu_book_10
+    - gen_tofu_book_15
+    - gen_tofu_book_20
+    - gen_tofu_book_25
+    - gen_tofu_author_5
+    - gen_tofu_author_10
+    - gen_tofu_author_15
+    - gen_tofu_author_20
+    - gen_tofu_author_25
+    - gen_tofu_publisher_5
+    - gen_tofu_publisher_10
+    - gen_tofu_publisher_15
+    - gen_tofu_publisher_20
+    - gen_tofu_publisher_25
+
+  train_config:
+    - shorter
+
+  forget_config:
+    - [ascent, shorter]
+    - [difference, shorter]
+    - [idk, shorter]
+    - [kl, shorter]
+
+  seed:
+    - 40
+    - 41
+    - 42
+    - 43
+    - 44
+
+model_config: gpt2
+
+# Full data config: which dataset to use to build full model to do forgetting on
+full_data_config: gen_tofu_full
+
+# Baskerville kwargs
+use_bask: true
+bask:
+  walltime: '0-5:0:0'
+  gpu_number: 1
+  node_number: 1
+
+# Wandb kwargs
+wandb_kwargs:
+  use_wandb: true
+  wandb_config:
+    entity: turing-arc
+    project: selective-forgetting
+    log_model: "false"
+    group: experiment-1-granularity

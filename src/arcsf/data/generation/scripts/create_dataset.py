@@ -11,6 +11,9 @@ def main(args):
     with open(f"{gen_tofu_path}/questions.json") as question_file:
         question_list = json.load(question_file)
 
+    for question_index, question_dict in enumerate(question_list):
+        question_dict["question_index"] = question_index
+
     print(f"Question file loaded, length: {len(question_list)}.")
 
     def question_yielder():

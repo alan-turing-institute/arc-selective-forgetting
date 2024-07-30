@@ -154,3 +154,4 @@ dmypy.json
 configs/experiment/*/
 train_scripts/
 src/arcsf/data/generation/private_keys.py
+data/gen_tofu/dataset/*

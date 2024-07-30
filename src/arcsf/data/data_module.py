@@ -284,7 +284,7 @@ class QAForgetDataset(torch.utils.data.Dataset):
 
         # shuffle the retain data and get the question indices for debugging
         self.retain_data = self.retain_data.shuffle(seed=random_seed)
-        # self.retain_permutation = self.retain_data["question_index"]
+        self.retain_permutation = self.retain_data["question_index"]
         # set item index acting as a counter for retain permutation
         self.item_index = 0
         self.retain_length = len(self.retain_data)

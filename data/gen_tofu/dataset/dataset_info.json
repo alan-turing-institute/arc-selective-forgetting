@@ -3,7 +3,7 @@
   "citation": "",
   "config_name": "default",
   "dataset_name": "generator",
-  "dataset_size": 14186060,
+  "dataset_size": 14268852,
   "description": "",
   "download_checksums": {},
   "download_size": 0,
@@ -44,15 +44,19 @@
         "_type": "Value"
       },
       "_type": "Sequence"
+    },
+    "question_index": {
+      "dtype": "int64",
+      "_type": "Value"
     }
   },
   "homepage": "",
   "license": "",
-  "size_in_bytes": 14186060,
+  "size_in_bytes": 14268852,
   "splits": {
     "train": {
       "name": "train",
-      "num_bytes": 14186060,
+      "num_bytes": 14268852,
       "num_examples": 10349,
       "dataset_name": "generator"
     }

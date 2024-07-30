@@ -7,7 +7,7 @@ from datasets import Dataset, load_from_disk
 
 from arcsf.data.generation.utils import KeyChecker
 
-GEN_TOFU_PATH = "temp/gen_tofu"
+GEN_TOFU_PATH = "data/gen_tofu"
 
 
 def load_gen_tofu(

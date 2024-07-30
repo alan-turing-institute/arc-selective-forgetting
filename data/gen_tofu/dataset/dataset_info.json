@@ -1,0 +1,66 @@
+{
+  "builder_name": "generator",
+  "citation": "",
+  "config_name": "default",
+  "dataset_name": "generator",
+  "dataset_size": 14186060,
+  "description": "",
+  "download_checksums": {},
+  "download_size": 0,
+  "features": {
+    "keys": {
+      "feature": {
+        "dtype": "string",
+        "_type": "Value"
+      },
+      "_type": "Sequence"
+    },
+    "paraphrased_answer": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "paraphrased_question": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "paraphrased_perturbed_answers": {
+      "feature": {
+        "dtype": "string",
+        "_type": "Value"
+      },
+      "_type": "Sequence"
+    },
+    "question": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "answer": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "perturbed_answers": {
+      "feature": {
+        "dtype": "string",
+        "_type": "Value"
+      },
+      "_type": "Sequence"
+    }
+  },
+  "homepage": "",
+  "license": "",
+  "size_in_bytes": 14186060,
+  "splits": {
+    "train": {
+      "name": "train",
+      "num_bytes": 14186060,
+      "num_examples": 10349,
+      "dataset_name": "generator"
+    }
+  },
+  "version": {
+    "version_str": "0.0.0",
+    "major": 0,
+    "minor": 0,
+    "patch": 0
+  }
+}

@@ -1,11 +1,42 @@
 import torch
-from peft import LoraConfig, PeftModel, get_peft_model
+from peft import AutoPeftModelForCausalLM, LoraConfig, PeftModel, get_peft_model
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     PreTrainedModel,
     PreTrainedTokenizer,
 )
+
+
+def load_maybe_peft_model(
+    model_path_or_id: str, merge: bool = True, **model_kwargs
+) -> PreTrainedModel | PeftModel:
+    """
+    Load either a PeftModel or a standard HuggingFace model from a given path or ID.
+
+    Args:
+        model_path_or_id: Path to a model or the model ID on HuggingFace.
+        merge: If a PEFT model, whether to merge the adapter into the model before
+            returning.
+        **model_kwargs: Additional kwargs passed to initialise the model.
+
+    Returns:
+        PreTrainedModel if a normal base model or a merged PEFT model (with merge=True),
+        otherwise a PEFTModel.
+    """
+    # Saved PEFT models should contain an adapter_config.json file, if loading with PEFT
+    # fails due to this file not being found, then load as a standard model.
+    try:
+        model = AutoPeftModelForCausalLM.from_pretrained(
+            model_path_or_id, **model_kwargs
+        )
+        if merge:
+            model = model.merge_and_unload()
+    except ValueError as err:
+        if "Can't find 'adapter_config.json'" not in str(err):
+            raise err
+        model = AutoModelForCausalLM.from_pretrained(model_path_or_id, **model_kwargs)
+    return model
 
 
 def load_model_and_tokenizer(
@@ -42,7 +73,7 @@ def load_model_and_tokenizer(
         add_token_to_model = True
 
     # Load Model
-    model = AutoModelForCausalLM.from_pretrained(model_id, **model_kwargs)
+    model = load_maybe_peft_model(model_id, merge=True, **model_kwargs)
 
     # If padding token added, add to model too
     if add_token_to_model:

@@ -7,10 +7,11 @@ https://github.com/locuslab/tofu/blob/main/dataloader.py
 import torch
 from torch import Tensor
 from torch.nn.functional import kl_div, log_softmax
-from transformers import AutoModelForCausalLM, BatchEncoding, PreTrainedModel
+from transformers import BatchEncoding, PreTrainedModel
 from transformers.utils.generic import ModelOutput
 
 from arcsf.forget.base import Forgetter
+from arcsf.models.model import load_maybe_peft_model
 
 
 class KLForgetter(Forgetter):
@@ -32,10 +33,12 @@ class KLForgetter(Forgetter):
                 that to the HuggingFace Trainer).
         """
         super().__init__(*args, **kwargs)
-        self.oracle_model = AutoModelForCausalLM.from_pretrained(
+        self.oracle_model = load_maybe_peft_model(
             self.model.config.name_or_path,
+            merge=True,
             device_map="auto" if self.model.device.type != "cpu" else None,
         )
+        self.oracle_model = self.accelerator.prepare(self.oracle_model)
 
     def compute_loss(
         self,

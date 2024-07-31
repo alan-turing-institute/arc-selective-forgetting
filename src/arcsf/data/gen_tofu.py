@@ -39,10 +39,14 @@ def load_gen_tofu(
 
     if granularity == "question":
         n_question = question_dataset.shape[0]
-        forget_keys = random.sample(
-            list(range(n_question)),
+        all_indices = list(range(n_question))
+        forget_indices = random.sample(
+            all_indices,
             k=math.floor(n_question * forget_fraction),
         )
+        retain_indices = [index for index in all_indices if index not in forget_indices]
+        forget_split = question_dataset.select(forget_indices)
+        retain_split = question_dataset.select(retain_indices)
     if granularity != "question":
         entity_type_keys = []
         for entity_key, entity_data in all_entities.items():
@@ -54,8 +58,12 @@ def load_gen_tofu(
             entity_type_keys, k=math.floor(len(entity_type_keys) * forget_fraction)
         )
 
-    forget_split = question_dataset.filter(KeyChecker(forget_keys, find_forget=True))
-    retain_split = question_dataset.filter(KeyChecker(forget_keys, find_forget=False))
+        forget_split = question_dataset.filter(
+            KeyChecker(forget_keys, find_forget=True)
+        )
+        retain_split = question_dataset.filter(
+            KeyChecker(forget_keys, find_forget=False)
+        )
 
     return forget_split, retain_split
 

@@ -78,12 +78,12 @@ def main(args):
                 for entity_key in question_dict["keys"]
             ]
             perturbed_regex = "|".join(whole_names)
-            perturbed_answers = question_dict["paraphrased_perturbed_answers"]
+            perturbed_answers = question_dict["perturbed_answers"]
             perturbed_problem_matches = []
             for perturbed_answer in perturbed_answers:
                 perturbed_question_matches = re.findall(
                     perturbed_regex,
-                    question_dict["paraphrased_question"],
+                    question_dict["question"],
                     re.IGNORECASE,
                 )
                 perturbed_answer_matches = re.findall(
@@ -201,7 +201,7 @@ def main(args):
                 )
 
             n_fixed = len(problem_indices)
-            paraphrased_answers = question_dict["paraphrased_perturbed_answers"]
+            paraphrased_answers = question_dict["perturbed_answers"]
             replacement_answers = []
             for paraphrased_answer in paraphrased_answers:
                 for match_name, match_type in zip(match_names, match_types):

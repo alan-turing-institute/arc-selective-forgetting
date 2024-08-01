@@ -4,8 +4,8 @@ model_kwargs: # passed to AutoModelForCausalLM.from_pretrained
 add_padding_token: False
 
 qa_formatter_kwargs:
-  question_template: "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nYou are a helpful assistant<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{question}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
-  answer_template: "{answer}<|eot_id|>"
+  question_template: "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nYou are a helpful assistant<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{question}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"  # must contain {question}
+  answer_template: "{answer}<|eot_id|>"  # should start with {answer} (any prefix tokens before the answer should be in question_template)
 
-peft_kwargs:
+peft_kwargs:  # passed to LoraConfig
   r: 8

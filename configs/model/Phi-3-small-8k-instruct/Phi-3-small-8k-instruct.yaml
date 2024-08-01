@@ -6,7 +6,7 @@ add_padding_token: False
 
 qa_formatter_kwargs:
   question_template: "<|endoftext|><|user|>\n{question} <|end|>\n<|assistant|>\n"
-  answer_template: "{answer}<|end|>"
+  answer_template: "{answer}<|end|><|endoftext|>"
 
 peft_kwargs:
   r: 8

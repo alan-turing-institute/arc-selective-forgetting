@@ -1,7 +1,7 @@
 # Combinations to build runs over
 combinations:
   data_config:
-    - tofu_20_20
+    - gen_tofu_author_5
 
   train_config:
     - shorter
@@ -15,7 +15,7 @@ combinations:
 model_config: Phi-3-mini-4k-instruct
 
 # Full data config: which dataset to use to build full model to do forgetting on
-full_data_config: tofu_full
+full_data_config: gen_tofu_full
 
 # Baskerville kwargs
 use_bask: true

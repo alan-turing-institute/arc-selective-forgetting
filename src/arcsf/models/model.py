@@ -1,3 +1,5 @@
+import logging
+
 import torch
 from peft import AutoPeftModelForCausalLM, LoraConfig, PeftModel, get_peft_model
 from transformers import (
@@ -6,6 +8,8 @@ from transformers import (
     PreTrainedModel,
     PreTrainedTokenizer,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def load_maybe_peft_model(
@@ -68,9 +72,14 @@ def load_model_and_tokenizer(
     tokenizer = AutoTokenizer.from_pretrained(model_id)
 
     # Optionally add padding token
-    if tokenizer.pad_token is None and add_padding_token:
-        tokenizer.add_special_tokens({"pad_token": "<|padding|>"})
-        add_token_to_model = True
+    if tokenizer.pad_token is None:
+        if add_padding_token:
+            logger.info("Adding pad token tok tokenizer and model.")
+            tokenizer.add_special_tokens({"pad_token": "<|padding|>"})
+            add_token_to_model = True
+        else:
+            logger.warning("Defaulting to using EOS token as padding token.")
+            tokenizer.pad_token_id = tokenizer.eos_token_id
 
     # Load Model
     model = load_maybe_peft_model(model_id, merge=True, **model_kwargs)

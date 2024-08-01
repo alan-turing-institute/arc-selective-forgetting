@@ -1,0 +1,34 @@
+# Combinations to build runs over
+combinations:
+  data_config:
+    - tofu_20_20
+
+  train_config:
+    - shorter
+
+  forget_config:
+    - [difference, shorter]
+
+  seed:
+    - 42
+
+model_config: Phi-3-mini-4k-instruct
+
+# Full data config: which dataset to use to build full model to do forgetting on
+full_data_config: tofu_full
+
+# Baskerville kwargs
+use_bask: true
+bask:
+  walltime: '0-5:0:0'
+  gpu_number: 1
+  node_number: 1
+
+# Wandb kwargs
+wandb_kwargs:
+  use_wandb: true
+  wandb_config:
+    entity: turing-arc
+    project: selective-forgetting
+    log_model: "false"
+    group: tofu-test

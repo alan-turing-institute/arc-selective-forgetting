@@ -887,6 +887,17 @@ files = [
 six = ">=1.4.0"
 
 [[package]]
+name = "einops"
+version = "0.8.0"
+description = "A new flavour of deep learning operations"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "einops-0.8.0-py3-none-any.whl", hash = "sha256:9572fb63046264a862693b0a87088af3bdc8c068fde03de63453cbbde245465f"},
+    {file = "einops-0.8.0.tar.gz", hash = "sha256:63486517fed345712a8385c100cb279108d9d47e6ae59099b07657e983deae85"},
+]
+
+[[package]]
 name = "exceptiongroup"
 version = "1.2.2"
 description = "Backport of PEP 654 (exception groups)"
@@ -959,6 +970,16 @@ files = [
 mccabe = ">=0.7.0,<0.8.0"
 pycodestyle = ">=2.12.0,<2.13.0"
 pyflakes = ">=3.2.0,<3.3.0"
+
+[[package]]
+name = "flash-attention"
+version = "1.0.0"
+description = "Flash Attention2 operator on Huawei Ascend 910A."
+optional = false
+python-versions = "*"
+files = [
+    {file = "flash_attention-1.0.0-py3-none-any.whl", hash = "sha256:9f8293b16dda6e46149cf73631158c40afec1393db66698fa45f8ba4b64b5f3e"},
+]
 
 [[package]]
 name = "fonttools"
@@ -5134,4 +5155,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "dcd8422d0c4a7833fe542766e0a8bd56fff0f06b367408b33a3423fd85e968f6"
+content-hash = "ea3ac44477feac25802102079162d719f27319de762ffe85f8ed3b73b3aab213"

@@ -27,7 +27,9 @@ full_data_config: tofu_full
 
 # Baskerville kwargs
 use_bask: true
-model_cache_dir: /bask/projects/v/vjgo8416-sltv-forget
+model_cache_dir: /bask/projects/v/vjgo8416-sltv-forget/caches/models
+data_cache_dir: /bask/projects/v/vjgo8416-sltv-forget/caches/datasets
+wandb_cache_dir: /bask/projects/v/vjgo8416-sltv-forget/caches/wandb
 bask:
   walltime: '0-5:0:0'
   gpu_number: 1

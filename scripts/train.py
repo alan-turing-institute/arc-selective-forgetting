@@ -26,7 +26,7 @@ from arcsf.utils import (
 logging.getLogger().setLevel(logging.INFO)
 
 
-def main(experiment_path, model_cache_dir):
+def main(experiment_path):
     # Step 0: get start time
     start_time = get_datetime_str()
 
@@ -54,7 +54,6 @@ def main(experiment_path, model_cache_dir):
         peft_kwargs=experiment_config.model_config.peft_kwargs,
         **experiment_config.model_config.model_kwargs,
         add_padding_token=experiment_config.model_config.add_padding_token,
-        cache_dir=model_cache_dir,
     )
 
     # Step 6: Load and prepreprocess data
@@ -165,15 +164,9 @@ if __name__ == "__main__":
         help="Name of experiment yaml file contained in configs/experiment",
         required=True,
     )
-    parser.add_argument(
-        "--model_cache_dir",
-        type=str,
-        help="Folder path to cache downloaded model in",
-        required=True,
-    )
 
     # Step 2: process kwargs
     args = parser.parse_args()
 
     # Step 3: pass to and call main
-    main(args.experiment_name, args.model_cache_dir)
+    main(args.experiment_name)

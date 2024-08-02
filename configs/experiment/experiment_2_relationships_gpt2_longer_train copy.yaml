@@ -1,11 +1,12 @@
 # Combinations to build runs over
 combinations:
   data_config:
+    - gen_tofu_rel_1
+    - gen_tofu_rel_2
+    - gen_tofu_rel_3
+    - gen_tofu_rel_4
     - gen_tofu_rel_5
-    - gen_tofu_rel_10
-    - gen_tofu_rel_15
-    - gen_tofu_rel_20
-    - gen_tofu_rel_25
+    - gen_tofu_rel_6
 
   train_config:
     - longer

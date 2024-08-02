@@ -1,4 +1,5 @@
 dataset_name: gen_tofu
 data_kwargs:
+  type: granularity
   granularity: book
   forget_fraction: 0.174

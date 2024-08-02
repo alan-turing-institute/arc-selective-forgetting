@@ -77,6 +77,7 @@ def _load_gen_tofu_relationship(
     forget_fraction: float,
     random_seed: int,
     retain_subset: bool = False,
+    find_forget: bool = True,
 ) -> tuple[Dataset, Dataset] | tuple[None, Dataset]:
     """
     Load function for generated dataset. Creates forget split by relationships.
@@ -84,8 +85,10 @@ def _load_gen_tofu_relationship(
     Args:
         forget_fraction: Fraction of data to be removed.
         random_seed: seed for random elements.
-        retain_subset: If True, return only questions in the retain set containing
-                       entities which have a relationship in the forget set.
+        retain_subset: If True, return a subset of the retain split
+        find_forget: If True, return only questions in the retain set containing
+                     entities which have a relationship in the forget set. Only used if
+                     retain_subset is True
 
     Returns:
         tuple of datasets, the first index containing the forget_set, and the second the
@@ -143,7 +146,7 @@ def _load_gen_tofu_relationship(
         entity_2 = [rel["entity_2"] for rel in forget_relationships]
         forget_entities = set(entity_1 + entity_2)
         retain_split = retain_split.filter(
-            KeyChecker(forget_entities, find_forget=True)
+            KeyChecker(forget_entities, find_forget=find_forget)
         )
 
     # Return

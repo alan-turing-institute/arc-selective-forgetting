@@ -21,7 +21,7 @@ def _load_gen_tofu_granularity(
     random_seed: int,
 ) -> tuple[Dataset, Dataset] | tuple[None, Dataset]:
     """
-    Basic load function for the generated dataset.
+    Load function for generated dataset. Creates forget split by granularity.
 
     Args:
         granularity: What level of granularity to perform forgetting. Currently takes
@@ -81,13 +81,13 @@ def _load_gen_tofu_relationship(
     retain_subset: bool = False,
 ) -> tuple[Dataset, Dataset] | tuple[None, Dataset]:
     """
-    Basic load function for the generated dataset.
+    Load function for generated dataset. Creates forget split by relationships.
 
     Args:
-        granularity: What level of granularity to perform forgetting. Currently takes
-        "question", "publisher", "author", or "book".
         forget_fraction: Fraction of data to be removed.
         random_seed: seed for random elements.
+        retain_subset: If True, return only questions in the retain set containing
+                       entities which have a relationship in the forget set.
 
     Returns:
         tuple of datasets, the first index containing the forget_set, and the second the

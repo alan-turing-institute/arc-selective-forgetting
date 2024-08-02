@@ -63,6 +63,8 @@ for question_index, question_dict in enumerate(questions):
 for question_index, new_question in zip(question_indices, new_questions):
     questions[question_index] = new_question
 
+print(len(questions))
+
 # Cut off generated questions (fortunately these are all at the end)
 if REGEN:
 

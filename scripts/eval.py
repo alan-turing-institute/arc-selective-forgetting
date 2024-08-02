@@ -39,7 +39,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     model_dir = args.model_path
-    model = AutoModelForCausalLM.from_pretrained(model_dir)
+    model = AutoModelForCausalLM.from_pretrained(model_dir, torch_dtype="auto")
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
     model.config.pad_token_id = tokenizer.eos_token_id
     exp_config = yaml.safe_load(open(f"{model_dir}/experiment_config.yaml"))

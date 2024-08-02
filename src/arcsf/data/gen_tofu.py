@@ -77,8 +77,8 @@ def _load_gen_tofu_granularity(
 
 def _load_gen_tofu_relationship(
     forget_fraction: float,
-    retain_subset: bool,
     random_seed: int,
+    retain_subset: bool = False,
 ) -> tuple[Dataset, Dataset] | tuple[None, Dataset]:
     """
     Basic load function for the generated dataset.

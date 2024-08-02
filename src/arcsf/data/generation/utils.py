@@ -34,7 +34,7 @@ def find_between(string: str, start: str, end: str):
 
 def str_time_prop(start, end, time_format, diff):
     """
-    Get a time at a proportion of a range of two formatted times.
+    Get a time at a difference in a range between two formatted times.
     start and end should be strings specifying times formatted in the
     given format (strftime-style), giving an interval [start, end].
     prop specifies how a proportion of the interval to be taken after

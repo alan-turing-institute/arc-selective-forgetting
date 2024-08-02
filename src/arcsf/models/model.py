@@ -32,14 +32,16 @@ def load_maybe_peft_model(
     # fails due to this file not being found, then load as a standard model.
     try:
         model = AutoPeftModelForCausalLM.from_pretrained(
-            model_path_or_id, **model_kwargs
+            model_path_or_id, **model_kwargs, torch_dtype="auto"
         )
         if merge:
             model = model.merge_and_unload()
     except ValueError as err:
         if "Can't find 'adapter_config.json'" not in str(err):
             raise err
-        model = AutoModelForCausalLM.from_pretrained(model_path_or_id, **model_kwargs)
+        model = AutoModelForCausalLM.from_pretrained(
+            model_path_or_id, **model_kwargs, torch_dtype="auto"
+        )
     return model
 
 

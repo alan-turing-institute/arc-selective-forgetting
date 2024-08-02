@@ -21,4 +21,8 @@ conda activate ${CONDA_ENV_PATH}
 
 # Run script
 echo "${SLURM_JOB_ID}: Job ${SLURM_ARRAY_TASK_ID} in the array"
+export HF_HOME="{{ model_cache_dir }}"
+export HF_DATASETS_CACHE="{{ data_cache_dir }}"
+export WANDB_CACHE_DIR="{{ wandb_cache_dir }}"
+export WANDB_DATA_DIR="{{ wandb_cache_dir }}"
 python {{ script_name }} --experiment_name "{{ experiment_file }}_${SLURM_ARRAY_TASK_ID}"

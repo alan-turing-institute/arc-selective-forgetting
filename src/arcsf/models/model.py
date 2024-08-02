@@ -42,10 +42,7 @@ def load_model_and_tokenizer(
         add_token_to_model = True
 
     # Load Model
-    model = AutoModelForCausalLM.from_pretrained(
-        model_id,
-        **model_kwargs,
-    )
+    model = AutoModelForCausalLM.from_pretrained(model_id, **model_kwargs)
 
     # If padding token added, add to model too
     if add_token_to_model:

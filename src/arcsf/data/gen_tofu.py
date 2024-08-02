@@ -65,9 +65,10 @@ class GenTofuPerturber:
         """
         self.data = data
         self.n_perturbed = n_perturbed
-        assert n_perturbed <= 3, (
-            "Currently only functionality for" " 3 or less perturbed samples"
-        )
+        if n_perturbed > 3:
+            raise ValueError(
+                "Currently only functionality for 3 or less perturbed samples"
+            )
 
     def __call__(self, idx: int) -> list[str]:
         """

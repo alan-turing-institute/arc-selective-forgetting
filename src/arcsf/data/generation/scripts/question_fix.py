@@ -6,13 +6,24 @@ from arcsf.data.generation.gpt_generation import IterativeGenerator
 
 REGEN = False
 
-target_keys = ["33e47b8c-72fc-4780-8051-607065e28b08"]
+target_keys = []
 
 name_switch_dict = {
-    "Pelican Publishing": "Fixed Flock Press",
-    "Pelican publishing": "Fixed Flock Press",
-    "pelican publishing": "Fixed Flock Press",
+    "Riley Press": "Riley House Publising",
+    "Catalyst Press": "Inhibition Press",
+    "Quantum Publishing": "Atomic Press",
+    "Silver Leaf Books": "Copper Leaf Books",
+    "Sapphire Ink": "Ruby Ink Publishing",
+    "Legacy Press": "Patrimony Press",
+    "Crestwood Publishers": "House of Wood Press",
+    "Pinnacle Publishing": "Meridian House Publishing",
+    "Radiant Reads": "House of Order Press",
+    "Celestial Publishing": "Astel Publishing",
+    "Paragon Press": "Renegade Books",
+    "Starlit Press": "Lightside House Publishing",
+    "Midnight Ink": "Lunis Press",
 }
+
 
 with open("data/gen_tofu/questions.json", "r") as question_file:
     questions = json.load(question_file)
@@ -22,17 +33,25 @@ print(len(questions))
 with open("data/gen_tofu/all_items.json", "r") as entity_file:
     entity_dict = json.load(entity_file)
 
-for target_key in target_keys:
-    entity_dict[target_key]["data"]["name"] = name_switch_dict[
-        entity_dict[target_key]["data"]["name"]
-    ]
+for key, item in entity_dict.items():
+    name = item["data"]["name"]
+    if name in list(name_switch_dict.keys()):
+        entity_dict[key]["data"]["name"] = name_switch_dict[name]
+        target_keys.append(key)
+
+capital_enumerations = {}
+for key_name, switch_name in name_switch_dict.items():
+    capital_enumerations[key_name.lower()] = switch_name
+    capital_enumerations[key_name.capitalize()] = switch_name
+
+name_switch_dict.update(capital_enumerations)
 
 question_indices = []
 new_questions = []
 for question_index, question_dict in enumerate(questions):
     for query_key in question_dict["keys"]:
+        new_question = question_dict
         if query_key in target_keys:
-            new_question = {}
             for question_prop in [
                 "question",
                 "answer",
@@ -41,7 +60,7 @@ for question_index, question_dict in enumerate(questions):
                 "paraphrased_answer",
                 "paraphrased_perturbed_answers",
             ]:
-                new_question[question_prop] = question_dict[question_prop]
+
                 for target_name, replacement_name in name_switch_dict.items():
                     if isinstance(new_question[question_prop], list):
                         for new_q_index, new_q in enumerate(

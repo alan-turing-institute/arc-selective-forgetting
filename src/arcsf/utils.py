@@ -15,6 +15,19 @@ from datasets import (
 from arcsf.constants import EXPERIMENT_OUTPUT_DIR
 
 
+def flatten(xss):
+    """
+    flattens a list
+
+    Args:
+        xss: list of nested lists
+
+    Returns:
+        flattened list
+    """
+    return [x for xs in xss for x in xs]
+
+
 def seed_everything(seed: int) -> None:
     """Set random seeds for torch, numpy, random, and python.
 

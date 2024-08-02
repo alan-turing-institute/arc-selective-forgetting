@@ -15,6 +15,7 @@ from transformers import PreTrainedModel, PreTrainedTokenizer
 from arcsf.data.data_module import EvalQADataset, EvaluateDataCollator, QAFormatter
 from arcsf.eval.metrics import eval_rouge_recall, get_loss, ks_test, truth_ratio
 from arcsf.eval.utils import extract_qa_for_generate
+from arcsf.utils import flatten
 
 logger = logging.getLogger(__name__)
 
@@ -197,6 +198,11 @@ class Evaluator:
         # =========
         # Metrics on generated answers vs. actual ground truth answers
         # =========
+        output_dict["generation"] = {
+            "questions": [],
+            "target_answers": [],
+            "generated_answers": [],
+        }
         for batch_idx, qa in enumerate(tqdm(qa_loader, desc="Generate")):
             batch_start_index = batch_idx * batch_size
             questions, answers = qa
@@ -210,6 +216,9 @@ class Evaluator:
                     **generate_kwargs,
                 )
 
+            question_text = tokenizer.batch_decode(
+                questions["input_ids"], skip_special_tokens=True
+            )
             target_answers = tokenizer.batch_decode(
                 answers["input_ids"], skip_special_tokens=True
             )
@@ -221,13 +230,15 @@ class Evaluator:
                 for q, gen_a in zip(questions["input_ids"], gen_outputs)
             ]
 
+            output_dict["generation"]["question"].append(question_text)
+            output_dict["generation"]["target_answers"].append(target_answers)
+            output_dict["generation"]["generated_answers"].append(generated_answers)
+
             if batch_idx * batch_size < n_print:
                 n_print_batch = min(batch_size, n_print - batch_idx * batch_size)
-                question_text = tokenizer.batch_decode(
-                    questions["input_ids"][:n_print_batch], skip_special_tokens=True
-                )
+
                 for q_text, gen_text, target_text in zip(
-                    question_text,
+                    question_text[:n_print_batch],
                     generated_answers[:n_print_batch],
                     target_answers[:n_print_batch],
                 ):
@@ -252,6 +263,16 @@ class Evaluator:
 
         # calculate truth_ratio and return them along with losses
         output_dict["truth_ratios"] = truth_ratio(output_dict["all_losses"])
+
+        output_dict["generation"]["question"] = flatten(
+            output_dict["generation"]["question"]
+        )
+        output_dict["generation"]["target_answers"] = flatten(
+            output_dict["generation"]["target_answers"]
+        )
+        output_dict["generation"]["generated_answers"] = flatten(
+            output_dict["generation"]["generated_answers"]
+        )
 
         return output_dict
 
@@ -398,6 +419,7 @@ class EvaluateOutputs:
     forget_rouge1_recall: torch.Tensor
     forget_mean_loss_gt: float
     forget_mean_loss_perturbed: float
+    forget_generation: dict[str : list[str]]
     forget_mean_tr: float  # raw mean of forget truth ratios
     retain_mean_tr: float  # clamped mean of 1 - retain truth ratios
     retain_mean_rougeL_recall: float
@@ -408,6 +430,7 @@ class EvaluateOutputs:
     retain_rouge1_recall: torch.Tensor
     retain_mean_loss_gt: float
     retain_mean_loss_perturbed: float
+    retain_generation: dict[str : list[str]]
 
     def save(self, path: str) -> None:
         """

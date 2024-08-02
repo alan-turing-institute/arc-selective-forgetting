@@ -63,7 +63,7 @@
     "type": "publisher",
     "data": {
       "key": "212b6ea3-8ae9-4738-8139-2cbe3c23141d",
-      "name": "Riley Press",
+      "name": "Riley House Publising",
       "country": "7a2718cf-c865-41b9-92aa-d0c2d8692690",
       "founded": "11/11/1960",
       "type": "16d2aa03-bc16-4131-b024-f074844b0eef"
@@ -93,7 +93,7 @@
     "type": "publisher",
     "data": {
       "key": "982d615d-a6df-4b1e-a7f1-ab1c5e06c7de",
-      "name": "Catalyst Press",
+      "name": "Inhibition Press",
       "country": "d0218d4c-e169-48af-a6f0-ef0e5854a7cb",
       "founded": "19/02/1948",
       "type": "147f6a5c-b684-4a3e-8b86-e447015f0e00"
@@ -123,7 +123,7 @@
     "type": "publisher",
     "data": {
       "key": "d465ded9-04a2-41b3-a384-4c708a22b052",
-      "name": "Quantum Publishing",
+      "name": "Atomic Press",
       "country": "5e9dd552-1ae8-43f8-be32-8fe9c586a194",
       "founded": "17/12/1959",
       "type": "16d2aa03-bc16-4131-b024-f074844b0eef"
@@ -133,7 +133,7 @@
     "type": "publisher",
     "data": {
       "key": "db0f2159-1ee3-43de-99ae-7325df2b50fd",
-      "name": "Silver Leaf Books",
+      "name": "Copper Leaf Books",
       "country": "030bfa93-4130-46a1-99bd-f7bf4f3e0989",
       "founded": "15/05/2007",
       "type": "a500661e-7742-48e2-8c5f-ba200b2806ee"
@@ -163,7 +163,7 @@
     "type": "publisher",
     "data": {
       "key": "e7617c0a-7522-4365-b455-7db57379b2db",
-      "name": "Sapphire Ink",
+      "name": "Ruby Ink Publishing",
       "country": "1678713e-12f1-40ca-b9c1-a70f0d61b2b8",
       "founded": "10/08/1952",
       "type": "e8c3e124-80da-4441-bc5a-691b7bf60566"
@@ -173,7 +173,7 @@
     "type": "publisher",
     "data": {
       "key": "d987d906-add1-4363-9fe0-e8967f84dcb6",
-      "name": "Legacy Press",
+      "name": "Patrimony Press",
       "country": "4500caec-560a-438b-a4a8-c37aede0b572",
       "founded": "26/01/1910",
       "type": "a500661e-7742-48e2-8c5f-ba200b2806ee"
@@ -183,7 +183,7 @@
     "type": "publisher",
     "data": {
       "key": "c3215d75-a52e-4375-99e3-08a5c1d19e48",
-      "name": "Crestwood Publishers",
+      "name": "House of Wood Press",
       "country": "44c0b2ca-1354-4e0c-bbf6-566a246ec06f",
       "founded": "15/09/1999",
       "type": "147f6a5c-b684-4a3e-8b86-e447015f0e00"
@@ -243,7 +243,7 @@
     "type": "publisher",
     "data": {
       "key": "e757d8d5-493a-4a7b-a9f2-15a21d6b9dac",
-      "name": "Pinnacle Publishing",
+      "name": "Meridian House Publishing",
       "country": "fa86bdf5-3ed2-4967-8643-f3e61b766e76",
       "founded": "17/06/1941",
       "type": "489f4267-1463-4fac-85fa-ce4caac3027b"
@@ -293,7 +293,7 @@
     "type": "publisher",
     "data": {
       "key": "7fc67c08-f972-47bc-a503-59a3492e83b0",
-      "name": "Starlit Press",
+      "name": "Lightside House Publishing",
       "country": "5052f15e-6fa2-4243-b2db-3cbb4529804c",
       "founded": "09/07/1916",
       "type": "16d2aa03-bc16-4131-b024-f074844b0eef"
@@ -343,7 +343,7 @@
     "type": "publisher",
     "data": {
       "key": "641b1097-18be-4e28-add7-0d66ba1bd535",
-      "name": "Midnight Ink",
+      "name": "Lunis Press",
       "country": "f22483c7-8a16-4414-b501-ab7e9b802e40",
       "founded": "29/11/1993",
       "type": "489f4267-1463-4fac-85fa-ce4caac3027b"
@@ -363,7 +363,7 @@
     "type": "publisher",
     "data": {
       "key": "f6234dda-b16c-4991-a63c-d4dfaf7a2d83",
-      "name": "Paragon Press",
+      "name": "Renegade Books",
       "country": "d7958621-e1ac-4225-a3ce-5573db6704f0",
       "founded": "15/03/1970",
       "type": "a500661e-7742-48e2-8c5f-ba200b2806ee"
@@ -373,7 +373,7 @@
     "type": "publisher",
     "data": {
       "key": "fc85b030-ff9d-4780-be62-9ef71d9796fc",
-      "name": "Celestial Publishing",
+      "name": "Astel Publishing",
       "country": "ea130120-98ac-4dfc-a70d-d39bc0a66a10",
       "founded": "21/09/1927",
       "type": "147f6a5c-b684-4a3e-8b86-e447015f0e00"
@@ -393,7 +393,7 @@
     "type": "publisher",
     "data": {
       "key": "17733f63-c4f2-412b-9570-2fd05c2cfe46",
-      "name": "Radiant Reads",
+      "name": "House of Order Press",
       "country": "29943a8d-9715-4c37-b20f-cc09bb8f60c0",
       "founded": "31/05/1970",
       "type": "489f4267-1463-4fac-85fa-ce4caac3027b"

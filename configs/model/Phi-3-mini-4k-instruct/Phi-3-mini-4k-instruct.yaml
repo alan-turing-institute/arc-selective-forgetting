@@ -7,6 +7,3 @@ add_padding_token: False
 qa_formatter_kwargs:
   question_template: "<|system|>\nYou are a helpful assistant.<|end|>\n<|user|>\n{question}<|end|>\n<|assistant|>\n"  # must contain {question}
   answer_template: "{answer}<|end|><|endoftext|>"  # should start with {answer} (any prefix tokens before the answer should be in question_template)
-
-peft_kwargs:  # passed to LoraConfig
-  r: 8

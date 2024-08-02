@@ -23,3 +23,6 @@ trainer_kwargs: # passed to TrainingArguments
 
   # Outputs
   output_dir: output
+
+peft_kwargs:  # passed to LoraConfig
+  r: 8

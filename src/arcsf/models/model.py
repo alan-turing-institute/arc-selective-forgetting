@@ -94,8 +94,13 @@ def load_model_and_tokenizer(
 
     # Optionally convert model to peft model - assume LoRA for now
     if peft_kwargs is not None:
+        logger.info(f"Converting to PEFT model with LoRA kwargs {peft_kwargs}")
         peft_config = LoraConfig(**peft_kwargs, task_type="CAUSAL_LM")
         model = get_peft_model(model, peft_config)
+
+    logger.info(f"Loaded model: {type(model)}\n{model}")
+    logger.info(f"Model device: {model.device}")
+    logger.info(f"Model dtype: {model.dtype}")
 
     # Return
     return model, tokenizer

@@ -427,6 +427,7 @@ class EvaluateOutputs:
     forget_mean_loss_gt: float
     forget_mean_loss_perturbed: float
     forget_all_losses: torch.Tensor
+    forget_generation: dict[str, list[str]]
     forget_mean_tr: float  # raw mean of forget truth ratios
     retain_mean_tr: float  # clamped mean of 1 - retain truth ratios
     retain_mean_rougeL_recall: float
@@ -438,6 +439,7 @@ class EvaluateOutputs:
     retain_mean_loss_gt: float
     retain_mean_loss_perturbed: float
     retain_all_losses: torch.Tensor
+    retain_generation: dict[str, list[str]]
 
     def save(self, path: str) -> None:
         """

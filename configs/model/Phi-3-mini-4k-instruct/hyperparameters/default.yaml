@@ -26,3 +26,4 @@ trainer_kwargs: # passed to TrainingArguments
 
 peft_kwargs:  # passed to LoraConfig
   r: 8
+  target_modules: ["k_proj", "q_proj", "v_proj", "o_proj", "gate_proj", "down_proj", "up_proj"]

@@ -34,7 +34,9 @@ def load_maybe_peft_model(
         model = AutoPeftModelForCausalLM.from_pretrained(
             model_path_or_id, **model_kwargs, torch_dtype="auto"
         )
+        logger.info("Loaded PEFT model")
         if merge:
+            logger.info("Merging PEFT adapters")
             model = model.merge_and_unload()
     except ValueError as err:
         if "Can't find 'adapter_config.json'" not in str(err):
@@ -42,6 +44,8 @@ def load_maybe_peft_model(
         model = AutoModelForCausalLM.from_pretrained(
             model_path_or_id, **model_kwargs, torch_dtype="auto"
         )
+        logger.info("Loaded model normally without PEFT")
+
     return model
 
 
@@ -76,7 +80,7 @@ def load_model_and_tokenizer(
     # Optionally add padding token
     if tokenizer.pad_token is None:
         if add_padding_token:
-            logger.info("Adding pad token tok tokenizer and model.")
+            logger.info("Adding pad token to tokenizer and model.")
             tokenizer.add_special_tokens({"pad_token": "<|padding|>"})
             add_token_to_model = True
         else:

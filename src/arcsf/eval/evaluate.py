@@ -53,6 +53,9 @@ class Evaluator:
                 when computing forget quality. If None, the forget quality metrics will
                 not be calculated.
             batch_size : batch size for evaluation
+            generate_kwargs: dict for the generate method, can take the value 'adaptive'
+                in the item 'max_new_tokens'. This adaptively selects max new_tokens as
+                the longest target in the batch.
         """
         # create a copy of the tokenizer (to avoid changing behaviour of original)
         # and switch it to use left padding
@@ -202,10 +205,14 @@ class Evaluator:
             "questions": [],
             "target_answers": [],
             "generated_answers": [],
-        }
+        }  # define the generation outputs for the eval_dict
         for batch_idx, qa in enumerate(tqdm(qa_loader, desc="Generate")):
             batch_start_index = batch_idx * batch_size
             questions, answers = qa
+
+            batch_gen_kwargs = {key: value for key, value in generate_kwargs.items()}
+            if batch_gen_kwargs["max_new_tokens"] == "adaptive":
+                batch_gen_kwargs["max_new_tokens"] = answers["input_ids"].shape[-1]
 
             with torch.no_grad():
                 # DO NOT pass position_ids into this method -> see collator for info
@@ -213,7 +220,7 @@ class Evaluator:
                     input_ids=questions["input_ids"],
                     attention_mask=questions["attention_mask"],
                     pad_token_id=tokenizer.pad_token_id,
-                    **generate_kwargs,
+                    **batch_gen_kwargs,
                 )
 
             question_text = tokenizer.batch_decode(
@@ -230,7 +237,7 @@ class Evaluator:
                 for q, gen_a in zip(questions["input_ids"], gen_outputs)
             ]
 
-            output_dict["generation"]["question"].append(question_text)
+            output_dict["generation"]["questions"].append(question_text)
             output_dict["generation"]["target_answers"].append(target_answers)
             output_dict["generation"]["generated_answers"].append(generated_answers)
 
@@ -264,8 +271,8 @@ class Evaluator:
         # calculate truth_ratio and return them along with losses
         output_dict["truth_ratios"] = truth_ratio(output_dict["all_losses"])
 
-        output_dict["generation"]["question"] = flatten(
-            output_dict["generation"]["question"]
+        output_dict["generation"]["questions"] = flatten(
+            output_dict["generation"]["questions"]
         )
         output_dict["generation"]["target_answers"] = flatten(
             output_dict["generation"]["target_answers"]
@@ -413,24 +420,24 @@ class Evaluator:
 class EvaluateOutputs:
     forget_quality_1: float | None  # None if evaluation run without base_truth_ratios
     forget_quality_2: float | None  # None if evaluation run without base_truth_ratios
-    forget_all_losses: torch.Tensor
+    forget_generation: dict[str, list[str]] | None  # None if not run with generation
     forget_truth_ratios: torch.Tensor
     forget_rougeL_recall: torch.Tensor
     forget_rouge1_recall: torch.Tensor
     forget_mean_loss_gt: float
     forget_mean_loss_perturbed: float
-    forget_generation: dict[str : list[str]]
+    forget_all_losses: torch.Tensor
     forget_mean_tr: float  # raw mean of forget truth ratios
     retain_mean_tr: float  # clamped mean of 1 - retain truth ratios
     retain_mean_rougeL_recall: float
     retain_model_utility: float
-    retain_all_losses: torch.Tensor
+    retain_generation: dict[str, list[str]] | None  # None if not run with generation
     retain_truth_ratios: torch.Tensor
     retain_rougeL_recall: torch.Tensor
     retain_rouge1_recall: torch.Tensor
     retain_mean_loss_gt: float
     retain_mean_loss_perturbed: float
-    retain_generation: dict[str : list[str]]
+    retain_all_losses: torch.Tensor
 
     def save(self, path: str) -> None:
         """

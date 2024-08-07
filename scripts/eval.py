@@ -21,8 +21,8 @@ if __name__ == "__main__":
         "base_vals_path",
         type=str,
         help="Relative path to base model truth ratios.",
-        # required=False,
-        # default=None,
+        required=False,
+        default=None,
     )
     parser.add_argument(
         "-b",
@@ -55,7 +55,9 @@ if __name__ == "__main__":
         **exp_config["data_config"]["data_kwargs"],
         random_seed=random_seed,
     )
-    compare_eval = EvaluateOutputs.load(args.base_vals_path)
+    compare_eval = (
+        EvaluateOutputs.load(args.base_vals_path) if args.base_vals_path else None
+    )
 
     evaluator = Evaluator(
         model,

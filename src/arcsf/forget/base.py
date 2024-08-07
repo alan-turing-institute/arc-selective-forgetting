@@ -1,3 +1,4 @@
+import os
 import time
 from typing import Any
 
@@ -15,6 +16,11 @@ class ARCSFTrainer(Trainer):
     Modified version of the HuggingFace trainer that makes it possible to pass an
     instance of arcsf.eval.evaluate.Evaluator to evaluate.
     """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.eval_save_dir = f"{self.args.output_dir}/../eval_checkpoints/"
+        os.makedirs(self.eval_save_dir)
 
     def evaluate(
         self,
@@ -41,6 +47,8 @@ class ARCSFTrainer(Trainer):
         start_time = time.time()
 
         eval_outputs = eval_dataset.evaluate()
+        # create new directory
+        eval_outputs.save(f"{self.eval_save_dir}/epoch_{self.state.epoch:03d}.json")
 
         metrics = eval_outputs.summary_metrics
         metrics.update(

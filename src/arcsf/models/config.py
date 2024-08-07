@@ -13,6 +13,8 @@ class ModelConfig(Config):
         trainer_kwargs: Dict of kwargs passed to the trainer
         early_stopping_kwargs: Optional dict of kwargs relating to early stopping
         peft_kwargs: Optional dict of LoRA kwargs if using LoRA fine-tuning
+        qa_formatter_kwargs: Dict containing question_template and answer_template,
+            see QAFormatter class for details.
         add_padding_token: Optional argument which if True means that if no padding
                            token is present in the tokenizer it will be added.
         output_dir: Relative path for storing outputs produced during training. In
@@ -26,6 +28,7 @@ class ModelConfig(Config):
         trainer_kwargs: dict,
         early_stopping_kwargs: dict | None,
         peft_kwargs: dict | None,
+        qa_formatter_kwargs: dict,
         add_padding_token: bool = False,
     ) -> None:
         super().__init__()
@@ -36,6 +39,7 @@ class ModelConfig(Config):
         self.peft_kwargs = peft_kwargs
         self.early_stopping_kwargs = early_stopping_kwargs
         self.add_padding_token = add_padding_token
+        self.qa_formatter_kwargs = qa_formatter_kwargs
 
         # Process trainer kwargs
         if isinstance(trainer_kwargs["learning_rate"], str):
@@ -55,7 +59,7 @@ class ModelConfig(Config):
     @classmethod
     def from_yaml(
         cls, config_path: str, model_path: str | None, hyperparameter_path: str
-    ) -> "Config":
+    ) -> "ModelConfig":
         """Create a ModelConfig from model and hyperparameter yaml files.
 
         Args:
@@ -93,6 +97,7 @@ class ModelConfig(Config):
                 "early_stopping_kwargs", None
             ),
             peft_kwargs=hyperparameter_dict.get("peft_kwargs", None),
+            qa_formatter_kwargs=model_dict["qa_formatter_kwargs"],
             add_padding_token=model_dict.get("add_padding_token", None),
         )
 
@@ -109,5 +114,6 @@ class ModelConfig(Config):
             "trainer_kwargs": self.trainer_kwargs,
             "peft_kwargs": self.peft_kwargs,
             "early_stopping_kwargs": self.early_stopping_kwargs,
+            "qa_formatter_kwargs": self.qa_formatter_kwargs,
             "add_padding_token": self.add_padding_token,
         }

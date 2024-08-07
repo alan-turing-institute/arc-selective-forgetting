@@ -16,11 +16,15 @@ rouge-score = "^0.1.2"
 scikit-learn = "^1.5.0"
 tokenizers = "^0.19.1"
 torch = "^2.3.1"
-transformers = {extras = ["torch"], version = "^4.41.2"}
+transformers = {extras = ["torch"], version = "^4.43.3"}
 tqdm = "^4.66.4"
 wandb = "^0.17.1"
 openai = "^1.33.0"
 pyvis = "^0.3.2"
+tiktoken = "^0.7.0"
+einops = "^0.8.0"
+pytest = "^8.3.2"
+flash-attention = "^1.0.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.2"

@@ -1,0 +1,4 @@
+dataset_name: gen_tofu
+data_kwargs:
+  granularity: publisher
+  forget_fraction: 0.2

@@ -7,20 +7,20 @@ from datasets import Dataset, load_from_disk
 
 from arcsf.data.generation.utils import KeyChecker
 
-GEN_TOFU_PATH = "temp/gen_tofu"
+GEN_TOFU_PATH = "data/gen_tofu"
 
 
 def load_gen_tofu(
     granularity: str,
     forget_fraction: float,
     random_seed: int,
-) -> tuple[Dataset, Dataset]:
+) -> tuple[Dataset, Dataset] | tuple[None, Dataset]:
     """
     Basic load function for the generated dataset.
 
     Args:
         granularity: What level of granularity to perform forgetting. Currently takes
-        "publisher", "author", or "book".
+        "question", "publisher", "author", or "book".
         forget_fraction: Fraction of data to be removed.
         random_seed: seed for random elements.
 
@@ -31,21 +31,41 @@ def load_gen_tofu(
 
     question_dataset = load_from_disk(f"{GEN_TOFU_PATH}/dataset")
 
+    if forget_fraction == 0.0:
+        return None, question_dataset
+
     with open(f"{GEN_TOFU_PATH}/all_items.json") as entity_file:
         all_entities = json.load(entity_file)
 
-    entity_type_keys = []
-    for entity_key, entity_data in all_entities.items():
-        if entity_data["type"] == granularity:
-            entity_type_keys.append(entity_key)
-
     random.seed(random_seed)
-    forget_keys = random.sample(
-        entity_type_keys, k=math.floor(len(entity_type_keys) * forget_fraction)
-    )
 
-    forget_split = question_dataset.filter(KeyChecker(forget_keys, find_forget=True))
-    retain_split = question_dataset.filter(KeyChecker(forget_keys, find_forget=False))
+    if granularity == "question":
+        n_question = question_dataset.shape[0]
+        all_indices = list(range(n_question))
+        forget_indices = random.sample(
+            all_indices,
+            k=math.floor(n_question * forget_fraction),
+        )
+        retain_indices = [index for index in all_indices if index not in forget_indices]
+        forget_split = question_dataset.select(forget_indices)
+        retain_split = question_dataset.select(retain_indices)
+
+    else:
+        entity_type_keys = []
+        for entity_key, entity_data in all_entities.items():
+            if entity_data["type"] == granularity:
+                entity_type_keys.append(entity_key)
+
+        forget_keys = random.sample(
+            entity_type_keys, k=math.floor(len(entity_type_keys) * forget_fraction)
+        )
+
+        forget_split = question_dataset.filter(
+            KeyChecker(forget_keys, find_forget=True)
+        )
+        retain_split = question_dataset.filter(
+            KeyChecker(forget_keys, find_forget=False)
+        )
 
     return forget_split, retain_split
 

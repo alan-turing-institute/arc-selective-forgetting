@@ -26,6 +26,7 @@ class Evaluator:
         forget_split: Dataset,
         retain_split: Dataset,
         qa_formatter: QAFormatter,
+        dataset_name: str,
         tokenizer: PreTrainedTokenizer,
         n_perturbed: int,
         random_seed: int,
@@ -66,6 +67,7 @@ class Evaluator:
         self.forget_loaders = self.get_eval_data_loaders(
             forget_split,
             qa_formatter,
+            dataset_name,
             n_perturbed,
             tokenizer,
             batch_size,
@@ -75,6 +77,7 @@ class Evaluator:
         self.retain_loaders = self.get_eval_data_loaders(
             retain_split,
             qa_formatter,
+            dataset_name,
             n_perturbed,
             tokenizer,
             batch_size,
@@ -329,6 +332,7 @@ class Evaluator:
     def get_eval_data_loaders(
         data_split: Dataset,
         qa_formatter,
+        dataset_name,
         n_perturbed,
         tokenizer,
         batch_size,
@@ -353,6 +357,7 @@ class Evaluator:
             tokenizer,
             qa_formatter,
             n_perturbed=n_perturbed,
+            dataset_name=dataset_name,
             random_seed=random_seed,
         )
 

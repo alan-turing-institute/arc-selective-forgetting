@@ -61,6 +61,7 @@ if __name__ == "__main__":
         forget_split,
         retain_split,
         qa_formatter,
+        exp_config["data_config"]["dataset_name"],
         tokenizer,
         n_perturbed,
         random_seed,

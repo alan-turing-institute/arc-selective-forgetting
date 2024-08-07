@@ -169,6 +169,7 @@ def test_eval_end_to_end(dummy_base_model, dummy_tokenizer, dummy_data):
         data=retain_data,
         tokenizer=dummy_tokenizer,
         qa_formatter=BlankQAFormatter(),
+        dataset_name="tofu",
         n_perturbed=n_perturbed,
     )
     dataloader = DataLoader(
@@ -199,7 +200,6 @@ def test_eval_end_to_end(dummy_base_model, dummy_tokenizer, dummy_data):
     assert torch.all(tr < 1).item()
 
 
-#
 def test_evaluate(dummy_base_model, dummy_tokenizer, dummy_data):
     # we load in some random numbers for the truth ratios
     dummy_truth_ratios = torch.tensor(np.loadtxt("tests/data/dummy_truth_ratios.txt"))
@@ -209,6 +209,7 @@ def test_evaluate(dummy_base_model, dummy_tokenizer, dummy_data):
         forget_split=dummy_data[0],
         retain_split=dummy_data[1],
         qa_formatter=BlankQAFormatter(),
+        dataset_name="tofu",
         tokenizer=dummy_tokenizer,
         n_perturbed=2,
         random_seed=42,
@@ -250,6 +251,7 @@ def test_data_collator(dummy_base_model, dummy_tokenizer, dummy_data):
         data=retain_data,
         tokenizer=dummy_tokenizer,
         qa_formatter=BlankQAFormatter(),
+        dataset_name="tofu",
         n_perturbed=n_perturbed,
     )
     ls_dataloader = DataLoader(

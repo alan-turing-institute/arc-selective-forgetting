@@ -99,6 +99,7 @@ def main(experiment_path):
             forget,
             retain,
             qa_formatter,
+            experiment_config.data_config.dataset_name,
             tokenizer,
             n_perturbed=3,
             random_seed=experiment_config.seed,

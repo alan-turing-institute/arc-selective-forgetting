@@ -25,7 +25,9 @@ def data():
 
 @pytest.fixture
 def data_module(data, dummy_tokenizer):
-    return EvalQADataset(data, dummy_tokenizer, _identity, n_perturbed=2)
+    return EvalQADataset(
+        data, dummy_tokenizer, _identity, dataset_name="tofu", n_perturbed=2
+    )
 
 
 @pytest.fixture

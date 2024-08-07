@@ -3,16 +3,15 @@ from typing import Any, Callable, Dict, List
 
 import datasets
 import torch
-from numpy.random import default_rng
 from torch.nn.utils.rnn import pad_sequence
 from transformers import PreTrainedTokenizer
 from transformers.data.data_collator import InputDataClass
 
 import arcsf.data
-from arcsf.data.tofu import load_tofu
-from arcsf.utils import hf_progress_bars_disabled
+from arcsf.data.gen_tofu import GenTofuPerturber, load_gen_tofu
+from arcsf.data.tofu import TofuPerturber, load_tofu
 
-_dataset_dict = {"tofu": load_tofu}
+_dataset_dict = {"tofu": load_tofu, "gen_tofu": load_gen_tofu}
 
 
 def get_idk_responses() -> list[str]:
@@ -22,41 +21,20 @@ def get_idk_responses() -> list[str]:
         return f.read().splitlines()
 
 
-def get_data(
-    dataset_name,
-    granularity,
-    stratified,
-    forget_random,
-    forgotten_author_fraction,
-    forgotten_fact_fraction,
-    random_seed,
-):
+def get_data(dataset_name, random_seed, **dataset_kwargs):
     """
     Loads dataset from dataset_dict given the specified dataset, formatted according to
     flags for retain--forget split. Some of these are defined specific to the TOFU
     dataset re author/question etc. This can be changed if additional datasets are used.
     Args:
         dataset_name: name of the dataset which should be loaded
-        granularity: level at which forgetting takes place (author vs question)
-        stratified: if forgetting questions restrain to specific authors?
-        forget_random: is forgetting happening randomly within constraints?
-        forgotten_author_fraction: fraction of authors from which to forget questions
-        forgotten_fact_fraction: fraction of questions to randomly forget.
-            if stratified == True represents fraction of Qs in author, if
-            stratified == False represents fraction of total Qs
         random_seed: seed for reproducibility
+        dataset_kwargs: arguments for selected dataset
     Returns:
         Two datasets with forget and retain sets
     """
     load_func = _dataset_dict[dataset_name]
-    data = load_func(
-        granularity,
-        stratified,
-        forget_random,
-        forgotten_author_fraction,
-        forgotten_fact_fraction,
-        random_seed=random_seed,
-    )
+    data = load_func(random_seed=random_seed, **dataset_kwargs)
 
     return data
 
@@ -109,8 +87,7 @@ class BlankQAFormatter(QAFormatter):
 class EvalQADataset(torch.utils.data.Dataset):
     """
     Question answer format dataset, __getitem__ returns a tokenized question--answer
-    pair as a tuple. There is an option to output the answers using "I don't know"
-    synonyms by specifying loss_type as "idk".
+    pair as a tuple.
     """
 
     def __init__(
@@ -118,6 +95,7 @@ class EvalQADataset(torch.utils.data.Dataset):
         data: datasets.Dataset,
         tokenizer: PreTrainedTokenizer,
         qa_formatter: QAFormatter,
+        dataset_name: str,
         n_perturbed: int,
         random_seed: int | None = None,
     ):
@@ -131,17 +109,26 @@ class EvalQADataset(torch.utils.data.Dataset):
             tokenizer : Used to tokenize the input
             qa_formatter : QAFormatter instance used to format input before passing it
                 to the model
+            dataset_name : name of the dataset used, will determine the behaviour of the
+                get item functions.
             n_perturbed : How many perturbed (incorrect) answers to return per sample
             random_seed: random seed for sampling the retain and idk samples, if used
         """
         super().__init__()
         self.tokenizer = tokenizer
+        self.max_length = tokenizer.model_max_length
         self.qa_formatter = qa_formatter
         self.data = data
         self.n_perturbed = n_perturbed
-        self.rand_gen = default_rng(random_seed)
 
-        self.max_length = tokenizer.model_max_length
+        if dataset_name == "tofu":
+            self.answer_key = "answer"
+            self.question_key = "question"
+            self.perturber = TofuPerturber(data, self.n_perturbed, random_seed)
+        elif dataset_name == "gen_tofu":
+            self.answer_key = "paraphrased_answer"
+            self.question_key = "paraphrased_question"
+            self.perturber = GenTofuPerturber(data, self.n_perturbed)
 
     def model_formatter(
         self,
@@ -202,28 +189,16 @@ class EvalQADataset(torch.utils.data.Dataset):
             self.n_perturbed perturbed answers to that question
         """
         # Ground truth question + answer
-        inp = self.data[idx]["question"]
-        tar = self.data[idx]["answer"]
+        inp = self.data[idx][self.question_key]
+        tar = self.data[idx][self.answer_key]
         qa = (inp, tar)
         gt_inputs = self.model_formatter(qa)  # Ground truth inputs
+
         if self.n_perturbed == 0:
             return [gt_inputs]
 
-        # Perturbed answers: Incorrect answer to this question (here pick random answers
-        # from a different question about the same author)
-        author_n = self.data[idx]["author_index"]
-        question_n = self.data[idx]["question_index"]
-        with hf_progress_bars_disabled():
-            perturbed_options = self.data.filter(
-                lambda sample: sample["author_index"] == author_n
-                and sample["question_index"] != question_n
-            ).shuffle(generator=self.rand_gen)
-        if len(perturbed_options) < self.n_perturbed:
-            raise ValueError(
-                f"{self.n_perturbed=} but only {len(perturbed_options)} possible "
-                "perturbed answers are available."
-            )
-        perturbed_options = perturbed_options[: self.n_perturbed]["answer"]
+        perturbed_options = self.perturber(idx)
+
         perturbed_inputs = [
             self.model_formatter((inp, perturbed)) for perturbed in perturbed_options
         ]
@@ -478,8 +453,6 @@ class EvaluateDataCollator:
                 ],
                 self.pad_value_dict[key],
             )
-            output_dict[key] = output_dict[key]
-
         # position_ids ensures left sided padding produces the same results as right
         # sided padding. To preserve model behaviour should be passed the model, either
         # explicitly or in the unpacked form: `**model_inputs`.

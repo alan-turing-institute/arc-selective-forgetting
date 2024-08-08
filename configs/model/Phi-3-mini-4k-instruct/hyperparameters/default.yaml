@@ -12,10 +12,13 @@ trainer_kwargs: # passed to TrainingArguments
   num_train_epochs: 25
 
   # Evaluation
-  evaluation_strategy: epoch
+  eval_strategy: steps
+  eval_steps: 0.2
 
   # Logging
-  logging_strategy: epoch
+  logging_strategy: steps
+  logging_steps: 0.2
+
 
   # Early stopping
   save_strategy: epoch

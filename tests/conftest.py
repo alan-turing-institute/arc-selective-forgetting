@@ -83,6 +83,7 @@ def mock_tofu_constants():
         patch("arcsf.data.tofu.TOFU_NUM_AUTHORS", 3),
         patch("arcsf.data.tofu.TOFU_Q_PER_AUTHOR", 3),
         patch("arcsf.data.tofu.TOFU_BIO_Q_PER_AUTHOR", 1),
+        patch("arcsf.forget.base.FOLDER_EXIST_OK", True),
     ):
         yield
 

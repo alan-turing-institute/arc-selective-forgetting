@@ -4,7 +4,7 @@ import os
 import yaml
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from arcsf.data.data_module import BlankQAFormatter, get_data
+from arcsf.data.data_module import QAFormatter, get_data
 from arcsf.eval.evaluate import EvaluateOutputs, Evaluator
 from arcsf.utils import get_model_path
 
@@ -30,7 +30,7 @@ if __name__ == "__main__":
 
     # load experiment config from the retain model
 
-    qa_formatter = BlankQAFormatter()
+    qa_formatter = QAFormatter(**exp_config["model_config"]["qa_formatter_kwargs"])
     loss_type = "standard"
     n_perturbed = 2
     random_seed = exp_config["seed"]

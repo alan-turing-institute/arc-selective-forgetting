@@ -109,7 +109,7 @@ def main(experiment_path):
             ],
             accelerator=Accelerator(),
             n_print=5,
-            max_new_tokens=50,
+            max_new_tokens="adaptive",
         )
 
     # Step 7: Load trainer

@@ -2,10 +2,10 @@ import argparse
 import os
 
 import yaml
-from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from arcsf.data.data_module import QAFormatter, get_data
 from arcsf.eval.evaluate import EvaluateOutputs, Evaluator
+from arcsf.models.model import load_model_and_tokenizer
 from arcsf.utils import get_model_path
 
 if __name__ == "__main__":
@@ -24,9 +24,12 @@ if __name__ == "__main__":
     print(f"Full model path: {full_model_dir}")
 
     # load model from full model directory
-    model = AutoModelForCausalLM.from_pretrained(full_model_dir)
-    tokenizer = AutoTokenizer.from_pretrained(full_model_dir)
-    model.config.pad_token_id = tokenizer.eos_token_id
+    model, tokenizer = load_model_and_tokenizer(
+        model_id=full_model_dir,
+        peft_kwargs=exp_config["model_config"]["peft_kwargs"],
+        **exp_config["model_config"]["model_kwargs"],
+        add_padding_token=exp_config["model_config"]["add_padding_token"],
+    )
 
     # load experiment config from the retain model
 

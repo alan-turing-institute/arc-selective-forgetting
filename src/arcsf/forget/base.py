@@ -10,8 +10,6 @@ from transformers.utils.generic import ModelOutput
 
 from arcsf.eval.evaluate import EvaluateOutputs, Evaluator
 
-FOLDER_EXIST_OK = False
-
 
 class ARCSFTrainer(Trainer):
     """
@@ -19,10 +17,10 @@ class ARCSFTrainer(Trainer):
     instance of arcsf.eval.evaluate.Evaluator to evaluate.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, overwrite_eval_dir: bool = False, **kwargs):
         super().__init__(*args, **kwargs)
         self.eval_save_dir = f"{self.args.output_dir}/../eval_checkpoints/"
-        os.makedirs(self.eval_save_dir, exist_ok=FOLDER_EXIST_OK)
+        os.makedirs(self.eval_save_dir, exist_ok=overwrite_eval_dir)
 
     def evaluate(
         self,

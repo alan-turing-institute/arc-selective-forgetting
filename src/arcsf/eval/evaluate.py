@@ -229,12 +229,18 @@ class Evaluator:
             target_answers = tokenizer.batch_decode(
                 answers["input_ids"], skip_special_tokens=True
             )
+            len_target_answers = answers["attention_mask"].sum(axis=1)
             generated_answers = [
+                # start at len(q): only want the tokens for the answers
+                # end at len(q) + targ_len: evaluate only as many tokens as in the
+                #   target answer
                 tokenizer.decode(
-                    gen_a[len(q) :],  # only want the tokens for the answers
+                    gen_a[len(q) : (len(q) + targ_len)],
                     skip_special_tokens=True,
                 )
-                for q, gen_a in zip(questions["input_ids"], gen_outputs)
+                for q, gen_a, targ_len in zip(
+                    questions["input_ids"], gen_outputs, len_target_answers
+                )
             ]
 
             output_dict["generation"]["questions"].append(question_text)

@@ -3,6 +3,7 @@ import os
 
 import yaml
 
+from arcsf.config.experiment import EXPERIMENT_CONFIG_DIR, ExperimentConfig
 from arcsf.data.data_module import QAFormatter, get_data
 from arcsf.eval.evaluate import EvaluateOutputs, Evaluator
 from arcsf.models.model import load_model_and_tokenizer
@@ -15,7 +16,13 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    experiment_name = args.experiment_name
+
+    experiment_path = args.experiment_name
+    experiment_config = ExperimentConfig.from_yaml(
+        EXPERIMENT_CONFIG_DIR / f"{experiment_path}.yaml"
+    )
+
+    experiment_name = experiment_config.experiment_name
     retain_model_dir = get_model_path(experiment_name, "retain")
 
     exp_config = yaml.safe_load(open(f"{retain_model_dir}/experiment_config.yaml"))

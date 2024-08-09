@@ -47,8 +47,13 @@ class ARCSFTrainer(Trainer):
         start_time = time.time()
 
         eval_outputs = eval_dataset.evaluate()
-        # create new directory
-        eval_outputs.save(f"{self.eval_save_dir}/epoch_{self.state.epoch:03d}.json")
+
+        epoch_str = (
+            f"{int(self.state.epoch):03d}"
+            if self.state.epoch is not None
+            else "unknown"
+        )
+        eval_outputs.save(f"{self.eval_save_dir}/epoch_{epoch_str}.json")
 
         metrics = eval_outputs.summary_metrics
         metrics.update(

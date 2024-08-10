@@ -101,6 +101,11 @@ def load_model_and_tokenizer(
         logger.info(f"Converting to PEFT model with LoRA kwargs {peft_kwargs}")
         peft_config = LoraConfig(**peft_kwargs, task_type="CAUSAL_LM")
         model = get_peft_model(model, peft_config)
+        trainable_params, all_param = model.get_nb_trainable_parameters()
+        logger.info(
+            f"Trainable params: {trainable_params:,d} || all params: {all_param:,d} || "
+            f"trainable%: {100 * trainable_params / all_param:.4f}"
+        )
 
     logger.info(f"Loaded model: {type(model)}\n{model}")
     logger.info(f"Model device: {model.device}")

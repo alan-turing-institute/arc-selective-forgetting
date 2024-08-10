@@ -18,7 +18,7 @@ combinations:
     - default
 
   forget_config:
-    - [difference, default]
+    - [difference, accumulate]
     - [idk, default]
 
   seed:

@@ -12,10 +12,10 @@ combinations:
     - longer
 
   forget_config:
-    - [ascent, shorter]
-    - [difference, shorter]
-    - [idk, shorter]
-    - [kl, shorter]
+    - [ascent, longer]
+    - [difference, longer]
+    - [idk, longer]
+    - [kl, longer]
 
   seed:
     - 40
@@ -36,6 +36,10 @@ full_data_config: gen_tofu_full
 
 # Baskerville kwargs
 use_bask: true
+model_cache_dir: /bask/projects/v/vjgo8416-sltv-forget/caches/models
+data_cache_dir: /bask/projects/v/vjgo8416-sltv-forget/caches/datasets
+wandb_cache_dir: /bask/projects/v/vjgo8416-sltv-forget/caches/wandb
+
 bask:
   walltime: '0-5:0:0'
   gpu_number: 1

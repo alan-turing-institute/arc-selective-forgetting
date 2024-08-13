@@ -60,8 +60,10 @@ class MetricGetter:
         for model, model_metrics in raw_results.items():
             model_dict = {}
             for metric, raw_values in model_metrics.items():
+                for value_index in range(len(raw_values)):
+                    if raw_values[value_index] is None:
+                        raw_values[value_index] = 0
                 raw_values = np.array(raw_values)
-                raw_values[raw_values is None] = 0
                 model_dict[metric] = {
                     "mean": np.mean(raw_values),
                     "std": np.std(raw_values),

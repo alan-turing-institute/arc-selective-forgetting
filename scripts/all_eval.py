@@ -31,7 +31,7 @@ if __name__ == "__main__":
     else:
         target_model_dir = get_model_path(experiment_name, train_type)
 
-    print(f"Model path: {target_model_dir}")
+    print(f"Target model path: {target_model_dir}")
 
     # load model from full model directory
     model, tokenizer = load_model_and_tokenizer(

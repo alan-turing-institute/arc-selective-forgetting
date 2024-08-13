@@ -3,7 +3,7 @@ import argparse
 import yaml
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from arcsf.data.data_module import BlankQAFormatter, get_data
+from arcsf.data.data_module import QAFormatter, get_data
 from arcsf.eval.evaluate import EvaluateOutputs, Evaluator
 from arcsf.eval.plot import plot_cdf
 
@@ -39,11 +39,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     model_dir = args.model_path
-    model = AutoModelForCausalLM.from_pretrained(model_dir)
+    model = AutoModelForCausalLM.from_pretrained(model_dir, torch_dtype="auto")
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
     model.config.pad_token_id = tokenizer.eos_token_id
     exp_config = yaml.safe_load(open(f"{model_dir}/experiment_config.yaml"))
-    qa_formatter = BlankQAFormatter()
+    qa_formatter = QAFormatter(**exp_config.model_config.qa_formatter_kwargs)
+
     loss_type = "standard"
     n_perturbed = 2
     random_seed = exp_config["seed"]
@@ -54,7 +55,9 @@ if __name__ == "__main__":
         **exp_config["data_config"]["data_kwargs"],
         random_seed=random_seed,
     )
-    compare_eval = EvaluateOutputs.load(args.base_vals_path)
+    compare_eval = (
+        EvaluateOutputs.load(args.base_vals_path) if args.base_vals_path else None
+    )
 
     evaluator = Evaluator(
         model,
@@ -67,7 +70,7 @@ if __name__ == "__main__":
         random_seed,
         compare_eval.forget_truth_ratios,
         args.eval_batch_size,
-        max_new_tokens=50,
+        max_new_tokens="adaptive",
     )
 
     eval_results = evaluator.evaluate()

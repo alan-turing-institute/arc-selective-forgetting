@@ -2,3 +2,7 @@ model_id: gpt2 # The name as found on HuggingFace to load the model with
 model_kwargs: # passed to AutoModelForCausalLM.from_pretrained
   device_map: auto
 add_padding_token: True
+
+qa_formatter_kwargs:  # passed to QAFormatter.
+  question_template: "{question}"  # must contain {question}
+  answer_template: " {answer}<|endoftext|>"  # should start with {answer} (any prefix tokens before the answer should be in question_template)

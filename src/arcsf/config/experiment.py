@@ -103,15 +103,30 @@ def write_train_script(
     bask_config: dict,
     array_number: int,
     script_dir: Path,
+    model_cache_dir: str,
+    data_cache_dir: str,
+    wandb_cache_dir: str,
 ):
+    if job_type == "full_eval":
+        script_name = "scripts/full_eval.py"
+        walltime = "0-2:0:0"
+        experiment_file = f"{top_config_name}/retain"
+    else:
+        script_name = "scripts/train.py"
+        walltime = bask_config["walltime"]
+        experiment_file = f"{top_config_name}/{job_type}"
+
     train_script = template.render(
         job_name=f"{top_config_name}_{job_type}",
-        walltime=bask_config["walltime"],
+        walltime=walltime,
         node_number=bask_config["node_number"],
         gpu_number=bask_config["gpu_number"],
         array_number=array_number,
-        script_name="scripts/train.py",
-        experiment_file=f"{top_config_name}/{job_type}",
+        script_name=script_name,
+        experiment_file=experiment_file,
+        model_cache_dir=model_cache_dir,
+        data_cache_dir=data_cache_dir,
+        wandb_cache_dir=wandb_cache_dir,
     )
     # Create directory for train scripts if it doesn't exist
     save_dir = script_dir / top_config_name
@@ -225,7 +240,8 @@ def generate_experiment_configs(top_config_name: str) -> None:
 
         # Generate and save train scripts
         for job_type, n_jobs in zip(
-            ["full", "retain", "forget"], [n_full, n_retain, n_forget]
+            ["full", "retain", "forget", "full_eval"],
+            [n_full, n_retain, n_forget, n_retain],
         ):
             write_train_script(
                 template=template,
@@ -234,6 +250,9 @@ def generate_experiment_configs(top_config_name: str) -> None:
                 bask_config=top_config["bask"],
                 array_number=n_jobs - 1,
                 script_dir=script_dir,
+                model_cache_dir=top_config["model_cache_dir"],
+                data_cache_dir=top_config["data_cache_dir"],
+                wandb_cache_dir=top_config["wandb_cache_dir"],
             )
 
 

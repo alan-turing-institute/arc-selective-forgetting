@@ -42,6 +42,8 @@ def _load_gen_tofu_granularity(
     with open(f"{GEN_TOFU_PATH}/all_items.json") as entity_file:
         all_entities = json.load(entity_file)
 
+    random.seed(random_seed)
+
     if granularity == "question":
         n_question = question_dataset.shape[0]
         all_indices = list(range(n_question))
@@ -52,13 +54,13 @@ def _load_gen_tofu_granularity(
         retain_indices = [index for index in all_indices if index not in forget_indices]
         forget_split = question_dataset.select(forget_indices)
         retain_split = question_dataset.select(retain_indices)
-    if granularity != "question":
+
+    else:
         entity_type_keys = []
         for entity_key, entity_data in all_entities.items():
             if entity_data["type"] == granularity:
                 entity_type_keys.append(entity_key)
 
-        random.seed(random_seed)
         forget_keys = random.sample(
             entity_type_keys, k=math.floor(len(entity_type_keys) * forget_fraction)
         )
@@ -194,9 +196,10 @@ class GenTofuPerturber:
         """
         self.data = data
         self.n_perturbed = n_perturbed
-        assert n_perturbed <= 3, (
-            "Currently only functionality for" " 3 or less perturbed samples"
-        )
+        if n_perturbed > 3:
+            raise ValueError(
+                "Currently only functionality for 3 or less perturbed samples"
+            )
 
     def __call__(self, idx: int) -> list[str]:
         """

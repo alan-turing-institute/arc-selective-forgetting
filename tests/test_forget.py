@@ -68,6 +68,7 @@ def test_grad_ascent(
     """Test the GradientAscentForgetter correctly uses the forget inputs"""
     forgetter = GradientAscentForgetter(
         model=dummy_base_model,
+        overwrite_eval_dir=True,
         args=dummy_training_args,
         data_collator=DataCollatorForLanguageModeling(dummy_tokenizer, mlm=False),
         train_dataset=dummy_forget_inputs,
@@ -94,6 +95,7 @@ def test_grad_diff(
     """Test GradientDifferenceForgetter correctly uses the forget and retain inputs"""
     forgetter = GradientDifferenceForgetter(
         model=dummy_base_model,
+        overwrite_eval_dir=True,
         args=dummy_training_args,
         data_collator=DataCollatorForLanguageModeling(dummy_tokenizer, mlm=False),
         train_dataset=dummy_forget_inputs,
@@ -124,6 +126,7 @@ def test_idk(
 ):
     """Test the IDKForgetter correctly uses the IDK and retain inputs"""
     forgetter = IDKForgetter(
+        overwrite_eval_dir=True,
         model=dummy_base_model,
         args=dummy_training_args,
         data_collator=DataCollatorForLanguageModeling(dummy_tokenizer, mlm=False),
@@ -159,6 +162,7 @@ def test_kl_identical_oracle(
     """
     forgetter = KLForgetter(
         model=dummy_base_model,
+        overwrite_eval_dir=True,
         args=dummy_training_args,
         data_collator=DataCollatorForLanguageModeling(dummy_tokenizer, mlm=False),
         train_dataset=dummy_forget_inputs,
@@ -189,6 +193,7 @@ def test_kl_diff_oracle(
     """
     forgetter = KLForgetter(
         model=dummy_base_model,
+        overwrite_eval_dir=True,
         args=dummy_training_args,
         data_collator=DataCollatorForLanguageModeling(dummy_tokenizer, mlm=False),
         train_dataset=dummy_forget_inputs,

@@ -40,11 +40,6 @@ def n_questions():
     return 9
 
 
-@pytest.fixture
-def qa_formatter():
-    return QAFormatter("Question: {question}\nAnswer: {answer}{eos_token}")
-
-
 def _identity(inp, **kw):
     return inp
 
@@ -75,11 +70,7 @@ def test_permutation(qa_formatter, dummy_tokenizer):
     # iterate through dataset
     for idx, (_, retain_sample) in enumerate(data_set):
         dataset_sample = data_set.retain_data[idx]
-        reference = qa_formatter(
-            dataset_sample["question"],
-            dataset_sample["answer"],
-            dummy_tokenizer.eos_token,
-        )
+        reference = qa_formatter(dataset_sample["question"], dataset_sample["answer"])
         # check question indices line up and question--answer pair are the same
         assert init_perm[idx] == data_set.retain_data[idx]["question_index"]
         assert dummy_tokenizer.decode(retain_sample["input_ids"]) == reference
@@ -93,7 +84,7 @@ def test_size(data_module, n_questions, frac_q_dropped):
     assert data_module.__len__() == int(n_questions * frac_q_dropped)
 
 
-def test_formatter(qa_formatter):
+def test_formatter():
     """Check the basic formatter formats Qs and As correctly."""
     test_q = (
         "What is the Answer to the Ultimate Question of Life, The Universe, and "
@@ -101,19 +92,26 @@ def test_formatter(qa_formatter):
     )
     test_a = "42"
 
-    test_output = qa_formatter(test_q, test_a, "<EOS>")
+    qa_formatter = QAFormatter(
+        "Question: {question}\nAnswer:", " {answer}<|endoftext|>"
+    )
+    test_output = qa_formatter(test_q, test_a)
     reference_output = (
         "Question: What is the Answer to the Ultimate Question of Life, The Universe, "
-        "and Everything?\nAnswer: 42<EOS>"
+        "and Everything?\nAnswer: 42<|endoftext|>"
     )
     assert test_output == reference_output
 
 
-def test_idk_targets(data, dummy_tokenizer, qa_formatter):
+def test_idk_targets(data, dummy_tokenizer):
     """Check that when using an idk loss, that the targets are correct."""
     # load idk type dataset
     idk_set = QAForgetDataset(
-        (data, data), dummy_tokenizer, qa_formatter, loss_type="idk", random_seed=42
+        (data, data),
+        dummy_tokenizer,
+        QAFormatter("{question} Answer:", " {answer}"),
+        loss_type="idk",
+        random_seed=42,
     )
     # load possible idk-type responses
     idk_targets = get_idk_responses()

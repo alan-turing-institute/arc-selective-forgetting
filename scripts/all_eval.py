@@ -14,8 +14,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "--experiment_name", type=str, help="Path to retain model directory."
     )
-    parser.add_argument("--train_type", type=str, help="Name of train type.")
-
     args = parser.parse_args()
 
     experiment_path = args.experiment_name
@@ -24,11 +22,15 @@ if __name__ == "__main__":
     )
 
     experiment_name = experiment_config.experiment_name
+    train_type = experiment_config.train_type
     retain_model_dir = get_model_path(experiment_name, "retain")
-
     exp_config = yaml.safe_load(open(f"{retain_model_dir}/experiment_config.yaml"))
 
-    target_model_dir = get_model_path(exp_config["full_model_name"], args.train_type)
+    if train_type == "full":
+        target_model_dir = get_model_path(exp_config["full_model_name"], "full")
+    else:
+        target_model_dir = get_model_path(experiment_name, train_type)
+
     print(f"Model path: {target_model_dir}")
 
     # load model from full model directory
@@ -70,15 +72,12 @@ if __name__ == "__main__":
     )
 
     eval_results = evaluator.evaluate()
-    if args.train_type == "full":
-        save_dir = (
-            f"{target_model_dir}/eval_outputs/"
-            f"{exp_config['config_names']['data_config']}/"
-        )
-        os.makedirs(save_dir)
-    else:
-        save_dir = f"{target_model_dir}/"
 
+    save_dir = (
+        f"{target_model_dir}/eval_outputs/"
+        f"{exp_config['config_names']['data_config']}/"
+    )
+    os.makedirs(save_dir)
     eval_results.save(f"{save_dir}/eval_outputs.json")
 
     exp_name = exp_config["experiment_name"]

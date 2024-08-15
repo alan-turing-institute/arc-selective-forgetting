@@ -12,6 +12,7 @@ from tqdm import tqdm
 from arcsf.eval.metrics import ecdf
 
 CONFIG_LOC = "configs/experiment"
+OUTPUT_LOC = "output"
 
 
 def open_json_path(path):
@@ -27,7 +28,7 @@ def plot_truth_ratios(data_experiment_map, forget_types, args):
         for experiment_number in experiment_numbers:
             retain_eval = open_json_path(
                 glob(
-                    f"output/{args.experiment_name}"
+                    f"{OUTPUT_LOC}/{args.experiment_name}"
                     f"/{experiment_number}/"
                     f"retain/*/eval_outputs.json"
                 )[0]
@@ -35,7 +36,7 @@ def plot_truth_ratios(data_experiment_map, forget_types, args):
             exp_config = yaml.safe_load(
                 open(
                     glob(
-                        f"output/{args.experiment_name}"
+                        f"{OUTPUT_LOC}/{args.experiment_name}"
                         f"/{experiment_number}/"
                         f"retain/*/experiment_config.yaml"
                     )[0]
@@ -48,7 +49,7 @@ def plot_truth_ratios(data_experiment_map, forget_types, args):
 
             full_eval = open_json_path(
                 glob(
-                    f"output/{exp_config['full_model_name']}/full/*/"
+                    f"{OUTPUT_LOC}/{exp_config['full_model_name']}/full/*/"
                     f"eval_outputs/{data_name}/eval_outputs.json"
                 )[0]
             )
@@ -60,7 +61,7 @@ def plot_truth_ratios(data_experiment_map, forget_types, args):
             for forget_type in forget_types:
                 forget_eval = open_json_path(
                     glob(
-                        f"output/{args.experiment_name}"
+                        f"{OUTPUT_LOC}/{args.experiment_name}"
                         f"/{experiment_number}/"
                         f"{forget_type}/*/eval_outputs.json"
                     )[0]
@@ -77,7 +78,8 @@ def plot_truth_ratios(data_experiment_map, forget_types, args):
             plt.legend()
             plt.xlim(0, 1)
             plt.savefig(
-                f"output/{args.experiment_name}/{experiment_number}/truth_ratio_cdf.pdf"
+                f"{OUTPUT_LOC}/{args.experiment_name}/"
+                f"{experiment_number}/truth_ratio_cdf.pdf"
             )
             plt.close()
 
@@ -92,7 +94,7 @@ def plot_eval_checkpoints(data_experiment_map, forget_types, args):
                     forget_quality = []
                     model_utility = []
                     checkpoint_glob = (
-                        f"output/{args.experiment_name}"
+                        f"{OUTPUT_LOC}/{args.experiment_name}"
                         f"/{experiment_number}/"
                         f"{forget_type}/*/eval_checkpoints/*.json"
                     )
@@ -124,7 +126,7 @@ def plot_eval_checkpoints(data_experiment_map, forget_types, args):
                         )
                 retain_eval = open_json_path(
                     glob(
-                        f"output/{args.experiment_name}"
+                        f"{OUTPUT_LOC}/{args.experiment_name}"
                         f"/{experiment_number}/"
                         f"retain/*/eval_outputs.json"
                     )[0]
@@ -148,7 +150,7 @@ def plot_eval_checkpoints(data_experiment_map, forget_types, args):
                 )
                 full_eval = open_json_path(
                     glob(
-                        f"output/{exp_config['full_model_name']}/full/*/"
+                        f"{OUTPUT_LOC}/{exp_config['full_model_name']}/full/*/"
                         f"eval_outputs/{data_name}/eval_outputs.json"
                     )[0]
                 )
@@ -243,7 +245,7 @@ def main(args):
             experiment_data_map[data_split].append(f"experiment_{exp_number}")
             exp_number += 1
 
-    fp = f"output/{args.experiment_name}"
+    fp = f"{OUTPUT_LOC}/{args.experiment_name}"
     os.makedirs(f"{fp}/results/", exist_ok=True)
     results_getter = MetricGetter(
         experiment_data_map, fp, 1, forget_methods=forget_types

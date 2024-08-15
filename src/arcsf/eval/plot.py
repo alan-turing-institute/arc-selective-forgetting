@@ -36,6 +36,28 @@ def plot_cdf(
     plt.close()
 
 
+def plot_individual_cdf_no_save(
+    vals: dict,
+    train_type: str,
+    split: str,
+) -> None:
+    """
+    Function to plot and save CDF functions for model comparison
+
+    Args:
+        base_vals : values for the base model to be compared against
+        test_vals : values for the test model to be compared
+        save_path : relative path where the model is stored
+        exp_name : the name of the experiment for naming purposes
+        split (optional): the split to be used. Defaults to "retain".
+    """
+    data, y_values = ecdf(vals[f"{split}_tr"])
+    plt.title(f"{split} data CDF")
+    plt.plot(data, y_values, label=f"{train_type}")
+    plt.legend()
+    plt.xlim(0, 1)
+
+
 def plot_scatter(dict: dict[float], **plot_kwargs) -> None:
     """
     Plot of the data from a given model/experiment

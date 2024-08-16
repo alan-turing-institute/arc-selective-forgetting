@@ -8,8 +8,10 @@ trainer_kwargs: # passed to TrainingArguments
   gradient_accumulation_steps: 1
 
   # Core hyperparameters
-  learning_rate: 5.e-4
-  num_train_epochs: 25
+  learning_rate: 1.e-4
+  num_train_epochs: 5
+  weight_decay: 0.01
+  warmup_ratio: 0.2  # 0.2 for 1 epoch (when running for 5 epochs)
 
   # Evaluation
   eval_strategy: steps
@@ -29,3 +31,5 @@ trainer_kwargs: # passed to TrainingArguments
 
 peft_kwargs:  # passed to LoraConfig
   r: 8
+  lora_alpha: 32
+  lora_dropout: 0.05

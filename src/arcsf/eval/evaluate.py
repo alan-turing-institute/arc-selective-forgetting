@@ -236,13 +236,13 @@ class Evaluator:
             )
             # as above, vary generated tokens to keep based on target answer length
             # but allow for some rephrasing/extra tokens
-            len_target_answers = max(answers["attention_mask"].sum(axis=1) + 10, 50)
+            len_target_answers = answers["attention_mask"].sum(axis=1) + 10
             generated_answers = [
                 # start at len(q): only want the tokens for the answers
                 # end at len(q) + targ_len: evaluate only as many tokens as in the
                 #   target answer
                 tokenizer.decode(
-                    gen_a[len(q) : (len(q) + targ_len)],
+                    gen_a[len(q) : (len(q) + max(targ_len, 50))],
                     skip_special_tokens=True,
                 )
                 for q, gen_a, targ_len in zip(

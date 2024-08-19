@@ -111,6 +111,17 @@ def write_train_script(
         script_name = "scripts/full_eval.py"
         walltime = "0-2:0:0"
         experiment_file = f"{top_config_name}/retain"
+
+    elif job_type == "retain_eval":
+        script_name = "scripts/all_eval.py"
+        walltime = "0-2:0:0"
+        experiment_file = f"{top_config_name}/retain"
+
+    elif job_type == "forget_eval":
+        script_name = "scripts/all_eval.py"
+        walltime = "0-2:0:0"
+        experiment_file = f"{top_config_name}/forget"
+
     else:
         script_name = "scripts/train.py"
         walltime = bask_config["walltime"]
@@ -240,8 +251,8 @@ def generate_experiment_configs(top_config_name: str) -> None:
 
         # Generate and save train scripts
         for job_type, n_jobs in zip(
-            ["full", "retain", "forget", "full_eval"],
-            [n_full, n_retain, n_forget, n_retain],
+            ["full", "retain", "forget", "full_eval", "forget_eval", "retain_eval"],
+            [n_full, n_retain, n_forget, n_retain, n_forget, n_retain],
         ):
             write_train_script(
                 template=template,

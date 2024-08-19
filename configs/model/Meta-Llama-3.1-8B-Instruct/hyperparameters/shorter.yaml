@@ -31,5 +31,5 @@ trainer_kwargs: # passed to TrainingArguments
 
 peft_kwargs:  # passed to LoraConfig
   r: 8
-  lora_alpha: 32
+  lora_alpha: 8
   lora_dropout: 0.05

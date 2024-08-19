@@ -14,6 +14,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "--experiment_name", type=str, help="Path to retain model directory."
     )
+    parser.add_argument(
+        "--experiment_2_eval", action="store_true", help="Running experiment 2 eval."
+    )
+
     args = parser.parse_args()
 
     experiment_path = args.experiment_name
@@ -26,6 +30,8 @@ if __name__ == "__main__":
     retain_model_dir = get_model_path(experiment_name, "retain")
     exp_config = yaml.safe_load(open(f"{retain_model_dir}/experiment_config.yaml"))
 
+    if args.experiment_2_eval:
+        exp_config["data_config"]["data_kwargs"]["retain_subset"] = True
     if train_type == "full":
         target_model_dir = get_model_path(exp_config["full_model_name"], "full")
     else:
@@ -77,6 +83,10 @@ if __name__ == "__main__":
         f"{target_model_dir}/eval_outputs/"
         f"{exp_config['config_names']['data_config']}/"
     )
+
+    if args.experiment_2_eval:
+        save_dir = f"{save_dir}/entity_subset_eval/"
+
     os.makedirs(save_dir)
     eval_results.save(f"{save_dir}/eval_outputs.json")
 

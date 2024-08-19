@@ -81,6 +81,7 @@ if __name__ == "__main__":
     )
     if args.experiment_2_eval:
         save_dir = f"{save_dir}/entity_subset_eval/"
+
     os.makedirs(save_dir)
     eval_results.save(f"{save_dir}/eval_outputs.json")
 

@@ -1,10 +1,10 @@
 import argparse
-import os
+import json
+
 import torch
+import yaml
 from torch.nn.functional import softmax
 from tqdm import tqdm
-import json
-import yaml
 
 from arcsf.config.experiment import EXPERIMENT_CONFIG_DIR, ExperimentConfig
 from arcsf.data.data_module import QAFormatter, get_data
@@ -148,6 +148,12 @@ if __name__ == "__main__":
                 token_loss_dict["target_probs"].append(
                     sample_target_probs[target_idxs].detach().cpu().tolist()
                 )
+        if train_type == "full":
+            target_model_dir = (
+                f"{target_model_dir}/eval_outputs/"
+                f"{exp_config['config_names']['data_config']}"
+            )
+
         save_path = f"{target_model_dir}/{split}_token_loss.json"
         with open(save_path, "w") as f:
             json.dump(token_loss_dict, f)

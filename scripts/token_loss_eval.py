@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 
 import torch
 import yaml
@@ -153,6 +154,7 @@ if __name__ == "__main__":
                 f"{target_model_dir}/eval_outputs/"
                 f"{exp_config['config_names']['data_config']}"
             )
+            os.makedirs(target_model_dir, exist_ok=True)
 
         save_path = f"{target_model_dir}/{split}_token_loss.json"
         with open(save_path, "w") as f:

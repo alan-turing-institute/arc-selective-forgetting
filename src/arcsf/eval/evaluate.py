@@ -35,6 +35,7 @@ class Evaluator:
         batch_size: int,
         accelerator: Accelerator = Accelerator(),
         n_print: int = 5,
+        train_set_eval: bool = False,
         **generate_kwargs: dict,
     ):
         """
@@ -76,6 +77,7 @@ class Evaluator:
             tokenizer,
             batch_size,
             random_seed,
+            train_set_eval=train_set_eval,
         )
         logger.info("Creating retain loaders...")
         self.retain_loaders = self.get_eval_data_loaders(
@@ -86,6 +88,7 @@ class Evaluator:
             tokenizer,
             batch_size,
             random_seed,
+            train_set_eval=train_set_eval,
         )
         self.model = model
         self.base_truth_ratios = base_truth_ratios
@@ -371,6 +374,7 @@ class Evaluator:
         tokenizer,
         batch_size,
         random_seed,
+        train_set_eval,
     ) -> dict[str, DataLoader]:
         """
         Create two data loaders for evaluation on a given data split, one that returns
@@ -393,6 +397,7 @@ class Evaluator:
             n_perturbed=n_perturbed,
             dataset_name=dataset_name,
             random_seed=random_seed,
+            train_set_eval=train_set_eval,
         )
 
         tokenizer.padding_side = "left"

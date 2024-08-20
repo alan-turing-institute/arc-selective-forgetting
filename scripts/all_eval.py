@@ -93,7 +93,7 @@ if __name__ == "__main__":
     if args.experiment_2_eval:
         save_dir = f"{save_dir}/entity_subset_eval/"
 
-    os.makedirs(save_dir)
+    os.makedirs(save_dir, exist_ok=True)
     if args.train_set_eval:
         eval_results.save(f"{save_dir}/train_set_eval_outputs.json")
     else:

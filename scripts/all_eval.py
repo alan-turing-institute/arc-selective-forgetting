@@ -79,6 +79,7 @@ if __name__ == "__main__":
         random_seed,
         compare_eval.forget_truth_ratios,
         b_sz,
+        train_set_eval=args.train_set_eval,
         max_new_tokens="adaptive",
     )
 

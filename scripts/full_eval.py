@@ -17,7 +17,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--experiment_2_eval", action="store_true", help="Running experiment 2 eval."
     )
-
+    parser.add_argument(
+        "--train_set_eval", action="store_true", help="Eval on train set."
+    )
     args = parser.parse_args()
 
     experiment_path = args.experiment_name
@@ -31,6 +33,9 @@ if __name__ == "__main__":
     exp_config = yaml.safe_load(open(f"{retain_model_dir}/experiment_config.yaml"))
     if args.experiment_2_eval:
         exp_config["data_config"]["data_kwargs"]["retain_subset"] = True
+
+    if args.train_set_eval:
+        exp_config["data_config"]["data_kwargs"]["train_set_eval"] = True
 
     full_model_dir = get_model_path(exp_config["full_model_name"], "full")
     print(f"Full model path: {full_model_dir}")
@@ -57,6 +62,8 @@ if __name__ == "__main__":
         random_seed=random_seed,
     )
 
+    if args.experiment_2_eval:
+        retain_model_dir = f"{retain_model_dir}/entity_subset_eval/"
     compare_eval = EvaluateOutputs.load(f"{retain_model_dir}/eval_outputs.json")
 
     b_sz = exp_config["model_config"]["trainer_kwargs"]["per_device_eval_batch_size"]
@@ -83,7 +90,10 @@ if __name__ == "__main__":
         save_dir = f"{save_dir}/entity_subset_eval/"
 
     os.makedirs(save_dir)
-    eval_results.save(f"{save_dir}/eval_outputs.json")
+    if args.train_set_eval:
+        eval_results.save(f"{save_dir}/train_set_eval_outputs.json")
+    else:
+        eval_results.save(f"{save_dir}/eval_outputs.json")
 
     exp_name = exp_config["experiment_name"]
     print(f"\nBase Model path: {retain_model_dir}")

@@ -34,9 +34,6 @@ if __name__ == "__main__":
     if args.experiment_2_eval:
         exp_config["data_config"]["data_kwargs"]["retain_subset"] = True
 
-    if args.train_set_eval:
-        exp_config["data_config"]["data_kwargs"]["train_set_eval"] = True
-
     full_model_dir = get_model_path(exp_config["full_model_name"], "full")
     print(f"Full model path: {full_model_dir}")
 

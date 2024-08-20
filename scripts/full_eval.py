@@ -61,7 +61,12 @@ if __name__ == "__main__":
 
     if args.experiment_2_eval:
         retain_model_dir = f"{retain_model_dir}/entity_subset_eval/"
-    compare_eval = EvaluateOutputs.load(f"{retain_model_dir}/eval_outputs.json")
+    if args.train_set_eval:
+        compare_eval = EvaluateOutputs.load(
+            f"{retain_model_dir}/eval_outputs/train_set_eval_outputs.json"
+        )
+    else:
+        compare_eval = EvaluateOutputs.load(f"{retain_model_dir}/eval_outputs.json")
 
     b_sz = exp_config["model_config"]["trainer_kwargs"]["per_device_eval_batch_size"]
     evaluator = Evaluator(

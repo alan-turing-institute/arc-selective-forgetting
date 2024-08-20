@@ -195,6 +195,7 @@ class GenTofuPerturber:
             n_perturbed: number of perturbed samples the __call__ function should output
         """
         self.data = data
+        self.prefix = data.answer_key
         self.n_perturbed = n_perturbed
         if n_perturbed > 3:
             raise ValueError(
@@ -209,4 +210,4 @@ class GenTofuPerturber:
         Returns:
             list of strings representing perturbed samples
         """
-        return self.data[idx]["paraphrased_perturbed_answers"][: self.n_perturbed]
+        return self.data[idx][f"paraphrased_{self.prefix}s"][: self.n_perturbed]

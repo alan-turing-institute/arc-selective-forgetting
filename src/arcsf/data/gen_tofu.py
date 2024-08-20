@@ -186,16 +186,19 @@ class GenTofuPerturber:
     Function for retrieving perturbed (erroneous) samples at evaluation time
     """
 
-    def __init__(self, data: datasets.Dataset, n_perturbed: int) -> None:
+    def __init__(
+        self, data: datasets.Dataset, n_perturbed: int, perturbed_key: str
+    ) -> None:
         """
         Intialising the perturbing class
 
         Args:
             data: dataset from which the samples are being perturbed
             n_perturbed: number of perturbed samples the __call__ function should output
+            answer_key: dictionary_key used to identify the question
         """
         self.data = data
-        self.prefix = data.answer_key
+        self.perturbed_key = perturbed_key
         self.n_perturbed = n_perturbed
         if n_perturbed > 3:
             raise ValueError(
@@ -210,4 +213,4 @@ class GenTofuPerturber:
         Returns:
             list of strings representing perturbed samples
         """
-        return self.data[idx][f"paraphrased_{self.prefix}s"][: self.n_perturbed]
+        return self.data[idx][self.perturbed_key][: self.n_perturbed]

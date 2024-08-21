@@ -36,6 +36,7 @@ def _launch_from_experiment_name(experiment_path):
 
 
 def _launch_from_sweep():
+    wandb.init(entity="turing-arc", project="selective-forgetting")
     experiment_config = ExperimentConfig.from_yaml(
         EXPERIMENT_CONFIG_DIR / f"{wandb.config.experiment_config}.yaml"
     )
@@ -61,7 +62,6 @@ def _launch_from_sweep():
                 max_batch_size
             )
 
-    experiment_config.init_wandb(job_type="train")
     main(experiment_config)
 
 

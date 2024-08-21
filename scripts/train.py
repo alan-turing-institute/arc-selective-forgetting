@@ -226,6 +226,6 @@ if __name__ == "__main__":
             args.sweep_name,
             function=_launch_from_sweep,
             count=1,
-            entity="jack89roberts",
-            project="sweep-test",
+            entity="turing-arc",
+            project="selective-forgetting",
         )

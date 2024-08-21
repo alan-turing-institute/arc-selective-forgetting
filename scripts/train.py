@@ -173,8 +173,10 @@ def main(experiment_config):
 
     # Step 9: save model after fine-tuning
     experiment_config.save(f"{save_dir}/experiment_config.yaml")
-    model.save_pretrained(save_dir)
-    tokenizer.save_pretrained(save_dir)
+
+    if experiment_config.model_config.trainer_kwargs["save_strategy"] != "no":
+        model.save_pretrained(save_dir)
+        tokenizer.save_pretrained(save_dir)
 
     # Delete checkpoints to save space if training finished successfully
     shutil.rmtree(experiment_config.model_config.trainer_kwargs["output_dir"])

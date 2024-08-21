@@ -4,10 +4,10 @@ combinations:
     - gen_tofu_author_10
 
   train_config:
-    - default
+    - default_nosave
 
   forget_config:
-    - [difference, default]
+    - [difference, default_nosave]
 
   seed:
     - 40

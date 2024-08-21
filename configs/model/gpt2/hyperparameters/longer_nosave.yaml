@@ -1,0 +1,24 @@
+trainer_kwargs: # passed to TrainingArguments
+  # Batch size
+  per_device_train_batch_size: 16
+  per_device_eval_batch_size: 16
+  gradient_accumulation_steps: 1
+
+  # Core hyperparameters
+  learning_rate: 5.e-5
+  num_train_epochs: 25
+
+  # Evaluation
+  eval_strategy: steps
+  eval_steps: 0.2
+
+  # Logging
+  logging_strategy: steps
+  logging_steps: 0.2
+
+
+  # Early stopping
+  save_strategy: "no"
+
+  # Outputs
+  output_dir: output

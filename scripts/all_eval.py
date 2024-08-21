@@ -3,7 +3,12 @@ import os
 
 import yaml
 
-from arcsf.config.experiment import EXPERIMENT_CONFIG_DIR, ExperimentConfig
+from arcsf.config.experiment import (
+    DATA_CONFIG_DIR,
+    EXPERIMENT_CONFIG_DIR,
+    MODEL_CONFIG_DIR,
+    ExperimentConfig,
+)
 from arcsf.data.data_module import QAFormatter, get_data
 from arcsf.eval.evaluate import EvaluateOutputs, Evaluator
 from arcsf.models.model import load_model_and_tokenizer
@@ -31,9 +36,15 @@ if __name__ == "__main__":
     train_type = experiment_config.train_type
     retain_model_dir = get_model_path(experiment_name, "retain")
     exp_config = yaml.safe_load(open(f"{retain_model_dir}/experiment_config.yaml"))
+    data_config = yaml.safe_load(
+        open(f"{DATA_CONFIG_DIR}/{experiment_config.data_config}.yaml")
+    )
+    model_config = yaml.safe_load(
+        open(f"{MODEL_CONFIG_DIR}/{experiment_config.model_config}.yaml")
+    )
 
     if args.experiment_2_eval:
-        exp_config["data_config"]["data_kwargs"]["retain_subset"] = True
+        data_config["data_kwargs"]["retain_subset"] = True
 
     if train_type == "full":
         target_model_dir = get_model_path(exp_config["full_model_name"], "full")
@@ -58,8 +69,8 @@ if __name__ == "__main__":
 
     # get splits
     forget_split, retain_split = get_data(
-        exp_config["data_config"]["dataset_name"],
-        **exp_config["data_config"]["data_kwargs"],
+        data_config["dataset_name"],
+        **data_config["data_kwargs"],
         random_seed=random_seed,
     )
 

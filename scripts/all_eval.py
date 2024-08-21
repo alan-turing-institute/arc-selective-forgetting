@@ -31,16 +31,18 @@ if __name__ == "__main__":
     experiment_config = ExperimentConfig.from_yaml(
         EXPERIMENT_CONFIG_DIR / f"{experiment_path}.yaml"
     )
-
     experiment_name = experiment_config.experiment_name
     train_type = experiment_config.train_type
     retain_model_dir = get_model_path(experiment_name, "retain")
     exp_config = yaml.safe_load(open(f"{retain_model_dir}/experiment_config.yaml"))
     data_config = yaml.safe_load(
-        open(f"{DATA_CONFIG_DIR}/{experiment_config.data_config}.yaml")
+        open(f"{DATA_CONFIG_DIR}/{experiment_config.config_names['data_config']}.yaml")
     )
     model_config = yaml.safe_load(
-        open(f"{MODEL_CONFIG_DIR}/{experiment_config.model_config}.yaml")
+        open(
+            f"{MODEL_CONFIG_DIR}/{experiment_config.config_names['model_config']}"
+            f"/{experiment_config.config_names['model_config']}.yaml"
+        )
     )
 
     if args.experiment_2_eval:
@@ -79,7 +81,9 @@ if __name__ == "__main__":
 
     if args.train_set_eval and train_type != "retain":
         compare_eval = EvaluateOutputs.load(
-            f"{retain_model_dir}/eval_outputs/train_set_eval_outputs.json"
+            f"{retain_model_dir}/eval_outputs/"
+            f"{experiment_config.config_names['data_config']}"
+            "/train_set_eval_outputs.json"
         )
     else:
         compare_eval = EvaluateOutputs.load(f"{retain_model_dir}/eval_outputs.json")
@@ -104,7 +108,7 @@ if __name__ == "__main__":
 
     save_dir = (
         f"{target_model_dir}/eval_outputs/"
-        f"{exp_config['config_names']['data_config']}/"
+        f"{experiment_config.config_names['data_config']}/"
     )
 
     if args.experiment_2_eval:

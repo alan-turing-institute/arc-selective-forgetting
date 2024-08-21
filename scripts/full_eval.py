@@ -3,7 +3,12 @@ import os
 
 import yaml
 
-from arcsf.config.experiment import EXPERIMENT_CONFIG_DIR, ExperimentConfig
+from arcsf.config.experiment import (
+    DATA_CONFIG_DIR,
+    EXPERIMENT_CONFIG_DIR,
+    MODEL_CONFIG_DIR,
+    ExperimentConfig,
+)
 from arcsf.data.data_module import QAFormatter, get_data
 from arcsf.eval.evaluate import EvaluateOutputs, Evaluator
 from arcsf.models.model import load_model_and_tokenizer
@@ -31,8 +36,17 @@ if __name__ == "__main__":
     retain_model_dir = get_model_path(experiment_name, "retain")
 
     exp_config = yaml.safe_load(open(f"{retain_model_dir}/experiment_config.yaml"))
+    data_config = yaml.safe_load(
+        open(f"{DATA_CONFIG_DIR}/{experiment_config.config_names['data_config']}.yaml")
+    )
+    model_config = yaml.safe_load(
+        open(
+            f"{MODEL_CONFIG_DIR}/{experiment_config.config_names['model_config']}"
+            f"/{experiment_config.config_names['model_config']}.yaml"
+        )
+    )
     if args.experiment_2_eval:
-        exp_config["data_config"]["data_kwargs"]["retain_subset"] = True
+        data_config["data_kwargs"]["retain_subset"] = True
 
     full_model_dir = get_model_path(exp_config["full_model_name"], "full")
     print(f"Full model path: {full_model_dir}")
@@ -54,8 +68,8 @@ if __name__ == "__main__":
 
     # get splits
     forget_split, retain_split = get_data(
-        exp_config["data_config"]["dataset_name"],
-        **exp_config["data_config"]["data_kwargs"],
+        data_config["dataset_name"],
+        **data_config["data_kwargs"],
         random_seed=random_seed,
     )
 
@@ -63,7 +77,9 @@ if __name__ == "__main__":
         retain_model_dir = f"{retain_model_dir}/entity_subset_eval/"
     if args.train_set_eval:
         compare_eval = EvaluateOutputs.load(
-            f"{retain_model_dir}/eval_outputs/train_set_eval_outputs.json"
+            f"{retain_model_dir}/eval_outputs/"
+            f"{experiment_config.config_names['data_config']}"
+            "/train_set_eval_outputs.json"
         )
     else:
         compare_eval = EvaluateOutputs.load(f"{retain_model_dir}/eval_outputs.json")

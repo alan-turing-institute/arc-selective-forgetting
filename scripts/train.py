@@ -43,7 +43,7 @@ def _launch_from_sweep():
     for key, value in wandb.config.items():
         if key == "experiment_config":
             continue
-        experiment_config.trainer_kwargs[key] = value
+        experiment_config.model_config.trainer_kwargs[key] = value
 
     # set accumulation steps based on batch size/model
     if experiment_config.config_names["model_config"] in [
@@ -51,16 +51,16 @@ def _launch_from_sweep():
         "Meta-Llama-3.1-8B-Instruct",
     ]:
         max_batch_size = 16
-        config_batch_size = experiment_config.trainer_kwargs[
+        config_batch_size = experiment_config.model_config.trainer_kwargs[
             "per_device_train_batch_size"
         ]
         if config_batch_size > max_batch_size:
-            experiment_config.trainer_kwargs["gradient_accumulation_steps"] = (
-                config_batch_size // max_batch_size
-            )
-            experiment_config.trainer_kwargs["per_device_train_batch_size"] = (
-                max_batch_size
-            )
+            experiment_config.model_config.trainer_kwargs[
+                "gradient_accumulation_steps"
+            ] = (config_batch_size // max_batch_size)
+            experiment_config.model_config.trainer_kwargs[
+                "per_device_train_batch_size"
+            ] = max_batch_size
 
     main(experiment_config)
 

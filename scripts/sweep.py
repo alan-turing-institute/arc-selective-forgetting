@@ -3,7 +3,7 @@ import argparse
 import wandb
 
 
-def main(experimnet_config: str):
+def main(experiment_config: str):
     sweep_config = {
         "method": "random",
         "metric": {"goal": "maximize", "name": "eval/retain_mean_rougeL_recall"},
@@ -14,7 +14,7 @@ def main(experimnet_config: str):
             "warmup_ratio": {"values": [0, 0.04]},
             "lr_scheduler_type": {"values": ["linear", "cosine"]},
             "per_device_train_batch_size": {"values": [4, 8, 16, 32]},
-            "experiment_config": {"values": [experimnet_config]},
+            "experiment_config": {"values": [experiment_config]},
         },
     }
 

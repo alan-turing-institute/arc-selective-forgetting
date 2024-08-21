@@ -26,14 +26,48 @@ from arcsf.utils import (
 logging.getLogger().setLevel(logging.INFO)
 
 
-def main(experiment_path):
-    # Step 0: get start time
-    start_time = get_datetime_str()
-
-    # Step 1: Process configs to dicts
+def _launch_from_experiment_name(experiment_path):
     experiment_config = ExperimentConfig.from_yaml(
         EXPERIMENT_CONFIG_DIR / f"{experiment_path}.yaml"
     )
+    if experiment_config.use_wandb:
+        experiment_config.init_wandb(job_type="train")
+    main(experiment_config)
+
+
+def _launch_from_sweep():
+    experiment_config = ExperimentConfig.from_yaml(
+        EXPERIMENT_CONFIG_DIR / f"{wandb.config.experiment_config}.yaml"
+    )
+    for key, value in wandb.config.items():
+        if key == "experiment_config":
+            continue
+        experiment_config.trainer_kwargs[key] = value
+
+    # set accumulation steps based on batch size/model
+    if experiment_config.config_names["model_config"] in [
+        "Phi-3-mini-4k-instruct",
+        "Meta-Llama-3.1-8B-Instruct",
+    ]:
+        max_batch_size = 16
+        config_batch_size = experiment_config.trainer_kwargs[
+            "per_device_train_batch_size"
+        ]
+        if config_batch_size > max_batch_size:
+            experiment_config.trainer_kwargs["gradient_accumulation_steps"] = (
+                config_batch_size // max_batch_size
+            )
+            experiment_config.trainer_kwargs["per_device_train_batch_size"] = (
+                max_batch_size
+            )
+
+    experiment_config.init_wandb(job_type="train")
+    main(experiment_config)
+
+
+def main(experiment_config):
+    # Step 0: get start time
+    start_time = get_datetime_str()
 
     # Step 2: make save dirs
     save_dir = make_output_dir(
@@ -45,7 +79,6 @@ def main(experiment_path):
 
     # Step 4: Initialise wandb
     if experiment_config.use_wandb:
-        experiment_config.init_wandb(job_type="train")
         wandb.log({"save_dir": str(save_dir), "start_time": start_time})
 
     # Step 5: Load model
@@ -162,11 +195,35 @@ if __name__ == "__main__":
         "--experiment_name",
         type=str,
         help="Name of experiment yaml file contained in configs/experiment",
-        required=True,
+        required=False,
+        default=None,
+    )
+    parser.add_argument(
+        "--sweep_name",
+        type=str,
+        help="Name of experiment yaml file contained in configs/experiment",
+        required=False,
+        default=None,
     )
 
     # Step 2: process kwargs
     args = parser.parse_args()
 
+    if (
+        args.experiment_name
+        and args.sweep_name
+        or (not args.experiment_name and not args.sweep_name)
+    ):
+        raise ValueError("Please specify one (only) of experiment_name and sweep_name")
+
     # Step 3: pass to and call main
-    main(args.experiment_name)
+    if args.experiment_name:
+        experiment_config = _launch_from_experiment_name(args.experiment_name)
+    else:
+        wandb.agent(
+            args.sweep_name,
+            function=_launch_from_sweep,
+            count=1,
+            entity="jack89roberts",
+            project="sweep-test",
+        )

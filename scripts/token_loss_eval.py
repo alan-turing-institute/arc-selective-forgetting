@@ -7,7 +7,11 @@ import yaml
 from torch.nn.functional import softmax
 from tqdm import tqdm
 
-from arcsf.config.experiment import EXPERIMENT_CONFIG_DIR, ExperimentConfig
+from arcsf.config.experiment import (
+    DATA_CONFIG_DIR,
+    EXPERIMENT_CONFIG_DIR,
+    ExperimentConfig,
+)
 from arcsf.data.data_module import QAFormatter, get_data, get_idk_responses
 from arcsf.eval.evaluate import EvaluateOutputs, Evaluator
 from arcsf.eval.metrics import loss_function
@@ -51,6 +55,9 @@ if __name__ == "__main__":
     experiment_config = ExperimentConfig.from_yaml(
         EXPERIMENT_CONFIG_DIR / f"{experiment_path}.yaml"
     )
+    data_config = yaml.safe_load(
+        open(f"{DATA_CONFIG_DIR}/{experiment_config.config_names['data_config']}.yaml")
+    )
 
     experiment_name = experiment_config.experiment_name
 
@@ -87,8 +94,8 @@ if __name__ == "__main__":
 
     # get splits
     forget_split, retain_split = get_data(
-        exp_config["data_config"]["dataset_name"],
-        **exp_config["data_config"]["data_kwargs"],
+        data_config["dataset_name"],
+        **data_config["data_kwargs"],
         random_seed=random_seed,
     )
 

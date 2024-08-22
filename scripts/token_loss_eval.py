@@ -16,30 +16,59 @@ from arcsf.data.data_module import QAFormatter, get_data, get_idk_responses
 from arcsf.eval.evaluate import EvaluateOutputs, Evaluator
 from arcsf.eval.metrics import loss_function
 from arcsf.models.model import load_model_and_tokenizer
-from arcsf.utils import get_model_path
+from arcsf.utils import get_device, get_model_path
 
 
 class IDKBatchGen:
-    def __init__(self, random_seed, tokenizer) -> None:
+    def __init__(self, random_seed, tokenizer, device) -> None:
         self.responses = get_idk_responses()
         self.rand_gen = torch.Generator().manual_seed(random_seed)
         self.tokenizer = tokenizer
+        self.device = device
+        self.pad_values = {
+            "input_ids": self.tokenizer.pad_token_id,
+            "attention_mask": 0,
+            "position_ids": 0,
+            "labels": -100,
+        }
 
     def __call__(self, question_batch):
         """returns randomly sampled "I don't know" answer"""
         batch = {
-            key: [None] * len(question_batch)
-            for key in ["input_ids", "attention_mask", "labels"]
+            key: [None] * len(question_batch["input_ids"])
+            for key in question_batch.keys()
         }
-        for q_index, question in enumerate(question_batch):
+        for q_index, question in enumerate(question_batch["input_ids"]):
             rand_pos = torch.randint(
                 0, len(self.responses), (1,), generator=self.rand_gen
             ).item()
-            answer = self.responses[rand_pos]
-            qa = question["input_ids"] + tokenizer.tokenize(answer)
-            print(qa)
+            a = tokenizer.encode(self.responses[rand_pos])
+            q = question.detach().tolist()
+            batch["input_ids"][q_index] = q + a
+            batch["attention_mask"][q_index] = question_batch["attention_mask"][
+                q_index
+            ].detach().tolist() + [1] * len(a)
+            # start cumulative sum at ith index to ensure the first target token is 0
+            batch["position_ids"][q_index] = [
+                sum(batch["attention_mask"][q_index][:i])
+                for i in range(len(batch["attention_mask"][q_index]))
+            ]
+            batch["labels"][q_index] = [-100] * len(q) + a
 
-        print(batch)
+        max_len = max([len(input_ids) for input_ids in batch["input_ids"]])
+
+        for key, values in batch.items():
+            pad_value = self.pad_values[key]
+            padded = [None] * len(values)
+            for val_index, item in enumerate(values):
+                pad_length = max_len - len(item)
+                padded_item = [pad_value] * pad_length + item
+                padded[val_index] = torch.tensor(padded_item).to(self.device)
+            batch[key] = padded
+
+        loaded_batch = {key: torch.stack(values) for key, values in batch.items()}
+
+        return loaded_batch
 
 
 if __name__ == "__main__":
@@ -128,62 +157,80 @@ if __name__ == "__main__":
     else:
         loop_zip = (["forget"], [forget_dataloader])
 
-    idk_gen = IDKBatchGen(random_seed, tokenizer)
+    idk_gen = IDKBatchGen(random_seed, tokenizer, device=get_device())
     for split, data_loader in zip(*loop_zip):
         token_loss_dict = {
-            "all_losses": [],
-            "all_labels": [],
-            "all_probs": [],
             "target_losses": [],
             "target_labels": [],
             "target_probs": [],
+            "idk_losses": [],
+            "idk_labels": [],
+            "idk_probs": [],
         }
         for batch in tqdm(data_loader, desc=f"{split} batch"):
             ground_truth_batch = batch[0]
             idk_batch = idk_gen(batch[1])
-            print(idk_batch)
-            exit()
+
             with torch.no_grad():
-                output = model(**ground_truth_batch)
-            output_logits = output.logits[..., :-1, :].contiguous()
-            shifted_labels = ground_truth_batch["labels"][..., 1:].contiguous()
-            all_probabilities = softmax(output_logits, dim=-1)
+                gt_output = model(**ground_truth_batch)
+                idk_output = model(**idk_batch)
+            # logits
+            gt_output_logits = gt_output.logits[..., :-1, :].contiguous()
+            idk_output_logits = idk_output.logits[..., :-1, :].contiguous()
+            # labels
+            gt_shifted_labels = ground_truth_batch["labels"][..., 1:].contiguous()
+            idk_shifted_labels = idk_batch["labels"][..., 1:].contiguous()
+            # probabilities
+            gt_probabilities = softmax(gt_output_logits, dim=-1)
+            idk_probabilities = softmax(idk_output_logits, dim=-1)
 
-            batch_size, sequence_length, vocab_size = all_probabilities.shape
+            batch_size, gt_sequence_length, _ = gt_probabilities.shape
+            _, idk_sequence_length, _ = idk_probabilities.shape
 
-            loss = loss_function(output_logits.transpose(-1, -2), shifted_labels)
+            gt_loss = loss_function(
+                gt_output_logits.transpose(-1, -2), gt_shifted_labels
+            )
+            idk_loss = loss_function(
+                idk_output_logits.transpose(-1, -2), idk_shifted_labels
+            )
 
             for sample_n in range(batch_size):
-                sample_probs = all_probabilities[sample_n, ...]
-                sample_target_probs = sample_probs[
-                    range(sequence_length), shifted_labels[sample_n, :]
+                # gt
+                gt_probs = gt_probabilities[sample_n, ...]
+                sample_target_probs = gt_probs[
+                    range(gt_sequence_length), gt_shifted_labels[sample_n, :]
                 ]
-
-                target_idxs = shifted_labels[sample_n, :] != -100
-
-                token_loss_dict["all_losses"].append(
-                    loss[sample_n, :].detach().cpu().tolist()
-                )
-                token_loss_dict["all_labels"].append(
-                    shifted_labels[sample_n, :].detach().cpu().tolist()
-                )
-                token_loss_dict["all_probs"].append(
-                    sample_target_probs.detach().cpu().tolist()
-                )
+                gt_target_idxs = gt_shifted_labels[sample_n, :] != -100
+                # idk
+                idk_probs = idk_probabilities[sample_n, ...]
+                sample_idk_probs = idk_probs[
+                    range(idk_sequence_length), idk_shifted_labels[sample_n, :]
+                ]
+                idk_target_idxs = idk_shifted_labels[sample_n, :] != -100
 
                 token_loss_dict["target_losses"].append(
-                    loss[sample_n, target_idxs].detach().cpu().tolist()
-                )
-
-                token_loss_dict["target_losses"].append(
-                    loss[sample_n, target_idxs].detach().cpu().tolist()
+                    gt_loss[sample_n, gt_target_idxs].detach().cpu().tolist()
                 )
                 token_loss_dict["target_labels"].append(
-                    shifted_labels[sample_n, target_idxs].detach().cpu().tolist()
+                    gt_shifted_labels[sample_n, gt_target_idxs].detach().cpu().tolist()
                 )
                 token_loss_dict["target_probs"].append(
-                    sample_target_probs[target_idxs].detach().cpu().tolist()
+                    sample_target_probs[gt_target_idxs].detach().cpu().tolist()
                 )
+
+                token_loss_dict["idk_losses"].append(
+                    idk_loss[sample_n, idk_target_idxs].detach().cpu().tolist()
+                )
+                token_loss_dict["idk_labels"].append(
+                    idk_shifted_labels[sample_n, idk_target_idxs]
+                    .detach()
+                    .cpu()
+                    .tolist()
+                )
+                token_loss_dict["idk_probs"].append(
+                    sample_idk_probs[idk_target_idxs].detach().cpu().tolist()
+                )
+
         if train_type == "full":
             target_model_dir = (
                 f"{target_model_dir}/eval_outputs/"

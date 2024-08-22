@@ -40,25 +40,40 @@ def main(args):
     exp_cfg = yaml.safe_load(open(glob(f"{fp}/retain/*/experiment_config.yaml")[0]))
     data_name = exp_cfg["config_names"]["data_config"]
     full_model_path = exp_cfg["full_model_name"]
-    loop_count = 0
+
+    idk_vs_gt = {
+        key: {"target": None, "idk": None} for key in ["retain", "full"] + forget_types
+    }
+
     while True:
         retain_token_losses = open_json_path(
             glob(f"{fp}/retain/*/forget_token_loss.json")[0]
         )
-        row = random.randint(0, len(retain_token_losses["all_losses"]))
+        for q_type in ["target", "idk"]:
+            idk_vs_gt["retain"][q_type] = np.mean(
+                [
+                    sum(probs) / len(probs)
+                    for probs in retain_token_losses[f"{q_type}_probs"]
+                ]
+            )
+        row = random.randint(0, len(retain_token_losses["target_losses"]))
         data = []
         for forget_type in forget_types:
             token_losses = open_json_path(
                 glob(f"{fp}/{forget_type}/*/forget_token_loss.json")[0]
             )
+            for q_type in ["target", "idk"]:
+                idk_vs_gt[forget_type][q_type] = np.mean(
+                    [
+                        sum(probs) / len(probs)
+                        for probs in token_losses[f"{q_type}_probs"]
+                    ]
+                )
             data.append(np.array(token_losses["target_probs"][row]))
             tokens = token_losses["target_labels"][row]
             labels = [tokenizer.decode(token) for token in tokens]
-        if "was born in" in "".join(labels):
+        if len(labels) < 30:
             break
-        loop_count += 1
-        if loop_count > 1000:
-            raise ValueError("Short enough question could not be found")
 
     token_losses = open_json_path(
         glob(
@@ -66,6 +81,10 @@ def main(args):
             f"/{data_name}/forget_token_loss.json"
         )[0]
     )
+    for q_type in ["target", "idk"]:
+        idk_vs_gt["full"][q_type] = np.mean(
+            [sum(probs) / len(probs) for probs in token_losses[f"{q_type}_probs"]]
+        )
     data.append(np.array(token_losses["target_probs"][row]))
     tokens = token_losses["target_labels"][row]
     forget_types.append("full")
@@ -86,6 +105,30 @@ def main(args):
     cbar.set_label("Correct Token Probability", labelpad=15)
     plt.tight_layout()
     plt.savefig(f"{fp}/random_row_token_probs.pdf")
+    plt.close()
+
+    print(json.dumps(idk_vs_gt, indent=2))
+
+    prob_map = np.zeros((len(idk_vs_gt), 2))
+    for idx, (_, values) in enumerate(idk_vs_gt.items()):
+        prob_map[idx, 0] = values["target"]
+        prob_map[idx, 1] = values["idk"]
+
+    fig, ax = plt.subplots(figsize=(6, 8))
+    im = plt.imshow(prob_map, cmap="YlGn")
+    plt.yticks(forget_type_positions, idk_vs_gt.keys())
+    plt.xticks([0, 1], ["Target", "IDK"])
+    ax.tick_params(top=True, labeltop=True, bottom=False, labelbottom=False)
+
+    cbar = plt.colorbar(
+        im,
+        fraction=0.1,
+        orientation="vertical",
+        location="right",
+    )
+    cbar.set_label("Answer Probability", labelpad=20, rotation=270)
+    plt.tight_layout()
+    plt.savefig(f"{fp}/mean_answer_probs.pdf")
     plt.close()
 
 

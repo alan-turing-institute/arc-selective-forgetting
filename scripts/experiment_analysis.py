@@ -21,68 +21,75 @@ def open_json_path(path):
     return json_object
 
 
-def plot_truth_ratios(data_experiment_map, forget_types, args):
+def plot_truth_ratios(data_experiment_map, forget_types, args, train_set=False):
     for data_name, experiment_numbers in tqdm(
         data_experiment_map.items(), "Truth ratio CDF"
     ):
-        for split in ["retain", "forget"]:
-            for experiment_number in experiment_numbers:
-                retain_eval = open_json_path(
-                    glob(
-                        f"{OUTPUT_LOC}/{args.experiment_name}"
-                        f"/{experiment_number}/"
-                        f"retain/*/eval_outputs.json"
-                    )[0]
-                )
-                exp_config = yaml.safe_load(
-                    open(
+        for train_set in [False, True]:
+            for split in ["retain", "forget"]:
+                for experiment_number in experiment_numbers:
+                    retain_eval = open_json_path(
                         glob(
                             f"{OUTPUT_LOC}/{args.experiment_name}"
                             f"/{experiment_number}/"
-                            f"retain/*/experiment_config.yaml"
+                            f"retain/*/eval_outputs/{data_name}/"
+                            f"{train_set*'train_set_'}eval_outputs.json"
                         )[0]
                     )
-                )
-                retain_data, retain_y_values = ecdf(
-                    torch.tensor(retain_eval[f"{split}_truth_ratios"])
-                )
-                plt.plot(retain_data, retain_y_values, "-", label="retain", color="k")
-
-                full_eval = open_json_path(
-                    glob(
-                        f"{OUTPUT_LOC}/{exp_config['full_model_name']}/full/*/"
-                        f"eval_outputs/{data_name}/eval_outputs.json"
-                    )[0]
-                )
-                full_data, full_y_values = ecdf(
-                    torch.tensor(full_eval[f"{split}_truth_ratios"])
-                )
-                plt.plot(full_data, full_y_values, "-.", label="full", color="k")
-
-                for forget_type in forget_types:
-                    forget_eval = open_json_path(
-                        glob(
-                            f"{OUTPUT_LOC}/{args.experiment_name}"
-                            f"/{experiment_number}/"
-                            f"{forget_type}/*/eval_outputs.json"
-                        )[0]
+                    exp_config = yaml.safe_load(
+                        open(
+                            glob(
+                                f"{OUTPUT_LOC}/{args.experiment_name}"
+                                f"/{experiment_number}/"
+                                f"retain/*/experiment_config.yaml"
+                            )[0]
+                        )
                     )
-                    forget_data, forget_y_values = ecdf(
-                        torch.tensor(forget_eval[f"{split}_truth_ratios"])
+                    retain_data, retain_y_values = ecdf(
+                        torch.tensor(retain_eval[f"{split}_truth_ratios"])
                     )
                     plt.plot(
-                        forget_data,
-                        forget_y_values,
-                        label=f"{forget_type}",
+                        retain_data, retain_y_values, "-", label="retain", color="k"
                     )
 
-                plt.legend()
-                plt.xlim(0, 1)
-                plt.savefig(
-                    f"{OUTPUT_LOC}/{args.experiment_name}/"
-                    f"{experiment_number}/truth_ratio_cdf_{split}.pdf"
-                )
-                plt.close()
+                    full_eval = open_json_path(
+                        glob(
+                            f"{OUTPUT_LOC}/{exp_config['full_model_name']}/full/*/"
+                            f"eval_outputs/{data_name}/{train_set*'train_set_'}"
+                            "eval_outputs.json"
+                        )[0]
+                    )
+                    full_data, full_y_values = ecdf(
+                        torch.tensor(full_eval[f"{split}_truth_ratios"])
+                    )
+                    plt.plot(full_data, full_y_values, "-.", label="full", color="k")
+
+                    for forget_type in forget_types:
+                        forget_eval = open_json_path(
+                            glob(
+                                f"{OUTPUT_LOC}/{args.experiment_name}"
+                                f"/{experiment_number}/{forget_type}/*/"
+                                f"eval_outputs/{data_name}/{train_set*'train_set_'}"
+                                "eval_outputs.json"
+                            )[0]
+                        )
+                        forget_data, forget_y_values = ecdf(
+                            torch.tensor(forget_eval[f"{split}_truth_ratios"])
+                        )
+                        plt.plot(
+                            forget_data,
+                            forget_y_values,
+                            label=f"{forget_type}",
+                        )
+
+                    plt.legend()
+                    plt.xlim(0, 1)
+                    plt.savefig(
+                        f"{OUTPUT_LOC}/{args.experiment_name}/"
+                        f"{experiment_number}/truth_ratio_cdf_{split}"
+                        f"{train_set*'_train'}.pdf"
+                    )
+                    plt.close()
 
 
 def plot_eval_checkpoints(data_experiment_map, forget_types, args):
@@ -222,13 +229,15 @@ class MetricGetter:
         self.forget_methods = forget_methods
         self.n_seeds = n_seeds
 
-    def __call__(self, data_split, subset_results=False):
+    def __call__(self, data_split, subset_results=False, train_results=False):
         all_types = ["retain"] + self.forget_methods
         raw_results = {
             key: {
                 "forget_quality_1": [],
                 "forget_quality_2": [],
                 "retain_model_utility": [],
+                "forget_rougeL": [],
+                "retain_rougeL": [],
             }
             for key in all_types + ["full"]
         }
@@ -237,15 +246,30 @@ class MetricGetter:
                 output_location = f"{exp_type}/*/eval_outputs/{data_split}"
                 if subset_results:
                     output_location = f"{output_location}/entity_subset_eval"
+                if train_results:
+                    filename = "train_set_eval_outputs.json"
+                else:
+                    filename = "eval_outputs.json"
+
                 eval_outputs = open_json_path(
                     glob(
                         f"{self.output_path}/"
                         f"{experiment_n}/"
-                        f"{output_location}/eval_outputs.json"
+                        f"{output_location}/{filename}"
                     )[0]
                 )
-                for metric in raw_results[exp_type].keys():
+                for metric in [
+                    "forget_quality_1",
+                    "forget_quality_2",
+                    "retain_model_utility",
+                ]:
                     raw_results[exp_type][metric].append(eval_outputs[metric])
+                raw_results[exp_type]["forget_rougeL"].append(
+                    np.mean(eval_outputs["forget_rougeL_recall"])
+                )
+                raw_results[exp_type]["retain_rougeL"].append(
+                    np.mean(eval_outputs["retain_rougeL_recall"])
+                )
         for full_model_index in range(self.n_seeds):
             output_location = (
                 f"{self.output_path}/"
@@ -254,11 +278,19 @@ class MetricGetter:
             )
             if subset_results:
                 output_location = f"{output_location}/entity_subset_eval"
-            eval_outputs = open_json_path(
-                glob(f"{output_location}/eval_outputs.json")[0]
-            )
-            for metric in raw_results["full"].keys():
+            eval_outputs = open_json_path(glob(f"{output_location}/{filename}")[0])
+            for metric in [
+                "forget_quality_1",
+                "forget_quality_2",
+                "retain_model_utility",
+            ]:
                 raw_results["full"][metric].append(eval_outputs[metric])
+            raw_results["full"]["forget_rougeL"].append(
+                np.mean(eval_outputs["forget_rougeL_recall"])
+            )
+            raw_results["full"]["retain_rougeL"].append(
+                np.mean(eval_outputs["retain_rougeL_recall"])
+            )
 
         average_results = {}
         for model, model_metrics in raw_results.items():
@@ -305,44 +337,80 @@ def main(args):
         plot_truth_ratios(experiment_data_map, forget_types, args)
 
     for data_name in tqdm(experiment_data_map.keys(), desc="Data Split"):
-        for ks_type in ["1", "2"]:
-            avg_results, raw_results = results_getter(data_name)
-            result_path = f"{fp}/results/{data_name}"
-            os.makedirs(result_path, exist_ok=True)
-
-            with open(f"{result_path}/average_results.json", "w") as result_file:
-                json.dump(avg_results, result_file, indent=2)
-
-            with open(f"{result_path}/raw_results.json", "w") as result_file:
-                json.dump(raw_results, result_file, indent=2)
-
-            plt.figure()
-            for forget_method in results_getter.forget_methods:
-                plt.scatter(
-                    avg_results[forget_method]["retain_model_utility"]["mean"],
-                    avg_results[forget_method][f"forget_quality_{ks_type}"]["mean"],
-                    label=forget_method,
+        for train_set in [False, True]:
+            for ks_type in ["1", "2"]:
+                avg_results, raw_results = results_getter(
+                    data_name, train_results=train_set
                 )
-            plt.scatter(
-                avg_results["full"]["retain_model_utility"]["mean"],
-                avg_results["full"][f"forget_quality_{ks_type}"]["mean"],
-                marker="s",
-                label="full",
-                color="k",
-            )
-            plt.scatter(
-                avg_results["retain"]["retain_model_utility"]["mean"],
-                avg_results["retain"][f"forget_quality_{ks_type}"]["mean"],
-                marker="D",
-                label="retain",
-                color="k",
-            )
-            plt.legend()
-            plt.yscale("symlog")
-            plt.xlabel("Model Utility")
-            plt.ylabel(f"Forget Quality ({ks_type} sided)")
-            plt.savefig(f"{result_path}/result_plot_{ks_type}.pdf")
-            plt.close()
+                result_path = f"{fp}/results/{data_name}"
+                os.makedirs(result_path, exist_ok=True)
+
+                with open(
+                    f"{result_path}/average_results{train_set*'_train'}.json", "w"
+                ) as result_file:
+                    json.dump(avg_results, result_file, indent=2)
+
+                with open(
+                    f"{result_path}/raw_results{train_set*'_train'}.json", "w"
+                ) as result_file:
+                    json.dump(raw_results, result_file, indent=2)
+
+                plt.figure()
+                for forget_method in results_getter.forget_methods:
+                    plt.scatter(
+                        avg_results[forget_method]["retain_model_utility"]["mean"],
+                        avg_results[forget_method][f"forget_quality_{ks_type}"]["mean"],
+                        label=forget_method,
+                    )
+                plt.scatter(
+                    avg_results["full"]["retain_model_utility"]["mean"],
+                    avg_results["full"][f"forget_quality_{ks_type}"]["mean"],
+                    marker="s",
+                    label="full",
+                    color="k",
+                )
+                plt.scatter(
+                    avg_results["retain"]["retain_model_utility"]["mean"],
+                    avg_results["retain"][f"forget_quality_{ks_type}"]["mean"],
+                    marker="D",
+                    label="retain",
+                    color="k",
+                )
+                plt.legend()
+                plt.yscale("symlog")
+                plt.xlabel("Model Utility")
+                plt.ylabel(f"Forget Quality ({ks_type} sided)")
+                plt.savefig(
+                    f"{result_path}/result_plot_{ks_type}{train_set*'_train'}.pdf"
+                )
+                plt.close()
+
+                plt.figure()
+                for forget_method in results_getter.forget_methods:
+                    plt.scatter(
+                        avg_results[forget_method]["retain_rougeL"]["mean"],
+                        avg_results[forget_method]["forget_rougeL"]["mean"],
+                        label=forget_method,
+                    )
+                plt.scatter(
+                    avg_results["full"]["retain_rougeL"]["mean"],
+                    avg_results["full"]["forget_rougeL"]["mean"],
+                    marker="s",
+                    label="full",
+                    color="k",
+                )
+                plt.scatter(
+                    avg_results["retain"]["retain_rougeL"]["mean"],
+                    avg_results["retain"]["forget_rougeL"]["mean"],
+                    marker="D",
+                    label="retain",
+                    color="k",
+                )
+                plt.xlabel("Retain ROUGE")
+                plt.ylabel("Forget ROUGE")
+                plt.legend(title="Model type")
+                plt.savefig(f"{result_path}/rouge_plot{train_set*'_train'}.pdf")
+                plt.close()
 
     os.makedirs(f"{fp}/results/experiment_results/", exist_ok=True)
 

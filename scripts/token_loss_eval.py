@@ -8,11 +8,35 @@ from torch.nn.functional import softmax
 from tqdm import tqdm
 
 from arcsf.config.experiment import EXPERIMENT_CONFIG_DIR, ExperimentConfig
-from arcsf.data.data_module import QAFormatter, get_data
+from arcsf.data.data_module import QAFormatter, get_data, get_idk_responses
 from arcsf.eval.evaluate import EvaluateOutputs, Evaluator
 from arcsf.eval.metrics import loss_function
 from arcsf.models.model import load_model_and_tokenizer
 from arcsf.utils import get_model_path
+
+
+class IDKBatchGen:
+    def __init__(self, random_seed, tokenizer) -> None:
+        self.responses = get_idk_responses()
+        self.rand_gen = torch.Generator().manual_seed(random_seed)
+        self.tokenizer = tokenizer
+
+    def __call__(self, question_batch):
+        """returns randomly sampled "I don't know" answer"""
+        batch = {
+            key: [None] * len(question_batch)
+            for key in ["input_ids", "attention_mask", "labels"]
+        }
+        for q_index, question in enumerate(question_batch):
+            rand_pos = torch.randint(
+                0, len(self.responses), (1,), generator=self.rand_gen
+            ).item()
+            answer = self.responses[rand_pos]
+            qa = question["input_ids"] + tokenizer.tokenize(answer)
+            print(qa)
+
+        print(batch)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -97,6 +121,7 @@ if __name__ == "__main__":
     else:
         loop_zip = (["forget"], [forget_dataloader])
 
+    idk_gen = IDKBatchGen(random_seed, tokenizer)
     for split, data_loader in zip(*loop_zip):
         token_loss_dict = {
             "all_losses": [],
@@ -108,6 +133,9 @@ if __name__ == "__main__":
         }
         for batch in tqdm(data_loader, desc=f"{split} batch"):
             ground_truth_batch = batch[0]
+            idk_batch = idk_gen(batch[1])
+            print(idk_batch)
+            exit()
             with torch.no_grad():
                 output = model(**ground_truth_batch)
             output_logits = output.logits[..., :-1, :].contiguous()

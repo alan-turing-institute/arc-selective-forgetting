@@ -42,7 +42,10 @@ def main(args):
     full_model_path = exp_cfg["full_model_name"]
     loop_count = 0
     while True:
-        row = random.randint(0, 50)
+        retain_token_losses = open_json_path(
+            glob(f"{fp}/retain/*/forget_token_loss.json")[0]
+        )
+        row = random.randint(0, len(retain_token_losses["all_losses"]))
         data = []
         for forget_type in forget_types:
             token_losses = open_json_path(
@@ -51,10 +54,10 @@ def main(args):
             data.append(np.array(token_losses["target_probs"][row]))
             tokens = token_losses["target_labels"][row]
             labels = [tokenizer.decode(token) for token in tokens]
-        if len(labels) < 30:
+        if "was born in" in "".join(labels):
             break
         loop_count += 1
-        if loop_count > 30:
+        if loop_count > 1000:
             raise ValueError("Short enough question could not be found")
 
     token_losses = open_json_path(

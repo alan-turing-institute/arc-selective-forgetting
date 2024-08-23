@@ -1,26 +1,26 @@
 # Combinations to build runs over
 combinations:
   data_config:
-    - gen_tofu_rel_1
-    - gen_tofu_rel_3
-    - gen_tofu_rel_6
+    - gen_tofu_book_15
+    - gen_tofu_author_15
+    - gen_tofu_publisher_15
 
   train_config:
     - default
 
   forget_config:
-    - [difference, accumulate]
+    - [difference, default]
     - [idk, default]
-    - [difference, shorter_accumulate]
+    - [difference, shorter]
     - [idk, shorter]
 
   seed:
-    - 40
     - 41
     - 42
     - 43
+    - 44
 
-model_config: Phi-3-mini-4k-instruct
+model_config: Meta-Llama-3.1-8B-Instruct
 
 # Full data config: which dataset to use to build full model to do forgetting on
 full_data_config: gen_tofu_full
@@ -43,4 +43,4 @@ wandb_kwargs:
     entity: turing-arc
     project: selective-forgetting
     log_model: "false"
-    group: experiment-2-relationship
+    group: experiment-1-granularity

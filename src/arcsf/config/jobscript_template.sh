@@ -12,6 +12,7 @@
 module purge
 module load baskerville
 module load Miniconda3/4.10.3
+module load CUDA/12.1.1
 export CONDA_PKGS_DIRS=/tmp
 eval "$(${EBROOTMINICONDA3}/bin/conda shell.bash hook)"
 

@@ -9,6 +9,7 @@ from arcsf.eval.evaluate import EvaluateOutputs, Evaluator
 from arcsf.models.model import load_model_and_tokenizer
 from arcsf.utils import get_model_path
 
+logging.getLogger().setLevel(logging.INFO)
 logger = logging.getLogger(__name__)
 
 

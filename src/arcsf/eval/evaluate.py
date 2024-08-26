@@ -438,35 +438,33 @@ class Evaluator:
 class EvaluateOutputs:
     forget_quality_1: float | None  # None if evaluation run without base_truth_ratios
     forget_quality_2: float | None  # None if evaluation run without base_truth_ratios
-    forget_generation: dict[str, list[str]] | None  # None if not run with generation
     forget_truth_ratios: torch.Tensor
     forget_rougeL_recall: torch.Tensor
     forget_rouge1_recall: torch.Tensor
     forget_mean_loss_gt: float
     forget_mean_loss_perturbed: float
     forget_all_losses: torch.Tensor
-    forget_generation: dict[str, list[str]]
     forget_mean_tr: float  # raw mean of forget truth ratios
     retain_mean_tr: float  # clamped mean of 1 - retain truth ratios
     retain_mean_rougeL_recall: float
     retain_model_utility: float  # utility with truth ratio and rougeL only (no prob)
-    retain_generation: dict[str, list[str]] | None  # None if not run with generation
     retain_truth_ratios: torch.Tensor
     retain_rougeL_recall: torch.Tensor
     retain_rouge1_recall: torch.Tensor
     retain_mean_loss_gt: float
     retain_mean_loss_perturbed: float
     retain_all_losses: torch.Tensor
-    retain_generation: dict[str, list[str]]
     # metrics added after experiments run so allowed to be none for backwards
     # compatibility with previous outputs. Will be added automatically in
-    # __post_init__ if any are None.
+    # __post_init__ if any are None (except generated outputs).
     forget_mean_rougeL_recall: float | None = None
     forget_mean_probability_gt: float | None = None
     forget_model_utility: float | None = None  # hmean of tr, rougeL
     forget_model_utility_3: float | None = None  # hmean of prob, tr, rougeL
     forget_arithmetic_model_utility_3: float | None = None  # mean of prob, tr, rougeL
     forget_mean_clamped_tr: float | None = None  # mean of 1 - forget truth ratios
+    forget_generation: dict[str, list[str]] | None = None
+    retain_generation: dict[str, list[str]] | None = None
     retain_mean_probability_gt: float | None = None
     retain_model_utility_3: float | None = None  # hmean of prob, tr, rougeL
     retain_arithmetic_model_utility_3: float | None = None  # mean of prob, tr, rougeL

@@ -1,23 +1,30 @@
 import argparse
+import logging
 import os
-
 import yaml
 
-from arcsf.config.experiment import (
-    DATA_CONFIG_DIR,
-    EXPERIMENT_CONFIG_DIR,
-    MODEL_CONFIG_DIR,
-    ExperimentConfig,
-)
+from arcsf.config.experiment import EXPERIMENT_CONFIG_DIR, ExperimentConfig
 from arcsf.data.data_module import QAFormatter, get_data
 from arcsf.eval.evaluate import EvaluateOutputs, Evaluator
 from arcsf.models.model import load_model_and_tokenizer
 from arcsf.utils import get_model_path
 
+logger = logging.getLogger(__name__)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=("Runs evaluation, for full models."))
     parser.add_argument(
-        "--experiment_name", type=str, help="Path to retain model directory."
+        "--experiment_name",
+        type=str,
+        required=False,
+        help="Path to an experiment config file (specify this or model_dir)"
+    )
+    parser.add_argument(
+        "--model_dir",
+        type=str,
+        required=False,
+        help="Path to a model output directory (specify this or experiment_name)"
     )
     parser.add_argument(
         "--experiment_2_eval", action="store_true", help="Running experiment 2 eval."
@@ -27,101 +34,139 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    experiment_path = args.experiment_name
-    experiment_config = ExperimentConfig.from_yaml(
-        EXPERIMENT_CONFIG_DIR / f"{experiment_path}.yaml"
-    )
-    experiment_name = experiment_config.experiment_name
-    train_type = experiment_config.train_type
-    retain_model_dir = get_model_path(experiment_name, "retain")
-    exp_config = yaml.safe_load(open(f"{retain_model_dir}/experiment_config.yaml"))
-    data_config = yaml.safe_load(
-        open(f"{DATA_CONFIG_DIR}/{experiment_config.config_names['data_config']}.yaml")
-    )
-    model_config = yaml.safe_load(
-        open(
-            f"{MODEL_CONFIG_DIR}/{experiment_config.config_names['model_config']}"
-            f"/{experiment_config.config_names['model_config']}.yaml"
+    if (
+        (args.model_dir and args.experiment_name) or
+        (not args.model_dir and not args.experiment_name)
+    ):
+        raise RuntimeError("Specify one (only) of model_dir and experiment_name")
+
+    if args.experiment_name:
+        experiment_name = args.experiment_name
+        experiment_config = ExperimentConfig.from_yaml(
+            EXPERIMENT_CONFIG_DIR / f"{experiment_name}.yaml"
         )
-    )
+        train_type = experiment_config.train_type
+        seed = experiment_config.seed
+        target_model_dir = get_model_path(experiment_name, train_type)
+
+        data_config = experiment_config.data_config
+        dataset_name = data_config.dataset_name
+        dataset_kwargs = data_config.data_kwargs
+        data_config_name = experiment_config.config_names["data_config"]
+
+        model_config = experiment_config.model_config
+        model_kwargs = model_config.model_kwargs
+        add_padding_token = model_config.add_padding_token
+        qa_formatter_kwargs = model_config.qa_formatter_kwargs
+        trainer_kwargs = model_config.trainer_kwargs
+
+    else:  # model_dir specified
+        target_model_dir = args.model_dir
+        experiment_config = yaml.safe_load(
+            open(f"{target_model_dir}/experiment_config.yaml")
+        )
+        experiment_name = experiment_config["experiment_name"]
+        train_type = experiment_config["train_type"]
+        seed = experiment_config["seed"]
+        
+        data_config = experiment_config["data_config"]
+        dataset_name = data_config["dataset_name"]
+        dataset_kwargs = data_config["data_kwargs"]
+        if "type" not in dataset_kwargs:
+            # experiment 1 jobs (prior to experiment 2 loading implementation) did not
+            # specify a split type in their saved data config
+            logger.warning(
+                "Defaulting split type to granularity due to missing value in saved "
+                "data config"
+            )
+            dataset_kwargs["type"] =  "granularity"
+        data_config_name = experiment_config["config_names"]["data_config"]
+
+        model_config = experiment_config["model_config"]
+        model_kwargs = model_config["model_kwargs"]
+        add_padding_token = model_config["add_padding_token"]
+        qa_formatter_kwargs = model_config["qa_formatter_kwargs"]
+        trainer_kwargs = model_config["trainer_kwargs"]
+    
+    if train_type == "full":
+        raise ValueError("Use full_eval.py for evaluating full models")
 
     if args.experiment_2_eval:
-        data_config["data_kwargs"]["retain_subset"] = True
-
-    if train_type == "full":
-        target_model_dir = get_model_path(exp_config["full_model_name"], "full")
-    else:
-        target_model_dir = get_model_path(experiment_name, train_type)
+        dataset_kwargs["retain_subset"] = True
 
     print(f"Target model path: {target_model_dir}")
 
-    # load model from full model directory
+    # load model
     model, tokenizer = load_model_and_tokenizer(
         model_id=target_model_dir,
-        peft_kwargs=exp_config["model_config"]["peft_kwargs"],
-        **exp_config["model_config"]["model_kwargs"],
-        add_padding_token=exp_config["model_config"]["add_padding_token"],
+        peft_kwargs=None,  # don't need to add a new peft adapter for evals
+        **model_kwargs,
+        add_padding_token=add_padding_token,
     )
+    batch_size = trainer_kwargs["per_device_eval_batch_size"]
+    qa_formatter = QAFormatter(**qa_formatter_kwargs)
+    n_perturbed = 3
 
-    # load experiment config from the retain model
-
-    qa_formatter = QAFormatter(**exp_config["model_config"]["qa_formatter_kwargs"])
-    n_perturbed = 2
-    random_seed = exp_config["seed"]
-
-    # get splits
+    # get data splits
     forget_split, retain_split = get_data(
-        data_config["dataset_name"],
-        **data_config["data_kwargs"],
-        random_seed=random_seed,
+        dataset_name, **dataset_kwargs, random_seed=seed
     )
 
-    if args.experiment_2_eval:
-        retain_model_dir = f"{retain_model_dir}/entity_subset_eval/"
-
-    if args.train_set_eval and train_type != "retain":
-        compare_eval = EvaluateOutputs.load(
-            f"{retain_model_dir}/eval_outputs/"
-            f"{experiment_config.config_names['data_config']}"
-            "/train_set_eval_outputs.json"
-        )
+    # load base truth ratios for forget quality test from corresponding retain model
+    if train_type != "retain":
+        retain_model_dir = get_model_path(experiment_name, "retain")
+        if args.experiment_2_eval:
+            compare_path = (
+                f"{retain_model_dir}/eval_outputs/{data_config_name}/entity_subset_eval"
+                "/eval_outputs.json"
+            )
+        elif args.train_set_eval:
+            compare_path = (
+                f"{retain_model_dir}/eval_outputs/{data_config_name}/"
+                "train_set_eval_outputs.json"
+            )
+        elif os.path.exists(
+            f"{retain_model_dir}/eval_outputs/{data_config_name}/eval_outputs.json"
+        ):
+            compare_path = (
+                f"{retain_model_dir}/eval_outputs/{data_config_name}/eval_outputs.json"
+            )
+        else:
+            compare_path = f"{retain_model_dir}/eval_outputs.json"
+        compare_eval = EvaluateOutputs.load(compare_path)
+        compare_truth_ratios = compare_eval.forget_truth_ratios
     else:
-        compare_eval = EvaluateOutputs.load(f"{retain_model_dir}/eval_outputs.json")
+        retain_model_dir = None
+        compare_truth_ratios = None
 
-    b_sz = exp_config["model_config"]["trainer_kwargs"]["per_device_eval_batch_size"]
     evaluator = Evaluator(
         model,
         forget_split,
         retain_split,
         qa_formatter,
-        exp_config["data_config"]["dataset_name"],
+        dataset_name,
         tokenizer,
         n_perturbed,
-        random_seed,
-        compare_eval.forget_truth_ratios,
-        b_sz,
+        seed,
+        compare_truth_ratios,
+        batch_size,
         train_set_eval=args.train_set_eval,
         max_new_tokens="adaptive",
     )
 
     eval_results = evaluator.evaluate()
 
-    save_dir = (
-        f"{target_model_dir}/eval_outputs/"
-        f"{experiment_config.config_names['data_config']}/"
-    )
-
+    save_dir = f"{target_model_dir}/eval_outputs/{dataset_name}/"
     if args.experiment_2_eval:
         save_dir = f"{save_dir}/entity_subset_eval/"
-
     os.makedirs(save_dir, exist_ok=True)
+
     if args.train_set_eval:
         eval_results.save(f"{save_dir}/train_set_eval_outputs.json")
     else:
         eval_results.save(f"{save_dir}/eval_outputs.json")
 
-    exp_name = exp_config["experiment_name"]
     print(f"\nBase Model path: {retain_model_dir}")
     print(f"Test Model path: {target_model_dir}")
-    print(f"Experiment Name: {exp_name}")
+    print(f"Experiment Name: {experiment_name}")
     print(eval_results)

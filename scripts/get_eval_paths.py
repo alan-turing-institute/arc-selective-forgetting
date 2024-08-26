@@ -1,3 +1,7 @@
+"""
+Get paths to eval output files.
+"""
+
 from glob import glob
 
 output_dir = "tmp/output"

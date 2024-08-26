@@ -7,8 +7,6 @@ from glob import glob
 
 output_dir = "output"
 include = [
-    "experiment_1_granularity_gpt2",
-    "experiment_1_granularity_gpt2_longer_train",
     "experiment_1_granularity_gpt2_one_each",
     "experiment_1_granularity_gpt2_remaining",
     "experiment_1_granularity_llama",

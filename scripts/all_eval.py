@@ -61,7 +61,7 @@ if __name__ == "__main__":
         qa_formatter_kwargs = model_config.qa_formatter_kwargs
         trainer_kwargs = model_config.trainer_kwargs
 
-    else:  # model_dir specified
+    else:  # model_dir specified, use config saved in model's output dir
         target_model_dir = args.model_dir
         experiment_config = yaml.safe_load(
             open(f"{target_model_dir}/experiment_config.yaml")
@@ -157,7 +157,7 @@ if __name__ == "__main__":
 
     eval_results = evaluator.evaluate()
 
-    save_dir = f"{target_model_dir}/eval_outputs/{dataset_name}/"
+    save_dir = f"{target_model_dir}/eval_outputs/{data_config_name}/"
     if args.experiment_2_eval:
         save_dir = f"{save_dir}/entity_subset_eval/"
     os.makedirs(save_dir, exist_ok=True)

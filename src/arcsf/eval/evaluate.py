@@ -518,20 +518,20 @@ class EvaluateOutputs:
             torch.clamp((1 - self.forget_truth_ratios), 0).mean().item()
         )
         self.forget_model_utility = hmean(
-            [self.forget_mean_clamped_tr, self.forget_mean_rougeL_recall]
+            [1 - self.forget_mean_clamped_tr, 1 - self.forget_mean_rougeL_recall]
         )
         self.forget_model_utility_3 = hmean(
             [
-                self.forget_mean_probability_gt,
-                self.forget_mean_clamped_tr,
-                self.forget_mean_rougeL_recall,
+                1 - self.forget_mean_probability_gt,
+                1 - self.forget_mean_clamped_tr,
+                1 - self.forget_mean_rougeL_recall,
             ]
         )
         self.forget_arithmetic_model_utility_3 = np.mean(
             [
-                self.forget_mean_probability_gt,
-                self.forget_mean_clamped_tr,
-                self.forget_mean_rougeL_recall,
+                1 - self.forget_mean_probability_gt,
+                1 - self.forget_mean_clamped_tr,
+                1 - self.forget_mean_rougeL_recall,
             ]
         )
         self.retain_mean_probability_gt = (

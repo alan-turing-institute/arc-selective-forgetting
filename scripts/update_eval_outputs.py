@@ -10,7 +10,7 @@ from arcsf.eval.evaluate import EvaluateOutputs
 
 output_dir = "output"
 
-eval_output_files = glob(output_dir + "/**/*eval_outputs.json", recursive=True) + glob(
+eval_output_files = glob(output_dir + "/**/*eval_outputs*.json", recursive=True) + glob(
     output_dir + "/**/eval_checkpoints/*.json", recursive=True
 )
 

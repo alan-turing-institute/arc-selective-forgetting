@@ -21,6 +21,19 @@ def open_json_path(path):
     return json_object
 
 
+def locate_forget_length(glob_string, length):
+    options = glob(glob_string)
+    train_length = np.zeros(len(options))
+    for opt_idx, option_path in enumerate(options):
+        train_length[opt_idx] = yaml.safe_load(
+            open(f"{option_path}/experiment_config.yaml")
+        )["model_config"]["trainer_kwargs"]["num_train_epochs"]
+    if length == "short":
+        return options[np.argmin(train_length)]
+    elif length == "long":
+        return options[np.argmax(train_length)]
+
+
 def plot_truth_ratios(data_experiment_map, forget_types, args, train_set=False):
     for data_name, experiment_numbers in tqdm(
         data_experiment_map.items(), "Truth ratio CDF"
@@ -84,6 +97,9 @@ def plot_truth_ratios(data_experiment_map, forget_types, args, train_set=False):
 
                     plt.legend()
                     plt.xlim(0, 1)
+                    plt.ylabel("Cumulative Probability")
+                    plt.xlabel("Truth Ratio")
+                    plt.tight_layout()
                     plt.savefig(
                         f"{OUTPUT_LOC}/{args.experiment_name}/"
                         f"{experiment_number}/truth_ratio_cdf_{split}"
@@ -142,7 +158,7 @@ def plot_eval_checkpoints(data_experiment_map, forget_types, args):
                 retain_eval[f"forget_quality_{ks_type}"] = 0
                 plt.plot(
                     retain_eval["retain_model_utility"],
-                    retain_eval[f"forget_quality_{ks_type}"],
+                    0,
                     "D",
                     color="k",
                     label="retain",
@@ -184,9 +200,20 @@ def plot_eval_checkpoints(data_experiment_map, forget_types, args):
 def plot_relationship(
     color, marker, forget_method, base_results, subset_results, ks_type
 ):
+
+    base_fq = base_results[forget_method][f"forget_quality_{ks_type}"]["mean"]
+    base_mu = base_results[forget_method]["retain_model_utility"]["mean"]
+
+    subset_fq = subset_results[forget_method][f"forget_quality_{ks_type}"]["mean"]
+    subset_mu = subset_results[forget_method]["retain_model_utility"]["mean"]
+
+    if forget_method == "retain":
+        base_fq = 0
+        subset_fq = 0
+
     plt.scatter(
-        base_results[forget_method]["retain_model_utility"]["mean"],
-        base_results[forget_method][f"forget_quality_{ks_type}"]["mean"],
+        base_mu,
+        base_fq,
         s=75,
         alpha=0.5,
         marker=marker,
@@ -195,8 +222,8 @@ def plot_relationship(
         label=forget_method.capitalize(),
     )
     plt.scatter(
-        subset_results[forget_method]["retain_model_utility"]["mean"],
-        subset_results[forget_method][f"forget_quality_{ks_type}"]["mean"],
+        subset_mu,
+        subset_fq,
         marker=marker,
         s=35,
         alpha=0.5,
@@ -206,14 +233,14 @@ def plot_relationship(
     plt.plot(
         np.array(
             [
-                base_results[forget_method]["retain_model_utility"]["mean"],
-                subset_results[forget_method]["retain_model_utility"]["mean"],
+                base_mu,
+                subset_mu,
             ],
         ),
         np.array(
             [
-                base_results[forget_method][f"forget_quality_{ks_type}"]["mean"],
-                subset_results[forget_method][f"forget_quality_{ks_type}"]["mean"],
+                base_fq,
+                subset_fq,
             ]
         ),
         "--",
@@ -223,45 +250,58 @@ def plot_relationship(
 
 
 class MetricGetter:
-    def __init__(self, exp_data_map, output_path, n_seeds, forget_methods):
+    def __init__(
+        self, exp_data_map, output_path, n_seeds, forget_methods, forget_length
+    ):
         self.exp_data_map = exp_data_map
         self.output_path = output_path
         self.forget_methods = forget_methods
         self.n_seeds = n_seeds
+        self.forget_length = forget_length
 
-    def __call__(self, data_split, subset_results=False, train_results=False):
+    def __call__(
+        self,
+        data_split,
+        subset_results=False,
+        subset_non_entity_results=False,
+        train_results=False,
+    ):
         all_types = ["retain"] + self.forget_methods
         raw_results = {
             key: {
                 "forget_quality_1": [],
                 "forget_quality_2": [],
                 "retain_model_utility": [],
+                "retain_model_utility_3": [],
                 "forget_rougeL": [],
                 "retain_rougeL": [],
             }
             for key in all_types + ["full"]
         }
+
+        if train_results:
+            filename = "train_set_eval_outputs.json"
+        else:
+            filename = f"{subset_non_entity_results*'non_entity_'}eval_outputs.json"
+
         for experiment_n in self.exp_data_map[data_split]:
             for exp_type in all_types:
-                output_location = f"{exp_type}/*/eval_outputs/{data_split}"
-                if subset_results:
-                    output_location = f"{output_location}/entity_subset_eval"
-                if train_results:
-                    filename = "train_set_eval_outputs.json"
-                else:
-                    filename = "eval_outputs.json"
-
-                eval_outputs = open_json_path(
-                    glob(
-                        f"{self.output_path}/"
-                        f"{experiment_n}/"
-                        f"{output_location}/{filename}"
-                    )[0]
+                output_location = f"{exp_type}/*"  # /eval_outputs/{data_split}"
+                eval_path = locate_forget_length(
+                    glob_string=f"{self.output_path}/{experiment_n}/{output_location}",
+                    length=self.forget_length,
                 )
+                if subset_results:
+                    eval_path = (
+                        f"{eval_path}/eval_outputs/{data_split}/entity_subset_eval"
+                    )
+
+                eval_outputs = open_json_path(f"{eval_path}/{filename}")
                 for metric in [
                     "forget_quality_1",
                     "forget_quality_2",
                     "retain_model_utility",
+                    "retain_model_utility_3",
                 ]:
                     raw_results[exp_type][metric].append(eval_outputs[metric])
                 raw_results[exp_type]["forget_rougeL"].append(
@@ -270,6 +310,7 @@ class MetricGetter:
                 raw_results[exp_type]["retain_rougeL"].append(
                     np.mean(eval_outputs["retain_rougeL_recall"])
                 )
+
         for full_model_index in range(self.n_seeds):
             output_location = (
                 f"{self.output_path}/"
@@ -283,6 +324,7 @@ class MetricGetter:
                 "forget_quality_1",
                 "forget_quality_2",
                 "retain_model_utility",
+                "retain_model_utility_3",
             ]:
                 raw_results["full"][metric].append(eval_outputs[metric])
             raw_results["full"]["forget_rougeL"].append(
@@ -328,16 +370,19 @@ def main(args):
     fp = f"{OUTPUT_LOC}/{args.experiment_name}"
     os.makedirs(f"{fp}/results/", exist_ok=True)
     results_getter = MetricGetter(
-        experiment_data_map, fp, 1, forget_methods=forget_types
+        experiment_data_map,
+        fp,
+        len(combinations["seed"]),
+        forget_methods=forget_types,
+        forget_length=args.forget_length,
     )
 
     if args.plotting_eval_checkpoints:
         plot_eval_checkpoints(experiment_data_map, forget_types, args)
     if args.plot_truth_ratio_cdf:
         plot_truth_ratios(experiment_data_map, forget_types, args)
-
     for data_name in tqdm(experiment_data_map.keys(), desc="Data Split"):
-        for train_set in [False, True]:
+        for train_set in [False]:
             for ks_type in ["1", "2"]:
                 avg_results, raw_results = results_getter(
                     data_name, train_results=train_set
@@ -371,7 +416,7 @@ def main(args):
                 )
                 plt.scatter(
                     avg_results["retain"]["retain_model_utility"]["mean"],
-                    avg_results["retain"][f"forget_quality_{ks_type}"]["mean"],
+                    0,
                     marker="D",
                     label="retain",
                     color="k",
@@ -386,6 +431,7 @@ def main(args):
                 plt.close()
 
                 plt.figure()
+                results_getter.forget_methods = list(set(results_getter.forget_methods))
                 for forget_method in results_getter.forget_methods:
                     plt.scatter(
                         avg_results[forget_method]["retain_rougeL"]["mean"],
@@ -416,7 +462,9 @@ def main(args):
 
     if args.experiment_type == "granularity":
         sizes = [int(config.split("_")[-1]) for config in combinations["data_config"]]
+        sizes = [15]
         granularities = ["question", "book", "author", "publisher"]
+        granularities = ["book", "author", "publisher"]
         marker_sizes = 20 * np.cumsum(np.arange(len(granularities)) + 1)
         for size in tqdm(sizes, desc="Granularity Experiment"):
             for ks_type in ["1", "2"]:
@@ -459,7 +507,8 @@ def main(args):
                         utility_data[granularity_index] = data[base_model][
                             "retain_model_utility"
                         ]["mean"]
-
+                    if base_model == "retain":
+                        forget_data = [0] * len(utility_data)
                     plt.scatter(
                         utility_data,
                         forget_data,
@@ -491,39 +540,60 @@ def main(args):
                 plt.xlabel("Model Utility")
                 plt.ylabel(f"Forget Quality ({ks_type} sided)")
                 plt.savefig(
-                    f"{fp}/results/experiment_results/{size}_percent_{ks_type}.pdf"
+                    f"{fp}/results/experiment_results/{size}_percent_"
+                    f"{ks_type}_{args.forget_length}.pdf"
                 )
                 plt.close()
 
     if args.experiment_type == "relationship":
         for data_name in tqdm(experiment_data_map.keys(), desc="Data split"):
             for ks_type in ["1", "2"]:
-                avg_results, raw_results = results_getter(
+                entity_avg_results, entity_raw_results = results_getter(
                     data_name, subset_results=True
                 )
                 result_path = f"{fp}/results/experiment_results/{data_name}"
                 os.makedirs(result_path, exist_ok=True)
 
                 with open(
-                    f"{result_path}/subset_average_results.json", "w"
+                    f"{result_path}/entity_subset_average_results.json", "w"
                 ) as result_file:
-                    json.dump(avg_results, result_file, indent=2)
+                    json.dump(entity_avg_results, result_file, indent=2)
 
-                with open(f"{result_path}/subset_raw_results.json", "w") as result_file:
-                    json.dump(raw_results, result_file, indent=2)
+                with open(
+                    f"{result_path}/entity_subset_raw_results.json", "w"
+                ) as result_file:
+                    json.dump(entity_raw_results, result_file, indent=2)
+
+                non_entity_avg_results, non_entity_raw_results = results_getter(
+                    data_name, subset_results=True, subset_non_entity_results=True
+                )
+                result_path = f"{fp}/results/experiment_results/{data_name}"
+                os.makedirs(result_path, exist_ok=True)
+
+                with open(
+                    f"{result_path}/non_entity_subset_average_results.json", "w"
+                ) as result_file:
+                    json.dump(non_entity_avg_results, result_file, indent=2)
+
+                with open(
+                    f"{result_path}/non_entity_subset_raw_results.json", "w"
+                ) as result_file:
+                    json.dump(non_entity_raw_results, result_file, indent=2)
 
         for data_name in tqdm(experiment_data_map.keys(), desc="Plotting Experiment"):
             for ks_type in ["1", "2"]:
 
                 subset_path = f"{fp}/results/experiment_results/{data_name}"
-                base_path = f"{fp}/results/{data_name}"
+                base_path = f"{fp}/results/experiment_results/{data_name}"
 
                 with open(
-                    f"{subset_path}/subset_average_results.json", "r"
+                    f"{subset_path}/entity_subset_average_results.json", "r"
                 ) as result_file:
                     subset_results = json.load(result_file)
 
-                with open(f"{base_path}/average_results.json", "r") as result_file:
+                with open(
+                    f"{base_path}/non_entity_subset_average_results.json", "r"
+                ) as result_file:
                     base_results = json.load(result_file)
 
                 plt.figure()
@@ -587,7 +657,10 @@ def main(args):
                 plt.xlabel("Model Utility")
                 plt.ylabel(f"Forget Quality ({ks_type} sided)")
                 plt.xlim(-0.1, 1.1)
-                plt.savefig(f"{subset_path}/subset_result_plot_{ks_type}.pdf")
+                plt.savefig(
+                    f"{subset_path}/subset_result_plot_{ks_type}_"
+                    f"{args.forget_length}.pdf"
+                )
                 plt.close()
 
 
@@ -610,6 +683,12 @@ if __name__ == "__main__":
         type=str,
         default=None,
         help="Type of experiment run, defaults to none for individual analysis",
+    )
+    parser.add_argument(
+        "--forget_length",
+        type=str,
+        default="long",
+        help="Length on the forget training.",
     )
     args = parser.parse_args()
     main(args)

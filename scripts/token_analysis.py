@@ -10,6 +10,7 @@ from matplotlib.colors import SymLogNorm
 from transformers import AutoTokenizer
 
 CONFIG_LOC = "configs/experiment"
+MODEL_LOC = "configs/model"
 OUTPUT_LOC = "output"
 height = 10
 width = height * 3
@@ -36,8 +37,12 @@ def main(args):
     fp = args.experiment_path
 
     forget_types = ["idk", "difference", "ascent", "retain"]
-    tokenizer = AutoTokenizer.from_pretrained("gpt2")
+    forget_types = ["idk", "difference", "retain"]
     exp_cfg = yaml.safe_load(open(glob(f"{fp}/retain/*/experiment_config.yaml")[0]))
+    model_name = exp_cfg["config_names"]["model_config"]
+    model_id = yaml.safe_load(open(f"{MODEL_LOC}/{model_name}/{model_name}.yaml"))
+    tokenizer = AutoTokenizer.from_pretrained(model_id["model_id"])
+    print(f"{fp}/retain/*/experiment_config.yaml")
     data_name = exp_cfg["config_names"]["data_config"]
     full_model_path = exp_cfg["full_model_name"]
 

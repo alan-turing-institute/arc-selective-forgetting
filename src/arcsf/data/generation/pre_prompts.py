@@ -69,8 +69,8 @@ answer_5
 <end_incorrect_answers>
 
 It is vitally important all answers are contained between the
-<begin_paraphrased_answers> and <begin_paraphrased_answers> tags defined above. On each
-line there should no text except that of the paraphrased answer.
+<begin_incorrect_answers> and <end_incorrect_answers> tags defined above. On each
+line there should no text except that of the perturbed answer.
 """
 
 profile_questions_pre_prompt = """

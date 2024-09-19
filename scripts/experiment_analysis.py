@@ -14,6 +14,8 @@ from arcsf.eval.metrics import ecdf
 CONFIG_LOC = "configs/experiment"
 OUTPUT_LOC = "output"
 
+plt.rcParams["font.size"] = 10
+
 
 def open_json_path(path):
     with open(path) as file:
@@ -22,7 +24,10 @@ def open_json_path(path):
 
 
 def locate_forget_length(glob_string, length):
-    options = glob(glob_string)
+    # This ensures that we only select from directories with a .json file in
+    options = glob(f"{glob_string}/*eval_outputs.json")
+    options = ["/".join(option.split("/")[:-1]) for option in options]
+
     train_length = np.zeros(len(options))
     for opt_idx, option_path in enumerate(options):
         train_length[opt_idx] = yaml.safe_load(
@@ -127,7 +132,7 @@ def plot_eval_checkpoints(data_experiment_map, forget_types, args):
                     for checkpoint_fp in checkpoint_fps:
                         epoch_eval = open_json_path(checkpoint_fp)
                         forget_quality.append(epoch_eval[f"forget_quality_{ks_type}"])
-                        model_utility.append(epoch_eval["retain_model_utility"])
+                        model_utility.append(epoch_eval["retain_model_utility_3"])
                     colour = f"C{forget_index}"
                     plt.scatter(
                         model_utility,
@@ -157,7 +162,7 @@ def plot_eval_checkpoints(data_experiment_map, forget_types, args):
                 )
                 retain_eval[f"forget_quality_{ks_type}"] = 0
                 plt.plot(
-                    retain_eval["retain_model_utility"],
+                    retain_eval["retain_model_utility_3"],
                     0,
                     "D",
                     color="k",
@@ -179,7 +184,7 @@ def plot_eval_checkpoints(data_experiment_map, forget_types, args):
                     )[0]
                 )
                 plt.plot(
-                    full_eval["retain_model_utility"],
+                    full_eval["retain_model_utility_3"],
                     full_eval[f"forget_quality_{ks_type}"],
                     "s",
                     label="full",
@@ -202,10 +207,10 @@ def plot_relationship(
 ):
 
     base_fq = base_results[forget_method][f"forget_quality_{ks_type}"]["mean"]
-    base_mu = base_results[forget_method]["retain_model_utility"]["mean"]
+    base_mu = base_results[forget_method]["retain_model_utility_3"]["mean"]
 
     subset_fq = subset_results[forget_method][f"forget_quality_{ks_type}"]["mean"]
-    subset_mu = subset_results[forget_method]["retain_model_utility"]["mean"]
+    subset_mu = subset_results[forget_method]["retain_model_utility_3"]["mean"]
 
     if forget_method == "retain":
         base_fq = 0
@@ -214,7 +219,7 @@ def plot_relationship(
     plt.scatter(
         base_mu,
         base_fq,
-        s=75,
+        s=100,
         alpha=0.5,
         marker=marker,
         color=color,
@@ -225,7 +230,7 @@ def plot_relationship(
         subset_mu,
         subset_fq,
         marker=marker,
-        s=35,
+        s=75,
         alpha=0.5,
         facecolor="none",
         edgecolors=color,
@@ -278,7 +283,6 @@ class MetricGetter:
             }
             for key in all_types + ["full"]
         }
-
         if train_results:
             filename = "train_set_eval_outputs.json"
         else:
@@ -389,7 +393,6 @@ def main(args):
                 )
                 result_path = f"{fp}/results/{data_name}"
                 os.makedirs(result_path, exist_ok=True)
-
                 with open(
                     f"{result_path}/average_results{train_set*'_train'}.json", "w"
                 ) as result_file:
@@ -403,19 +406,19 @@ def main(args):
                 plt.figure()
                 for forget_method in results_getter.forget_methods:
                     plt.scatter(
-                        avg_results[forget_method]["retain_model_utility"]["mean"],
+                        avg_results[forget_method]["retain_model_utility_3"]["mean"],
                         avg_results[forget_method][f"forget_quality_{ks_type}"]["mean"],
                         label=forget_method,
                     )
                 plt.scatter(
-                    avg_results["full"]["retain_model_utility"]["mean"],
+                    avg_results["full"]["retain_model_utility_3"]["mean"],
                     avg_results["full"][f"forget_quality_{ks_type}"]["mean"],
                     marker="s",
                     label="full",
                     color="k",
                 )
                 plt.scatter(
-                    avg_results["retain"]["retain_model_utility"]["mean"],
+                    avg_results["retain"]["retain_model_utility_3"]["mean"],
                     0,
                     marker="D",
                     label="retain",
@@ -462,9 +465,8 @@ def main(args):
 
     if args.experiment_type == "granularity":
         sizes = [int(config.split("_")[-1]) for config in combinations["data_config"]]
-        sizes = [15]
+        sizes = sizes[1:]
         granularities = ["question", "book", "author", "publisher"]
-        granularities = ["book", "author", "publisher"]
         marker_sizes = 20 * np.cumsum(np.arange(len(granularities)) + 1)
         for size in tqdm(sizes, desc="Granularity Experiment"):
             for ks_type in ["1", "2"]:
@@ -481,7 +483,7 @@ def main(args):
                             f"forget_quality_{ks_type}"
                         ]["mean"]
                         utility_data[granularity_index] = data[forget_method][
-                            "retain_model_utility"
+                            "retain_model_utility_3"
                         ]["mean"]
 
                     plt.scatter(
@@ -505,7 +507,7 @@ def main(args):
                             f"forget_quality_{ks_type}"
                         ]["mean"]
                         utility_data[granularity_index] = data[base_model][
-                            "retain_model_utility"
+                            "retain_model_utility_3"
                         ]["mean"]
                     if base_model == "retain":
                         forget_data = [0] * len(utility_data)
@@ -535,10 +537,12 @@ def main(args):
                     ncol=4,
                     title="Granularity",
                 )
+
                 plt.gca().add_artist(size_legend)
                 plt.yscale("symlog")
                 plt.xlabel("Model Utility")
                 plt.ylabel(f"Forget Quality ({ks_type} sided)")
+                plt.xlim(left=-0.05)
                 plt.savefig(
                     f"{fp}/results/experiment_results/{size}_percent_"
                     f"{ks_type}_{args.forget_length}.pdf"
@@ -642,13 +646,13 @@ def main(args):
                     for face_col, size in zip(face_color, sizes)
                 ]
 
-                labels = ["All questions", "Entity Questions"]
+                labels = ["Non-entity questions", "Entity questions"]
 
                 size_legend = plt.legend(
                     h,
                     labels,
                     loc="upper center",
-                    bbox_to_anchor=(0.5, 1.1),
+                    bbox_to_anchor=(0.5, 1.15),
                     ncol=2,
                     framealpha=0.3,
                 )
@@ -656,7 +660,8 @@ def main(args):
                 plt.yscale("symlog")
                 plt.xlabel("Model Utility")
                 plt.ylabel(f"Forget Quality ({ks_type} sided)")
-                plt.xlim(-0.1, 1.1)
+                plt.xlim(left=-0.05)
+                plt.tight_layout()
                 plt.savefig(
                     f"{subset_path}/subset_result_plot_{ks_type}_"
                     f"{args.forget_length}.pdf"

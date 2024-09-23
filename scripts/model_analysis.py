@@ -390,6 +390,10 @@ def main(args):
     # Currently hardcoded the forget types
     forget_types = ["difference", "kl", "ascent", "idk"]
     forget_types = ["difference", "idk"]
+    # We sort so that methods in plots use the same colour
+    custom_order = {c: i for i, c in enumerate(["difference", "idk", "ascent", "kl"])}
+    forget_types.sort(key=lambda c: custom_order.get(c, len(custom_order)))
+
     plot_truth_ratios(forget_types=forget_types, args=args)
     plot_model_quality(forget_types=forget_types, args=args)
     plot_retain_forget_utility(forget_types=forget_types, args=args)

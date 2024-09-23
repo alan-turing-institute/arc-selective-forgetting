@@ -517,7 +517,9 @@ def main(args):
                 plt.figure()
                 for forget_method in results_getter.forget_methods:
                     forget_data = np.zeros(len(granularities))
+                    forget_std = np.zeros(len(granularities))
                     utility_data = np.zeros(len(granularities))
+                    utility_std = np.zeros(len(granularities))
                     # get results from the results file obtained earlier
                     for granularity_index, granularity in enumerate(granularities):
                         data_name = f"gen_tofu_{granularity}_{size}"
@@ -530,7 +532,23 @@ def main(args):
                         utility_data[granularity_index] = data[forget_method][
                             "retain_model_utility_3"
                         ]["mean"]
+
+                        forget_std[granularity_index] = data[forget_method][
+                            f"forget_quality_{ks_type}"
+                        ]["std"]
+                        utility_std[granularity_index] = data[forget_method][
+                            "retain_model_utility_3"
+                        ]["std"]
                     # plot the results
+                    plt.errorbar(
+                        x=utility_data,
+                        y=forget_data,
+                        xerr=utility_std / np.sqrt(5),
+                        yerr=forget_std / np.sqrt(5),
+                        capsize=2,
+                        ls="none",
+                        alpha=0.4,
+                    )
                     plt.scatter(
                         utility_data,
                         forget_data,
@@ -542,7 +560,9 @@ def main(args):
                 # now perform the same for the base models
                 for base_model, marker_shape in zip(["retain", "full"], ["D", "s"]):
                     forget_data = np.zeros(len(granularities))
+                    forget_std = np.zeros(len(granularities))
                     utility_data = np.zeros(len(granularities))
+                    utility_std = np.zeros(len(granularities))
                     for granularity_index, granularity in enumerate(granularities):
                         data_name = f"gen_tofu_{granularity}_{size}"
                         data = open_json_path(
@@ -554,8 +574,25 @@ def main(args):
                         utility_data[granularity_index] = data[base_model][
                             "retain_model_utility_3"
                         ]["mean"]
+
+                        forget_std[granularity_index] = data[base_model][
+                            f"forget_quality_{ks_type}"
+                        ]["std"]
+                        utility_std[granularity_index] = data[base_model][
+                            "retain_model_utility_3"
+                        ]["std"]
                     if base_model == "retain":
                         forget_data = [0] * len(utility_data)
+                    plt.errorbar(
+                        x=utility_data,
+                        y=forget_data,
+                        xerr=utility_std / np.sqrt(5),
+                        yerr=forget_std / np.sqrt(5),
+                        capsize=2,
+                        color="k",
+                        ls="none",
+                        alpha=0.4,
+                    )
                     plt.scatter(
                         utility_data,
                         forget_data,

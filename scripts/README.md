@@ -81,13 +81,13 @@ All experiment configs contain:
 
 Top experiment configs are used to generate a large number of jobs together. For every combination of dataset, model-hyperparameter config pair, and full model and forget technique + hyperparameter combination, they will generate one job.
 
-You can see an example of a top experiment config at <configs/experiment/example_top_experiment_config.yaml>.
+You can see an example of a top experiment config at <configs/experiment/tofu_test.yaml>.
 
-A top experiment config be a yaml file containing a **combinations** argument. Nested under this should be:
+A top experiment config is a yaml file containing a **combinations** argument. Nested under this should be:
 
-- **data_config**: A list containing of named data configs in configs/data
-- **train_config**: A list containing lists of hyperparameters to use for `full` and `retain` jobs
-- **forget_config**: A list forget method and forget hyperparameter pairs to generate `forget` models for, for every `retain` model
+- **data_config**: A list containing named data configs in `configs/data`
+- **train_config**: A list containing named hyperparameter sets to use for `full` and `retain` jobs (names of files in `configs/model/<model_config>/hyperparameters`)
+- **forget_config**: A list of forget method and forget hyperparameter pairs to generate `forget` models for, for every `retain` model.
 - **seed:** A list of seeds to generate experiments over
 
 It should additionally contain:
@@ -97,6 +97,9 @@ It should additionally contain:
 - **use_bask:** Whether to create a slurm array job for running on baskerville (you can treat this as whether to generate a slurm script - see our template in <src/arcsf/config/jobscript_template.sh>)
 - **bask:** Arguments used in generating the baskerville array job script. Only used if **use_bask** is true.
 - **wandb_kwargs:** Contains **use_wandb** and **wandb_config**, as defined above.
+- **model_cache_dir:** HuggingFace models cache path (where to download/look for base models)
+- **data_cache_dir:** HuggingFace datasets cache path (where to download/look for datasets)
+- **wandb_cache_dir:** WandB cache path (where to log WandB run outputs)
 
 ### Data Configs
 
@@ -109,13 +112,17 @@ Must contain two main arguments:
 
 Must contain the following arguments:
 
-- **model_id:** Model ID as on HuggingFace
+- **model_id:** Model ID as on HuggingFace (or a path to a local base model)
 - **model_kwargs:** Kwargs passed to `AutoModelForCausalLM.from_pretrained()`, see <https://huggingface.co/docs/transformers/model_doc/auto#transformers.AutoModelForCausalLM.from_pretrained>
 - **add_padding_token:** Boolean determining whether to add a padding token IF one does not already exist in the tokenizer.
+- **qa_formatter_kwargs:** Templates to format question-answer pairs:
+  - **question_template:** Must contain `{question}`, which will be replaced with the question string. Can also contain a system prompt before the question, for example.
+  - **answer_template:** Must contain `{answer}`, which will be replaced with the answer string. Can also contain end of text tags or other special tokens required by the model.
 
 ### Hyperparameter Configs
 
-Must contain the following arguments:
+Contain the following arguments:
 
 - **trainer_kwargs:** Arguments passed to `TrainingArguments`. See <https://huggingface.co/docs/transformers/en/main_classes/trainer#transformers.TrainingArguments>
-- **early_stopping_kwargs:** Early stopping kwargs. Optional. If provided, early stopping will be used. Should contain kwags for `EarlyStoppingCallback`. See <https://huggingface.co/docs/transformers/en/main_classes/callback#transformers.EarlyStoppingCallback>
+- [Optional] **peft_kwargs:** Keyword arguments passed to `LoraConfig` if using parameter-efficient fine-tuning See <https://huggingface.co/docs/peft/en/package_reference/lora>
+- [Optional] **early_stopping_kwargs:** Early stopping kwargs. Optional. If provided, early stopping will be used. Should contain kwargs for `EarlyStoppingCallback`. See <https://huggingface.co/docs/transformers/en/main_classes/callback#transformers.EarlyStoppingCallback>

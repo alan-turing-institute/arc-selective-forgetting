@@ -148,7 +148,6 @@ def main(experiment_path):
 
 
 if __name__ == "__main__":
-    # Step 1: script kwargs
     parser = argparse.ArgumentParser(
         description="""
         This script takes the name of an experiment config stored in configs/experiment.
@@ -164,9 +163,6 @@ if __name__ == "__main__":
         help="Name of experiment yaml file contained in configs/experiment",
         required=True,
     )
-
-    # Step 2: process kwargs
     args = parser.parse_args()
 
-    # Step 3: pass to and call main
     main(args.experiment_name)

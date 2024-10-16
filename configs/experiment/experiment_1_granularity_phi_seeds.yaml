@@ -1,0 +1,46 @@
+# Combinations to build runs over
+combinations:
+  data_config:
+    - gen_tofu_book_15
+    - gen_tofu_author_15
+    - gen_tofu_publisher_15
+
+  train_config:
+    - default
+
+  forget_config:
+    - [difference, default]
+    - [idk, default]
+    - [difference, shorter]
+    - [idk, shorter]
+
+  seed:
+    - 41
+    - 42
+    - 43
+    - 44
+
+model_config: Phi-3-mini-4k-instruct
+
+# Full data config: which dataset to use to build full model to do forgetting on
+full_data_config: gen_tofu_full
+
+# Baskerville kwargs
+use_bask: true
+model_cache_dir: /bask/projects/v/vjgo8416-sltv-forget/caches/models
+data_cache_dir: /bask/projects/v/vjgo8416-sltv-forget/caches/datasets
+wandb_cache_dir: /bask/projects/v/vjgo8416-sltv-forget/caches/wandb
+
+bask:
+  walltime: '0-12:0:0'
+  gpu_number: 1
+  node_number: 1
+
+# Wandb kwargs
+wandb_kwargs:
+  use_wandb: true
+  wandb_config:
+    entity: turing-arc
+    project: selective-forgetting
+    log_model: "false"
+    group: experiment-1-granularity

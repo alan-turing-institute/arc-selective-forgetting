@@ -477,9 +477,6 @@ for key, item in all_items.items():
         for question in questions:
             for q_key in question["keys"]:
                 if key == q_key:
-                    # print(key)
-                    # print(question["keys"])
-                    # print("match")
                     n_questions += 1
         print(f"Type:{item['type']}    Number Questions: {n_questions}")
 

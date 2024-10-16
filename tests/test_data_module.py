@@ -3,7 +3,7 @@ from torch.utils.data import Dataset
 
 from arcsf.data.data_module import (
     EvalQADataset,
-    QAForgetDataset,
+    ForgetQADataset,
     QAFormatter,
     get_data,
     get_idk_responses,
@@ -62,7 +62,7 @@ def test_permutation(qa_formatter, dummy_tokenizer):
         random_seed=42,
     )
     # create dataset object
-    data_set = QAForgetDataset(
+    data_set = ForgetQADataset(
         data, dummy_tokenizer, qa_formatter, loss_type="standard"
     )
     # dataset creates a random permutation of retain indices
@@ -106,7 +106,7 @@ def test_formatter():
 def test_idk_targets(data, dummy_tokenizer):
     """Check that when using an idk loss, that the targets are correct."""
     # load idk type dataset
-    idk_set = QAForgetDataset(
+    idk_set = ForgetQADataset(
         (data, data),
         dummy_tokenizer,
         QAFormatter("{question} Answer:", " {answer}"),

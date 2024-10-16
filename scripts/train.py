@@ -8,8 +8,8 @@ from accelerate import Accelerator
 from arcsf.config.experiment import ExperimentConfig
 from arcsf.constants import EXPERIMENT_CONFIG_DIR
 from arcsf.data.data_module import (
-    FinetuneDataset,
-    QAForgetDataset,
+    FinetuneQADataset,
+    ForgetQADataset,
     QAFormatter,
     get_data,
 )
@@ -67,7 +67,7 @@ def main(experiment_path):
     qa_formatter = QAFormatter(**experiment_config.model_config.qa_formatter_kwargs)
 
     if experiment_config.train_type in ["full", "retain"]:
-        train_dataset = FinetuneDataset(
+        train_dataset = FinetuneQADataset(
             data=retain,  # if full training retain will contain all the data
             tokenizer=tokenizer,
             qa_formatter=qa_formatter,
@@ -75,7 +75,7 @@ def main(experiment_path):
         base_truth_ratios = None
     else:
         loss_type = "idk" if experiment_config.train_type == "idk" else "normal"
-        train_dataset = QAForgetDataset(
+        train_dataset = ForgetQADataset(
             (forget, retain),
             tokenizer,
             qa_formatter,

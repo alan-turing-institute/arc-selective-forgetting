@@ -95,7 +95,7 @@ class Forgetter(ARCSFTrainer):
         Args:
             model: The model to compute the loss of.
             inputs: Tuple of forget and either retain or IDK inputs, as returned by
-                QAForgetDataset. All child classes of Forgetter should expect two inputs
+                ForgetQADataset. All child classes of Forgetter should expect two inputs
                 in this order.
             return_outputs: Whether to return the outputs of the model or just the loss.
 

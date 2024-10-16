@@ -98,8 +98,9 @@ class QAFormatter:
 
 class EvalQADataset(torch.utils.data.Dataset):
     """
-    Question answer format dataset, __getitem__ returns a tokenized question--answer
-    pair as a tuple.
+    Dataset class used for evaluation. __getitem__ returns a list of tokenized
+    question--answer pairs (formatted as a single string), with the first item
+    containing the ground truth answer and the rest perturbed answers.
     """
 
     def __init__(
@@ -224,11 +225,11 @@ class EvalQADataset(torch.utils.data.Dataset):
         return [gt_inputs] + perturbed_inputs
 
 
-class FinetuneDataset(torch.utils.data.Dataset):
+class FinetuneQADataset(torch.utils.data.Dataset):
     """
-    Finetune version of the dataset, __getitem__ returns a sample taken either from
-    retain, forget subsets, or a combination of both. Samples are formatted using a
-    question formatter allowing for autoregression.
+    Dataset class used for conventionally fine-tuning models on a whole question-answer
+    dataset. __getitem__ returns a single tokenized & formatted question--answer pair
+    (conctenated to a single string).
     """
 
     def __init__(
@@ -265,11 +266,12 @@ class FinetuneDataset(torch.utils.data.Dataset):
         return self.tokenizer(inp)
 
 
-class QAForgetDataset(torch.utils.data.Dataset):
+class ForgetQADataset(torch.utils.data.Dataset):
     """
-    Q+A Forget version of the dataset, __getitem__ returns a retain and forget sample.
-    Both are formatted using a question formatter. There is an option to output samples
-    using "I don't know" synonyms by specifying loss_type as "idk".
+    Dataset class used for unlearning. __getitem__ returns a retain and forget sample.
+    Both are formatted using a question formatter and then tokenized. There is an option
+    to replace forget set answers with "I don't know" synonyms by specifying
+    loss_type as "idk".
     """
 
     def __init__(
@@ -347,7 +349,7 @@ class QAForgetDataset(torch.utils.data.Dataset):
 class ForgetterDataCollator:
     """
     Data collator that parses lists of forget and retain inputs as provided by
-    QAForgetDataset.
+    ForgetQADataset.
     """
 
     def __init__(self, base_collator: Callable[[List[InputDataClass]], Dict[str, Any]]):
@@ -363,7 +365,7 @@ class ForgetterDataCollator:
     ) -> tuple[dict[str, Any], dict[str, Any]]:
         """
         Args:
-            features: A list of outputs from QAForgetDataset, containing tuples of
+            features: A list of outputs from ForgetQADataset, containing tuples of
                 forget and retain data.
             kwargs: Additional arguments to pass to the base collator.
 
@@ -379,8 +381,7 @@ class ForgetterDataCollator:
 class EvaluateDataCollator:
     """
     Data collator for the evaluation scripts, on __call__ it takes a list of samples
-    from the evaluation dataset, and packs each clean/perturbed inputs into a padded
-    batch.
+    from an EvalQADataset, and packs each clean/perturbed inputs into a padded batch.
     """
 
     def __init__(self, tokenizer: PreTrainedTokenizer, padding_side="left"):

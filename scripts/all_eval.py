@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os
+
 import yaml
 
 from arcsf.config.experiment import EXPERIMENT_CONFIG_DIR, ExperimentConfig
@@ -19,13 +20,13 @@ if __name__ == "__main__":
         "--experiment_name",
         type=str,
         required=False,
-        help="Path to an experiment config file (specify this or model_dir)"
+        help="Path to an experiment config file (specify this or model_dir)",
     )
     parser.add_argument(
         "--model_dir",
         type=str,
         required=False,
-        help="Path to a model output directory (specify this or experiment_name)"
+        help="Path to a model output directory (specify this or experiment_name)",
     )
     parser.add_argument(
         "--experiment_2_eval", action="store_true", help="Running experiment 2 eval."
@@ -35,9 +36,8 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    if (
-        (args.model_dir and args.experiment_name) or
-        (not args.model_dir and not args.experiment_name)
+    if (args.model_dir and args.experiment_name) or (
+        not args.model_dir and not args.experiment_name
     ):
         raise RuntimeError("Specify one (only) of model_dir and experiment_name")
 
@@ -69,7 +69,7 @@ if __name__ == "__main__":
         experiment_name = experiment_config["experiment_name"]
         train_type = experiment_config["train_type"]
         seed = experiment_config["seed"]
-        
+
         data_config = experiment_config["data_config"]
         dataset_name = data_config["dataset_name"]
         dataset_kwargs = data_config["data_kwargs"]
@@ -80,7 +80,7 @@ if __name__ == "__main__":
                 "Defaulting split type to granularity due to missing value in saved "
                 "data config"
             )
-            dataset_kwargs["type"] =  "granularity"
+            dataset_kwargs["type"] = "granularity"
         data_config_name = experiment_config["config_names"]["data_config"]
 
         model_config = experiment_config["model_config"]
@@ -88,7 +88,7 @@ if __name__ == "__main__":
         add_padding_token = model_config["add_padding_token"]
         qa_formatter_kwargs = model_config["qa_formatter_kwargs"]
         trainer_kwargs = model_config["trainer_kwargs"]
-    
+
     if train_type == "full":
         raise ValueError("Use full_eval.py for evaluating full models")
 

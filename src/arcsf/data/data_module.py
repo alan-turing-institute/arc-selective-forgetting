@@ -110,6 +110,7 @@ class EvalQADataset(torch.utils.data.Dataset):
         dataset_name: str,
         n_perturbed: int,
         random_seed: int | None = None,
+        train_set_eval: bool = False,
     ):
         """
         Dataset for evaluation purposes which returns a tokenized version of the input
@@ -138,9 +139,17 @@ class EvalQADataset(torch.utils.data.Dataset):
             self.question_key = "question"
             self.perturber = TofuPerturber(data, self.n_perturbed, random_seed)
         elif dataset_name == "gen_tofu":
-            self.answer_key = "paraphrased_answer"
-            self.question_key = "paraphrased_question"
-            self.perturber = GenTofuPerturber(data, self.n_perturbed)
+            if train_set_eval:
+                self.answer_key = "answer"
+                self.question_key = "question"
+                self.perturbed_key = "perturbed_answers"
+            else:
+                self.answer_key = "paraphrased_answer"
+                self.question_key = "paraphrased_question"
+                self.perturbed_key = "paraphrased_perturbed_answers"
+            self.perturber = GenTofuPerturber(
+                data, self.n_perturbed, self.perturbed_key
+            )
 
     def model_formatter(
         self,

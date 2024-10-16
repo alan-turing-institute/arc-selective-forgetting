@@ -35,6 +35,7 @@ class Evaluator:
         batch_size: int,
         accelerator: Accelerator = Accelerator(),
         n_print: int = 5,
+        train_set_eval: bool = False,
         **generate_kwargs: dict,
     ):
         """
@@ -76,6 +77,7 @@ class Evaluator:
             tokenizer,
             batch_size,
             random_seed,
+            train_set_eval=train_set_eval,
         )
         logger.info("Creating retain loaders...")
         self.retain_loaders = self.get_eval_data_loaders(
@@ -86,6 +88,7 @@ class Evaluator:
             tokenizer,
             batch_size,
             random_seed,
+            train_set_eval=train_set_eval,
         )
         self.model = model
         self.base_truth_ratios = base_truth_ratios
@@ -378,6 +381,7 @@ class Evaluator:
         tokenizer,
         batch_size,
         random_seed,
+        train_set_eval,
     ) -> dict[str, DataLoader]:
         """
         Create two data loaders for evaluation on a given data split, one that returns
@@ -400,6 +404,7 @@ class Evaluator:
             n_perturbed=n_perturbed,
             dataset_name=dataset_name,
             random_seed=random_seed,
+            train_set_eval=train_set_eval,
         )
 
         tokenizer.padding_side = "left"
@@ -433,26 +438,53 @@ class Evaluator:
 class EvaluateOutputs:
     forget_quality_1: float | None  # None if evaluation run without base_truth_ratios
     forget_quality_2: float | None  # None if evaluation run without base_truth_ratios
-    forget_generation: dict[str, list[str]] | None  # None if not run with generation
     forget_truth_ratios: torch.Tensor
     forget_rougeL_recall: torch.Tensor
     forget_rouge1_recall: torch.Tensor
     forget_mean_loss_gt: float
     forget_mean_loss_perturbed: float
     forget_all_losses: torch.Tensor
-    forget_generation: dict[str, list[str]]
     forget_mean_tr: float  # raw mean of forget truth ratios
     retain_mean_tr: float  # clamped mean of 1 - retain truth ratios
     retain_mean_rougeL_recall: float
-    retain_model_utility: float
-    retain_generation: dict[str, list[str]] | None  # None if not run with generation
+    retain_model_utility: float  # utility with truth ratio and rougeL only (no prob)
     retain_truth_ratios: torch.Tensor
     retain_rougeL_recall: torch.Tensor
     retain_rouge1_recall: torch.Tensor
     retain_mean_loss_gt: float
     retain_mean_loss_perturbed: float
     retain_all_losses: torch.Tensor
-    retain_generation: dict[str, list[str]]
+    # metrics added after experiments run so allowed to be none for backwards
+    # compatibility with previous outputs. Will be added automatically in
+    # __post_init__ if any are None (except generated outputs).
+    forget_mean_rougeL_recall: float | None = None
+    forget_mean_probability_gt: float | None = None
+    forget_model_utility: float | None = None  # hmean of tr, rougeL
+    forget_model_utility_3: float | None = None  # hmean of prob, tr, rougeL
+    forget_arithmetic_model_utility_3: float | None = None  # mean of prob, tr, rougeL
+    forget_mean_clamped_tr: float | None = None  # mean of 1 - forget truth ratios
+    forget_generation: dict[str, list[str]] | None = None
+    retain_generation: dict[str, list[str]] | None = None
+    retain_mean_probability_gt: float | None = None
+    retain_model_utility_3: float | None = None  # hmean of prob, tr, rougeL
+    retain_arithmetic_model_utility_3: float | None = None  # mean of prob, tr, rougeL
+
+    def __post_init__(self):
+        if any(
+            attr is None
+            for attr in [
+                self.forget_mean_probability_gt,
+                self.retain_mean_probability_gt,
+                self.retain_model_utility_3,
+                self.forget_mean_rougeL_recall,
+                self.forget_model_utility,
+                self.forget_model_utility_3,
+                self.forget_mean_clamped_tr,
+                self.forget_arithmetic_model_utility_3,
+                self.retain_arithmetic_model_utility_3,
+            ]
+        ):
+            self._add_additional_metrics()
 
     def save(self, path: str) -> None:
         """
@@ -473,6 +505,52 @@ class EvaluateOutputs:
             if isinstance(out_dict[key], torch.Tensor):
                 out_dict[key] = out_dict[key].cpu().numpy().tolist()
         return out_dict
+
+    def _add_additional_metrics(self) -> None:
+        """
+        Compute metrics not included in the original Evaluator implementation.
+        """
+        self.forget_mean_rougeL_recall = torch.mean(self.forget_rougeL_recall).item()
+        self.forget_mean_probability_gt = (
+            torch.exp(-self.forget_all_losses[:, 0]).mean().item()
+        )
+        self.forget_mean_clamped_tr = (
+            torch.clamp((1 - self.forget_truth_ratios), 0).mean().item()
+        )
+        self.forget_model_utility = hmean(
+            [1 - self.forget_mean_clamped_tr, 1 - self.forget_mean_rougeL_recall]
+        )
+        self.forget_model_utility_3 = hmean(
+            [
+                1 - self.forget_mean_probability_gt,
+                1 - self.forget_mean_clamped_tr,
+                1 - self.forget_mean_rougeL_recall,
+            ]
+        )
+        self.forget_arithmetic_model_utility_3 = np.mean(
+            [
+                1 - self.forget_mean_probability_gt,
+                1 - self.forget_mean_clamped_tr,
+                1 - self.forget_mean_rougeL_recall,
+            ]
+        )
+        self.retain_mean_probability_gt = (
+            torch.exp(-self.retain_all_losses[:, 0]).mean().item()
+        )
+        self.retain_model_utility_3 = hmean(
+            [
+                self.retain_mean_probability_gt,
+                self.retain_mean_rougeL_recall,
+                self.retain_mean_tr,
+            ]
+        )
+        self.retain_arithmetic_model_utility_3 = np.mean(
+            [
+                self.retain_mean_probability_gt,
+                self.retain_mean_tr,
+                self.retain_mean_rougeL_recall,
+            ]
+        )
 
     @classmethod
     def combine_outputs(
@@ -516,7 +594,7 @@ class EvaluateOutputs:
             return cls.from_dict(json.load(f))
 
     @property
-    def summary_metrics(self) -> dict[str, float]:
+    def summary_metrics(self) -> dict[str, float | int | None]:
         """
         Returns all single-valued forget quality/model utility metrics
         """
@@ -527,14 +605,34 @@ class EvaluateOutputs:
         }
 
     def __str__(self) -> str:
+        fq_1_str = (
+            f"{self.forget_quality_1:.3g}"
+            if self.forget_quality_1 is not None
+            else "None"
+        )
+        fq_2_str = (
+            f"{self.forget_quality_2:.3g}"
+            if self.forget_quality_2 is not None
+            else "None"
+        )
         return (
             f"FORGET SPLIT:\n"
-            f"- One-Sided Forget Quality: {self.forget_quality_1}\n"
-            f"- Two-Sided Forget Quality: {self.forget_quality_2}\n"
+            f"- One-Sided Forget Quality: {fq_1_str}\n"
+            f"- Two-Sided Forget Quality: {fq_2_str}\n"
+            f"- Model Utility (rouge, tr): {self.forget_model_utility:.3g}\n"
+            f"- Model Utility (prob, rouge, tr): {self.forget_model_utility_3:.3g}\n"
+            f"- Arithmetic Model Utility: {self.forget_arithmetic_model_utility_3:.3g}"
+            f"\n- Mean Truth Ratio (raw): {self.forget_mean_tr:.3g}\n"
+            f"- Mean Truth Ratio (1 - tr clamped): {self.forget_mean_clamped_tr:.3g}\n"
+            f"- Mean Rouge: {self.forget_mean_rougeL_recall:.3g}\n"
+            f"- Mean Probability: {self.forget_mean_probability_gt:.3g}\n"
             f"RETAIN SPLIT:\n"
-            f"- Model Utility: {self.retain_model_utility}\n"
-            f"- Mean Truth Ratio: {self.retain_mean_tr}\n"
-            f"- Mean Rouge: {self.retain_mean_rougeL_recall}\n"
+            f"- Model Utility (rouge, tr): {self.retain_model_utility:.3g}\n"
+            f"- Model Utility (prob, rouge, tr): {self.retain_model_utility_3:.3g}\n"
+            f"- Arithmetic Model Utility: {self.retain_arithmetic_model_utility_3:.3g}"
+            f"\n- Mean Truth Ratio (1 - tr clamped): {self.retain_mean_tr:.3g}\n"
+            f"- Mean Rouge: {self.retain_mean_rougeL_recall:.3g}\n"
+            f"- Mean Probability: {self.retain_mean_probability_gt:.3g}\n"
         )
 
     def __getitem__(self, key: str) -> float | torch.Tensor | None:

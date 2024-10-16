@@ -28,7 +28,7 @@ from arcsf.data.generation.utils import (
 # random.seed(42)
 
 # DEFINING THE CONSTANTS
-GPT_GEN = True
+GPT_GEN = False
 NAME_GEN = False
 
 # Currently the constraints/assumptions are:
@@ -468,8 +468,17 @@ net.save_graph("temp/gen_tofu/graph.html")
 # GENERATING DATSET
 
 entity_list = []
+types = []
 for key, item in all_items.items():
+    n_questions = 0
     entity_list.append({"key": key, "type": item["type"], "data": item["data"]})
+    if item["type"] not in types:
+        types.append(item["type"])
+        for question in questions:
+            for q_key in question["keys"]:
+                if key == q_key:
+                    n_questions += 1
+        print(f"Type:{item['type']}    Number Questions: {n_questions}")
 
 
 # GENERATOR FOR CREATING DATASET

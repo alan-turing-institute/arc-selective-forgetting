@@ -154,3 +154,4 @@ train_scripts/
 src/arcsf/data/generation/private_keys.py
 data/**/dataset/cache*
 output
+figures

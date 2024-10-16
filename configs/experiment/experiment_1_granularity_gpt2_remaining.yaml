@@ -23,6 +23,10 @@ combinations:
     - longer
 
   forget_config:
+    - [ascent, longer]
+    - [difference, longer]
+    - [idk, longer]
+    - [kl, longer]
     - [ascent, shorter]
     - [difference, shorter]
     - [idk, shorter]

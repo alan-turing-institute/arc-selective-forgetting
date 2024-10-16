@@ -9,9 +9,9 @@ combinations:
     - default
 
   forget_config:
-    - [difference, default]
+    - [difference, accumulate]
     - [idk, default]
-    - [difference, shorter]
+    - [difference, shorter_accumulate]
     - [idk, shorter]
 
   seed:

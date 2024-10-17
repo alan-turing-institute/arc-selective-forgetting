@@ -30,4 +30,4 @@ We developed the code with [Poetry](https://python-poetry.org/):
 
 ## Usage
 
-The main config files and scripts for running experiments are documented in the [scripts readme](scripts/README.md).
+See the [config files](configs/README.md) and [scripts](scripts/README.md) readmes.

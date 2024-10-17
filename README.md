@@ -10,13 +10,11 @@ We explore two research questions:
 
 To address these we create a new TOFU-inspired question-answer dataset with entities of different types (publishers, authors, books) and with each question-answer pair in the dataset labelled with the entities it refers to.
 
-## Usage
+## Installation/Development
 
-**TODO**
+You can `pip` install the dependencies and `arcsf` library with `pip install .` in your preferred virtual environment.
 
-## Development
-
-### Developer Setup
+We developed the code with [Poetry](https://python-poetry.org/):
 
 1. Install dependencies with Poetry
 
@@ -29,3 +27,7 @@ To address these we create a new TOFU-inspired question-answer dataset with enti
    ```bash
    poetry run pre-commit install --install-hooks
    ```
+
+## Usage
+
+The main config files and scripts for running experiments are documented in the [scripts readme](scripts/README.md).

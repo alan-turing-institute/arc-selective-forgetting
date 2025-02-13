@@ -540,15 +540,15 @@ def main(args):
                             "retain_model_utility_3"
                         ]["std"]
                     # plot the results
-                    plt.errorbar(
-                        x=utility_data,
-                        y=forget_data,
-                        xerr=utility_std / np.sqrt(5),
-                        yerr=forget_std / np.sqrt(5),
-                        capsize=2,
-                        ls="none",
-                        alpha=0.4,
-                    )
+                    # plt.errorbar(
+                    #     x=utility_data,
+                    #     y=forget_data,
+                    #     xerr=utility_std / np.sqrt(5),
+                    #     yerr=forget_std / np.sqrt(5),
+                    #     capsize=2,
+                    #     ls="none",
+                    #     alpha=0.4,
+                    # )
                     plt.scatter(
                         utility_data,
                         forget_data,
@@ -583,16 +583,16 @@ def main(args):
                         ]["std"]
                     if base_model == "retain":
                         forget_data = [0] * len(utility_data)
-                    plt.errorbar(
-                        x=utility_data,
-                        y=forget_data,
-                        xerr=utility_std / np.sqrt(5),
-                        yerr=forget_std / np.sqrt(5),
-                        capsize=2,
-                        color="k",
-                        ls="none",
-                        alpha=0.4,
-                    )
+                    # plt.errorbar(
+                    #     x=utility_data,
+                    #     y=forget_data,
+                    #     xerr=utility_std / np.sqrt(5),
+                    #     yerr=forget_std / np.sqrt(5),
+                    #     capsize=2,
+                    #     color="k",
+                    #     ls="none",
+                    #     alpha=0.4,
+                    # )
                     plt.scatter(
                         utility_data,
                         forget_data,
